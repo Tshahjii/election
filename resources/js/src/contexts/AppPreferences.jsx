@@ -13,7 +13,7 @@ const translations = {
     'controls.hindi': 'हिन्दी',
     'controls.light': 'Light',
     'controls.dark': 'Dark',
-    'auth.title': 'Officer Sign In',
+    'auth.title': 'Officer Sign',
     'auth.subtitle': 'Access the election dashboard with your registered mobile number and OTP.',
     'auth.officialLogin': 'Official Login',
     'auth.mobileOtpLogin': 'Mobile OTP Login',
