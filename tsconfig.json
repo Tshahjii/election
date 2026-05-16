@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "noCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./resources/js/*"],
+      "api/*": ["./resources/js/src/api/*"],
+      "assets/*": ["./resources/js/src/assets/*"],
+      "components/*": ["./resources/js/src/components/*"],
+      "config": ["./resources/js/src/config"],
+      "contexts/*": ["./resources/js/src/contexts/*"],
+      "enum": ["./resources/js/src/enum"],
+      "layouts/*": ["./resources/js/src/layouts/*"],
+      "menu-items": ["./resources/js/src/menu-items"],
+      "menu-items/*": ["./resources/js/src/menu-items/*"],
+      "routes": ["./resources/js/src/routes"],
+      "routes/*": ["./resources/js/src/routes/*"],
+      "sections/*": ["./resources/js/src/sections/*"],
+      "states/*": ["./resources/js/src/states/*"],
+      "store/*": ["./resources/js/src/store/*"],
+      "themes": ["./resources/js/src/themes"],
+      "themes/*": ["./resources/js/src/themes/*"],
+      "utils/*": ["./resources/js/src/utils/*"],
+      "views/*": ["./resources/js/src/views/*"]
+    }
+  },
+  "include": ["resources/js/**/*.d.ts", "resources/js/**/*.ts", "resources/js/**/*.tsx"]
+}
