@@ -13,30 +13,35 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('user_code', 30)->nullable()->unique();
             $table->string('name', 100);
             $table->string('email', 100)->unique();
             $table->string('mobile', 15)->unique();
             $table->timestamp('user_verified_at')->nullable();
             $table->string('password', 150);
             $table->timestamp('password_changed_at')->nullable();
-            $table->string('emp_type', 20);
-            $table->string('department', 20);
-            $table->string('designation', 20);
-            $table->string('ofc_id', 20);
-            $table->string('ofc_code', 20);
-            $table->string('district', 20);
-            $table->string('state', 20);
-            $table->string('country', 20);
+            $table->string('emp_type', 50);
+            $table->string('department', 100);
+            $table->string('designation', 100);
+            $table->unsignedBigInteger('ofc_id')->nullable();
+            $table->string('ofc_code', 20)->nullable();
+            $table->string('district', 100);
+            $table->string('state', 100);
+            $table->string('country', 100);
+            $table->text('address')->nullable();
             $table->tinyInteger('role')
                 ->default(3)
                 ->comment('1 = Super Admin, 2 = Admin, 3 = Data Entry, 4 = Verifier, 5 = Booth Officer, 6 = Report Viewer');
             $table->tinyInteger('is_active')->default(1)->comment('1 = Active, 0 = Inactive');
             $table->timestamp('last_active')->nullable();
             $table->string('last_active_ip', 45)->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->rememberToken();
             $table->timestamps();
 
             $table->index(['is_active', 'last_active']);
+            $table->index(['ofc_id', 'ofc_code']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

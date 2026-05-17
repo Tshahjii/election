@@ -6,6 +6,7 @@ use App\Models\CheckOtp;
 use App\Models\User;
 use App\Services\JwtService;
 use App\Services\TurnstileService;
+use App\Support\AccessScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -218,6 +219,7 @@ class AuthController extends Controller
     private function userPayload(User $user): array
     {
         $data = $user->toArray();
+        $user->loadMissing('accessManagment');
         $isDefaultPassword = Hash::check('Admin@123', $user->password);
         $passwordChangedAt = $user->password_changed_at ?: $user->created_at;
         $isPasswordExpired = ! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7));
@@ -225,6 +227,7 @@ class AuthController extends Controller
         $data['must_change_password'] = $isDefaultPassword || $isPasswordExpired;
         $data['password_change_reason'] = $isDefaultPassword ? 'default' : ($isPasswordExpired ? 'expired' : null);
         $data['password_expires_at'] = $passwordChangedAt ? $passwordChangedAt->copy()->addDays(7)->toISOString() : null;
+        $data['access'] = AccessScope::payload($user);
 
         return $data;
     }

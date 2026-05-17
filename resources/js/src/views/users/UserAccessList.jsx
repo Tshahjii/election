@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
 
 // material-ui
 import Avatar from '@mui/material/Avatar';
@@ -27,8 +28,11 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 // project imports
+import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
 import PaginationFooter from 'components/PaginationFooter';
+import { showNotification } from 'store/slices/notificationSlice';
+import { ROLE_LABELS } from 'utils/access';
 
 // assets
 import AddOutlined from '@mui/icons-material/AddOutlined';
@@ -36,80 +40,297 @@ import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOu
 import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
 import DeleteOutlineOutlined from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
-import EmailOutlined from '@mui/icons-material/EmailOutlined';
+import LockOpenOutlined from '@mui/icons-material/LockOpenOutlined';
 import PhoneIphoneOutlined from '@mui/icons-material/PhoneIphoneOutlined';
 import SaveOutlined from '@mui/icons-material/SaveOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
-import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 
-const userRows = [
-  { id: 'USR-1001', name: 'Rajesh Kumar', email: 'rajesh.kumar@gov.in', mobile: '9876543210', role: 'Super Admin', department: 'Election Office', status: 'Active', lastLogin: '10 May 2026' },
-  { id: 'USR-1002', name: 'Priya Sharma', email: 'priya.sharma@gov.in', mobile: '9823417856', role: 'Data Entry', department: 'Voter Cell', status: 'Active', lastLogin: '09 May 2026' },
-  { id: 'USR-1003', name: 'Imran Khan', email: 'imran.khan@gov.in', mobile: '9756312480', role: 'Booth Officer', department: 'Polling Operations', status: 'Pending', lastLogin: 'Not logged in' },
-  { id: 'USR-1004', name: 'Meena Patel', email: 'meena.patel@gov.in', mobile: '9900123456', role: 'Verifier', department: 'Verification Team', status: 'Inactive', lastLogin: '04 May 2026' },
-  { id: 'USR-1005', name: 'Sanjay Verma', email: 'sanjay.verma@gov.in', mobile: '9811122233', role: 'Report Viewer', department: 'Reports', status: 'Active', lastLogin: '08 May 2026' },
-  { id: 'USR-1006', name: 'Kavita Joshi', email: 'kavita.joshi@gov.in', mobile: '9898987654', role: 'Admin', department: 'Access Management', status: 'Pending', lastLogin: 'Not logged in' }
-];
-
-const initialFilters = {
+const initialFilters = { name: '', mobile: '', user_code: '', role: '', status: '' };
+const baseForm = {
+  user_code: '',
   name: '',
+  email: '',
   mobile: '',
-  userId: '',
-  role: '',
-  status: ''
+  password: 'Admin@123',
+  emp_type: 'Permanent',
+  department: 'Election Office',
+  designation: '',
+  ofc_id: '',
+  ofc_code: '',
+  district: '',
+  state: '',
+  country: 'India',
+  address: '',
+  role: 2,
+  is_active: 1
 };
 
-function getStatusColor(status) {
-  if (status === 'Active') return 'success';
-  if (status === 'Pending') return 'warning';
-  return 'error';
+const baseAccessForm = {
+  country_ids: [],
+  state_ids: [],
+  district_ids: [],
+  office_ids: [],
+  permissions: {}
+};
+
+function getApiError(error) {
+  const errors = error.response?.data?.errors;
+  if (errors) return Object.values(errors).flat().join(' ');
+  return error.response?.data?.message || 'Unable to complete request.';
+}
+
+function statusLabel(value) {
+  return Number(value) === 1 ? 'Active' : 'Inactive';
+}
+
+function AccessDropZone({ title, selected, items, onDropItem, onRemove }) {
+  return (
+    <Box
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        const data = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+        onDropItem(data);
+      }}
+      sx={{ minHeight: 116, p: 1.25, border: '1px dashed', borderColor: 'primary.main', borderRadius: 1, bgcolor: 'rgba(16,60,92,0.03)' }}
+    >
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        {title}
+      </Typography>
+      <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap' }}>
+        {selected.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Drag items here
+          </Typography>
+        )}
+        {selected.map((id) => {
+          const item = items.find((option) => Number(option.id) === Number(id));
+          return <Chip key={id} label={item?.name || id} onDelete={() => onRemove(id)} size="small" sx={{ bgcolor: 'success.light', color: 'success.contrastText' }} />;
+        })}
+      </Stack>
+    </Box>
+  );
+}
+
+function DraggableList({ title, items, type }) {
+  return (
+    <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 190, overflow: 'auto' }}>
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        {title}
+      </Typography>
+      <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap' }}>
+        {items.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            No available records.
+          </Typography>
+        )}
+        {items.map((item) => (
+          <Chip
+            key={`${type}-${item.id}`}
+            label={item.name}
+            size="small"
+            draggable
+            onDragStart={(event) => event.dataTransfer.setData('application/json', JSON.stringify({ type, id: item.id }))}
+            sx={{ cursor: 'grab', bgcolor: 'error.light', color: 'error.contrastText' }}
+          />
+        ))}
+      </Stack>
+    </Box>
+  );
 }
 
 export default function UserAccessList() {
+  const dispatch = useDispatch();
   const [filters, setFilters] = useState(initialFilters);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [options, setOptions] = useState({ countries: [], states: [], districts: [], offices: [], modules: [], actions: ['read', 'create', 'edit', 'delete'] });
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [totalRows, setTotalRows] = useState(0);
+  const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
+  const [accessModal, setAccessModal] = useState({ open: false, row: null });
+  const [deleteRow, setDeleteRow] = useState(null);
+  const [form, setForm] = useState(baseForm);
+  const [accessForm, setAccessForm] = useState(baseAccessForm);
 
-  const filteredRows = useMemo(
-    () =>
-      userRows.filter((row) => {
-        const nameMatch = row.name.toLowerCase().includes(filters.name.toLowerCase());
-        const mobileMatch = row.mobile.includes(filters.mobile);
-        const userIdMatch = row.id.toLowerCase().includes(filters.userId.toLowerCase());
-        const roleMatch = row.role.toLowerCase().includes(filters.role.toLowerCase());
-        const statusMatch = !filters.status || row.status === filters.status;
+  const availableStates = useMemo(() => {
+    const states = accessForm.country_ids.length ? options.states.filter((state) => accessForm.country_ids.includes(state.country_id)) : options.states;
+    return states.filter((state) => !accessForm.state_ids.includes(state.id));
+  }, [accessForm.country_ids, accessForm.state_ids, options.states]);
+  const availableDistricts = useMemo(() => {
+    if (!accessForm.state_ids.length) return [];
+    const districts = accessForm.state_ids.length ? options.districts.filter((district) => accessForm.state_ids.includes(district.state_id)) : options.districts;
+    return districts.filter((district) => !accessForm.district_ids.includes(district.id));
+  }, [accessForm.district_ids, accessForm.state_ids, options.districts]);
+  const availableCountries = useMemo(() => options.countries.filter((country) => !accessForm.country_ids.includes(country.id)), [accessForm.country_ids, options.countries]);
+  const availableOffices = useMemo(() => options.offices.filter((office) => !accessForm.office_ids.includes(office.id)), [accessForm.office_ids, options.offices]);
 
-        return nameMatch && mobileMatch && userIdMatch && roleMatch && statusMatch;
-      }),
-    [filters]
-  );
+  const fetchOptions = async () => {
+    const { data } = await apiClient.get('/users/access-options');
+    setOptions({
+      countries: data.countries || [],
+      states: data.states || [],
+      districts: data.districts || [],
+      offices: (data.offices || []).map((office) => ({ id: office.ofc_id, name: `${office.office_name}${office.office_code ? ` (${office.office_code})` : ''}` })),
+      modules: data.modules || [],
+      actions: data.actions || ['read', 'create', 'edit', 'delete']
+    });
+  };
+
+  const fetchRows = async () => {
+    try {
+      const { data } = await apiClient.get('/users', {
+        params: {
+          ...filters,
+          role: filters.role || undefined,
+          status: filters.status || undefined,
+          page,
+          per_page: rowsPerPage
+        }
+      });
+      setRows(data.data || []);
+      setTotalRows(data.total || 0);
+    } catch (error) {
+      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    }
+  };
+
+  useEffect(() => {
+    fetchOptions().catch((error) => dispatch(showNotification({ message: getApiError(error), severity: 'error' })));
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetchRows();
+  }, [filters, page, rowsPerPage]);
 
   const handleFilterChange = (field) => (event) => {
     setFilters((current) => ({ ...current, [field]: event.target.value }));
     setPage(1);
   };
 
-  const paginatedRows = filteredRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-  const allCurrentRowsSelected = paginatedRows.length > 0 && paginatedRows.every((row) => selectedRows.includes(row.id));
+  const handleOpenCreate = () => {
+    setForm(baseForm);
+    setModal({ open: true, mode: 'create', row: null });
+  };
 
-  const handleSelectAll = (event) => {
-    if (event.target.checked) {
-      setSelectedRows((current) => Array.from(new Set([...current, ...paginatedRows.map((row) => row.id)])));
-      return;
+  const handleOpenEdit = (row) => {
+    const raw = row.access_raw || {};
+    setForm({
+      ...baseForm,
+      ...row,
+      password: '',
+    });
+    setModal({ open: true, mode: 'edit', row });
+  };
+
+  const handleOpenAccess = (row) => {
+    const raw = row.access_raw || {};
+    setAccessForm({
+      ...baseAccessForm,
+      country_ids: raw.country_ids || [],
+      state_ids: raw.state_ids || [],
+      district_ids: raw.district_ids || [],
+      office_ids: raw.office_ids || [],
+      permissions: raw.permissions || {}
+    });
+    setAccessModal({ open: true, row });
+  };
+
+  const handleDropAccess = (type, data) => {
+    if (data.type !== type) return;
+
+    if (type === 'state') {
+      const state = options.states.find((item) => Number(item.id) === Number(data.id));
+
+      if (!accessForm.country_ids.length) {
+        dispatch(showNotification({ message: 'Please select the related Country first.', severity: 'error' }));
+        return;
+      }
+
+      if (!accessForm.country_ids.includes(Number(state?.country_id))) {
+        dispatch(showNotification({ message: 'Selected State does not belong to the chosen Country. Please select the correct hierarchy.', severity: 'error' }));
+        return;
+      }
     }
 
-    setSelectedRows((current) => current.filter((id) => !paginatedRows.some((row) => row.id === id)));
+    if (type === 'district') {
+      const district = options.districts.find((item) => Number(item.id) === Number(data.id));
+
+      if (!accessForm.state_ids.length) {
+        dispatch(showNotification({ message: 'Please select the related State first.', severity: 'error' }));
+        return;
+      }
+
+      if (!accessForm.state_ids.includes(Number(district?.state_id))) {
+        dispatch(showNotification({ message: 'Selected District does not belong to the chosen State. Please select the correct hierarchy.', severity: 'error' }));
+        return;
+      }
+    }
+
+    const field = `${type}_ids`;
+    setAccessForm((current) => ({ ...current, [field]: Array.from(new Set([...(current[field] || []), Number(data.id)])) }));
   };
 
-  const handleSelectRow = (id) => (event) => {
-    setSelectedRows((current) => (event.target.checked ? [...current, id] : current.filter((rowId) => rowId !== id)));
+  const removeAccess = (field, id) => {
+    setAccessForm((current) => ({ ...current, [field]: current[field].filter((value) => Number(value) !== Number(id)) }));
   };
 
-  const handleRowsPerPageChange = (event) => {
-    setRowsPerPage(Number(event.target.value));
-    setPage(1);
+  const handlePermissionChange = (moduleKey, action) => (event) => {
+    setAccessForm((current) => ({
+      ...current,
+      permissions: {
+        ...current.permissions,
+        [moduleKey]: {
+          ...(current.permissions?.[moduleKey] || {}),
+          [action]: event.target.checked
+        }
+      }
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const payload = { ...form };
+    if (!payload.password) delete payload.password;
+
+    try {
+      if (modal.mode === 'edit') {
+        await apiClient.put(`/users/${modal.row.id}`, payload);
+      } else {
+        await apiClient.post('/users', payload);
+      }
+      dispatch(showNotification({ message: 'User access saved successfully.' }));
+      setModal({ open: false, mode: 'create', row: null });
+      await fetchRows();
+    } catch (error) {
+      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    }
+  };
+
+  const handleAccessSubmit = async (event) => {
+    event.preventDefault();
+    if (!accessModal.row) return;
+
+    try {
+      await apiClient.put(`/users/${accessModal.row.id}/access`, accessForm);
+      dispatch(showNotification({ message: 'Access updated successfully.' }));
+      setAccessModal({ open: false, row: null });
+      await fetchRows();
+    } catch (error) {
+      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteRow) return;
+    try {
+      await apiClient.delete(`/users/${deleteRow.id}`);
+      dispatch(showNotification({ message: 'User deleted successfully.' }));
+      setDeleteRow(null);
+      await fetchRows();
+    } catch (error) {
+      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    }
   };
 
   return (
@@ -118,15 +339,10 @@ export default function UserAccessList() {
         <Box>
           <Typography variant="h2">Access Management</Typography>
           <Typography variant="body2" color="text.secondary">
-            Search and manage user access for election operations.
+            Create users and assign state, district and office access.
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddOutlined />}
-          onClick={() => setIsCreateModalOpen(true)}
-          sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}
-        >
+        <Button variant="contained" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>
           Create User
         </Button>
       </Stack>
@@ -134,51 +350,31 @@ export default function UserAccessList() {
       <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={filters.name}
-              onChange={handleFilterChange('name')}
-              placeholder="Search name"
-              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }}
-            />
+            <TextField fullWidth label="Name" value={filters.name} onChange={handleFilterChange('name')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-            <TextField
-              fullWidth
-              label="Mobile Number"
-              value={filters.mobile}
-              onChange={handleFilterChange('mobile')}
-              placeholder="Search number"
-              slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }}
-            />
+            <TextField fullWidth label="Mobile Number" value={filters.mobile} onChange={handleFilterChange('mobile')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-            <TextField
-              fullWidth
-              label="User ID"
-              value={filters.userId}
-              onChange={handleFilterChange('userId')}
-              placeholder="Search ID"
-              slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }}
-            />
+            <TextField fullWidth label="User ID" value={filters.user_code} onChange={handleFilterChange('user_code')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-            <TextField
-              fullWidth
-              label="Role"
-              value={filters.role}
-              onChange={handleFilterChange('role')}
-              placeholder="Search role"
-              slotProps={{ input: { startAdornment: <InputAdornment position="start"><AdminPanelSettingsOutlined fontSize="small" /></InputAdornment> } }}
-            />
+            <FormControl fullWidth>
+              <Select value={filters.role} onChange={handleFilterChange('role')} displayEmpty>
+                <MenuItem value="">All Roles</MenuItem>
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
             <FormControl fullWidth>
               <Select value={filters.status} onChange={handleFilterChange('status')} displayEmpty>
                 <MenuItem value="">All Status</MenuItem>
                 <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Pending">Pending</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
               </Select>
             </FormControl>
@@ -186,59 +382,35 @@ export default function UserAccessList() {
         </Grid>
       </MainCard>
 
-      <MainCard
-        title={`User Records (${filteredRows.length})`}
-        sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
-        headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }}
-        contentSX={{ p: 2, '&:last-child': { pb: 2 } }}
-      >
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          sx={{ gap: 2, alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', mb: 2 }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            {selectedRows.length} selected
-          </Typography>
-          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary">
-              Rows per page
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 92 }}>
-              <Select value={rowsPerPage} onChange={handleRowsPerPageChange}>
-                {[10, 50, 100, 200, 500].map((value) => (
-                  <MenuItem key={value} value={value}>
-                    {value}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
+      <MainCard title={`User Records (${totalRows})`} sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end', mb: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <Select value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}>
+              {[10, 50, 100, 200, 500].map((value) => (
+                <MenuItem key={value} value={value}>
+                  {value}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Stack>
-
-        <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+        <TableContainer>
           <Table sx={{ minWidth: 1060 }}>
             <TableHead>
               <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox checked={allCurrentRowsSelected} indeterminate={selectedRows.length > 0 && !allCurrentRowsSelected} onChange={handleSelectAll} />
-                </TableCell>
                 <TableCell>S.No</TableCell>
                 <TableCell>User</TableCell>
                 <TableCell>User ID</TableCell>
                 <TableCell>Mobile</TableCell>
                 <TableCell>Role</TableCell>
-                <TableCell>Department</TableCell>
-                <TableCell>Last Login</TableCell>
+                <TableCell>Permissions</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedRows.map((row, index) => (
+              {rows.map((row, index) => (
                 <TableRow key={row.id} hover>
-                  <TableCell padding="checkbox">
-                    <Checkbox checked={selectedRows.includes(row.id)} onChange={handleSelectRow(row.id)} />
-                  </TableCell>
                   <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
@@ -253,188 +425,166 @@ export default function UserAccessList() {
                       </Box>
                     </Stack>
                   </TableCell>
-                  <TableCell>{row.id}</TableCell>
+                  <TableCell>{row.user_code || `USR-${row.id}`}</TableCell>
                   <TableCell>{row.mobile}</TableCell>
-                  <TableCell>{row.role}</TableCell>
-                  <TableCell>{row.department}</TableCell>
-                  <TableCell>{row.lastLogin}</TableCell>
+                  <TableCell>{ROLE_LABELS[row.role] || row.role}</TableCell>
                   <TableCell>
-                    <Chip label={row.status} size="small" color={getStatusColor(row.status)} variant="outlined" />
+                    <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
+                      {row.access?.is_super_admin ? (
+                        <Chip label="Full Access" size="small" variant="outlined" color="success" />
+                      ) : (
+                        <Chip label={`${Object.values(row.access?.permissions || {}).filter((item) => item?.read).length} modules`} size="small" variant="outlined" />
+                      )}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={statusLabel(row.is_active)} size="small" color={Number(row.is_active) === 1 ? 'success' : 'error'} variant="outlined" />
                   </TableCell>
                   <TableCell align="right">
-                    <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 0.5 }}>
-                      <IconButton size="small" color="primary" aria-label="view user">
-                        <VisibilityOutlined fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="success" aria-label="edit user">
-                        <EditOutlined fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="error" aria-label="delete user">
-                        <DeleteOutlineOutlined fontSize="small" />
-                      </IconButton>
-                    </Stack>
+                    <IconButton size="small" color="primary" aria-label="assign access" onClick={() => handleOpenAccess(row)}>
+                      <LockOpenOutlined fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="success" aria-label="edit user" onClick={() => handleOpenEdit(row)}>
+                      <EditOutlined fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" aria-label="delete user" onClick={() => setDeleteRow(row)}>
+                      <DeleteOutlineOutlined fontSize="small" />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-
-        <Stack sx={{ display: { xs: 'flex', md: 'none' }, gap: 1.5 }}>
-          {paginatedRows.map((row, index) => (
-            <Box key={row.id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-              <Stack sx={{ gap: 1.25 }}>
-                <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-                  <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                    <Checkbox checked={selectedRows.includes(row.id)} onChange={handleSelectRow(row.id)} sx={{ p: 0.25 }} />
-                    <Avatar sx={{ width: 34, height: 34, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
-                      <AdminPanelSettingsOutlined fontSize="small" />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {(page - 1) * rowsPerPage + index + 1}. {row.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {row.id}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <Chip label={row.status} size="small" color={getStatusColor(row.status)} variant="outlined" />
-                </Stack>
-                <Grid container spacing={1}>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Mobile
-                    </Typography>
-                    <Typography variant="body2">{row.mobile}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Role
-                    </Typography>
-                    <Typography variant="body2">{row.role}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Department
-                    </Typography>
-                    <Typography variant="body2">{row.department}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Last Login
-                    </Typography>
-                    <Typography variant="body2">{row.lastLogin}</Typography>
-                  </Grid>
-                </Grid>
-                <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 0.5 }}>
-                  <IconButton size="small" color="primary" aria-label="view user">
-                    <VisibilityOutlined fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" color="success" aria-label="edit user">
-                    <EditOutlined fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" color="error" aria-label="delete user">
-                    <DeleteOutlineOutlined fontSize="small" />
-                  </IconButton>
-                </Stack>
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-
-        <PaginationFooter page={page} rowsPerPage={rowsPerPage} totalRows={filteredRows.length} onPageChange={setPage} />
+        <PaginationFooter page={page} rowsPerPage={rowsPerPage} totalRows={totalRows} onPageChange={setPage} />
       </MainCard>
 
-      <Dialog open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} fullWidth maxWidth="md">
-        <Box component="form" onSubmit={(event) => { event.preventDefault(); setIsCreateModalOpen(false); }}>
-        <DialogTitle component="div" sx={{ pb: 1 }}>
-          <Typography variant="h3" component="h2">Create User</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Add a user and assign access for election portal operations.
-          </Typography>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ pt: 0.5 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Full Name" placeholder="Enter user name" />
+      <Dialog open={modal.open} onClose={() => setModal({ open: false, mode: 'create', row: null })} fullWidth maxWidth="lg">
+        <Box component="form" onSubmit={handleSubmit}>
+          <DialogTitle component="div" sx={{ pb: 1 }}>
+            <Typography variant="h3" component="h2">{modal.mode === 'edit' ? 'Update' : 'Create'} User</Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Grid container spacing={2} sx={{ pt: 0.5 }}>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Full Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="User ID" value={form.user_code || ''} onChange={(event) => setForm({ ...form, user_code: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Email Address" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Mobile Number" value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth>
+                  <Select value={form.role} onChange={(event) => setForm({ ...form, role: Number(event.target.value) })}>
+                    {Object.entries(ROLE_LABELS).map(([value, label]) => <MenuItem key={value} value={Number(value)}>{label}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Department" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Designation" value={form.designation} onChange={(event) => setForm({ ...form, designation: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Temporary Password" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Country" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="State" value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="District" value={form.district} onChange={(event) => setForm({ ...form, district: event.target.value })} /></Grid>
+              <Grid size={12}><TextField fullWidth multiline minRows={2} label="Address" value={form.address || ''} onChange={(event) => setForm({ ...form, address: event.target.value })} /></Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth>
+                  <Select value={form.is_active} onChange={(event) => setForm({ ...form, is_active: Number(event.target.value) })}>
+                    <MenuItem value={1}>Active</MenuItem>
+                    <MenuItem value={0}>Inactive</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="User ID" placeholder="Enter user ID" />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button variant="outlined" color="inherit" onClick={() => setModal({ open: false, mode: 'create', row: null })}>Cancel</Button>
+            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>Save User</Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      <Dialog open={accessModal.open} onClose={() => setAccessModal({ open: false, row: null })} fullWidth maxWidth="lg">
+        <Box component="form" onSubmit={handleAccessSubmit}>
+          <DialogTitle component="div" sx={{ pb: 1 }}>
+            <Typography variant="h3" component="h2">
+              Access: {accessModal.row?.name}
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Grid container spacing={2} sx={{ pt: 0.5 }}>
+              {Number(accessModal.row?.role) !== 1 && (
+                <>
+                  <Grid size={{ xs: 12, md: 4 }}><DraggableList title="Countries" type="country" items={availableCountries} /></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}><DraggableList title="States" type="state" items={availableStates} /></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    {accessForm.state_ids.length ? (
+                      <DraggableList title="Districts" type="district" items={availableDistricts} />
+                    ) : (
+                      <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Districts
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Select State Access first.
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="Country Access" selected={accessForm.country_ids} items={options.countries} onDropItem={(data) => handleDropAccess('country', data)} onRemove={(id) => removeAccess('country_ids', id)} /></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} /></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="District Access" selected={accessForm.district_ids} items={options.districts} onDropItem={(data) => handleDropAccess('district', data)} onRemove={(id) => removeAccess('district_ids', id)} /></Grid>
+                  <Grid size={12}><DraggableList title="Offices" type="office" items={availableOffices} /></Grid>
+                  <Grid size={12}><AccessDropZone title="Office Access" selected={accessForm.office_ids} items={options.offices} onDropItem={(data) => handleDropAccess('office', data)} onRemove={(id) => removeAccess('office_ids', id)} /></Grid>
+                </>
+              )}
+
+              <Grid size={12}>
+                <MainCard title="Permissions" headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }}>
+                  <TableContainer>
+                    <Table sx={{ minWidth: 720 }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Module</TableCell>
+                          {options.actions.map((action) => (
+                            <TableCell key={action} align="center">
+                              {action.charAt(0).toUpperCase() + action.slice(1)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {options.modules.map((module) => (
+                          <TableRow key={module.key} hover>
+                            <TableCell>{module.label}</TableCell>
+                            {options.actions.map((action) => (
+                              <TableCell key={`${module.key}-${action}`} align="center">
+                                <Checkbox checked={Boolean(accessForm.permissions?.[module.key]?.[action]) || Number(accessModal.row?.role) === 1} disabled={Number(accessModal.row?.role) === 1} onChange={handlePermissionChange(module.key, action)} />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </MainCard>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Email Address" placeholder="Enter email address" type="email" slotProps={{ input: { inputProps: { autoComplete: 'email' } } }} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Mobile Number" placeholder="Enter mobile number" slotProps={{ input: { inputProps: { autoComplete: 'tel', inputMode: 'numeric' } } }} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <Select defaultValue="" displayEmpty>
-                  <MenuItem value="" disabled>
-                    Select Role
-                  </MenuItem>
-                  <MenuItem value="Super Admin">Super Admin</MenuItem>
-                  <MenuItem value="Admin">Admin</MenuItem>
-                  <MenuItem value="Data Entry">Data Entry</MenuItem>
-                  <MenuItem value="Verifier">Verifier</MenuItem>
-                  <MenuItem value="Booth Officer">Booth Officer</MenuItem>
-                  <MenuItem value="Report Viewer">Report Viewer</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <Select defaultValue="" displayEmpty>
-                  <MenuItem value="" disabled>
-                    Select Department
-                  </MenuItem>
-                  <MenuItem value="Election Office">Election Office</MenuItem>
-                  <MenuItem value="Voter Cell">Voter Cell</MenuItem>
-                  <MenuItem value="Polling Operations">Polling Operations</MenuItem>
-                  <MenuItem value="Verification Team">Verification Team</MenuItem>
-                  <MenuItem value="Reports">Reports</MenuItem>
-                  <MenuItem value="Access Management">Access Management</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <Select defaultValue="Active">
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
-                  <MenuItem value="Inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Temporary Password"
-                placeholder="Enter temporary password"
-                type="password"
-                slotProps={{ input: { inputProps: { autoComplete: 'new-password' } } }}
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField fullWidth multiline minRows={3} label="Address" placeholder="Enter complete address" />
-            </Grid>
-          </Grid>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button variant="outlined" color="inherit" onClick={() => setAccessModal({ open: false, row: null })}>Cancel</Button>
+            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>Save Access</Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Delete User</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">This user and access permissions will be deleted.</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button variant="outlined" color="inherit" onClick={() => setIsCreateModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            startIcon={<SaveOutlined />}
-            sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}
-          >
-            Save User
-          </Button>
+          <Button variant="outlined" color="inherit" onClick={() => setDeleteRow(null)}>Cancel</Button>
+          <Button variant="contained" color="error" startIcon={<DeleteOutlineOutlined />} onClick={handleDelete}>Delete</Button>
         </DialogActions>
-        </Box>
       </Dialog>
     </Stack>
   );

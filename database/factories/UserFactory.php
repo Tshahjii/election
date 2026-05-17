@@ -25,10 +25,20 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_code' => fake()->unique()->bothify('USR-####'),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
+            'mobile' => fake()->unique()->numerify('9#########'),
+            'user_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'emp_type' => 'Permanent',
+            'department' => 'Election Office',
+            'designation' => 'Staff',
+            'district' => 'Raipur',
+            'state' => 'Chhattisgarh',
+            'country' => 'India',
+            'role' => 3,
+            'is_active' => 1,
             'remember_token' => Str::random(10),
         ];
     }
@@ -39,7 +49,7 @@ class UserFactory extends Factory
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'user_verified_at' => null,
         ]);
     }
 }

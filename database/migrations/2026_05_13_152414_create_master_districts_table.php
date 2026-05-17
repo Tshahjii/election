@@ -17,7 +17,10 @@ return new class extends Migration
             $table->foreignId('state_id')->constrained('master_states')->onDelete('cascade');
             $table->string('name', 100);
             $table->string('district_code', 10)->nullable();
+            $table->string('attachment_path', 255)->nullable();
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
         });
     }

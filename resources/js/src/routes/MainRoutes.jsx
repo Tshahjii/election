@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
 
 // project imports
 import Loadable from 'components/Loadable';
@@ -9,6 +10,7 @@ import MainLayout from 'layouts/MainLayout';
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/default')));
 const VoterListPage = Loadable(lazy(() => import('views/voters/VoterList')));
 const UserAccessListPage = Loadable(lazy(() => import('views/users/UserAccessList')));
+const MasterDataPage = Loadable(lazy(() => import('views/masters/MasterData')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
 
 // utils
@@ -35,6 +37,26 @@ const MainRoutes = {
     {
       path: 'users/access-management',
       element: <UserAccessListPage />
+    },
+    {
+      path: 'masters',
+      element: <Navigate to="/admin/masters/countries" replace />
+    },
+    {
+      path: 'masters/countries',
+      element: <MasterDataPage masterKey="countries" />
+    },
+    {
+      path: 'masters/states',
+      element: <MasterDataPage masterKey="states" />
+    },
+    {
+      path: 'masters/districts',
+      element: <MasterDataPage masterKey="districts" />
+    },
+    {
+      path: 'masters/offices',
+      element: <MasterDataPage masterKey="offices" />
     },
     {
       path: 'sample-page',

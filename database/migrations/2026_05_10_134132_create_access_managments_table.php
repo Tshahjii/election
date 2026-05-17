@@ -14,14 +14,27 @@ return new class extends Migration
         Schema::create('access_managments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('emp_type', 20);
-            $table->string('department', 20);
-            $table->string('district', 20);
-            $table->string('state', 20);
-            $table->string('country', 20);
+            $table->string('emp_type', 50);
+            $table->string('department', 100);
+            $table->string('designation', 100)->nullable();
+            $table->unsignedBigInteger('ofc_id')->nullable();
+            $table->string('ofc_code', 20)->nullable();
+            $table->string('district', 100);
+            $table->string('state', 100);
+            $table->string('country', 100);
+            $table->text('country_ids')->nullable();
+            $table->text('state_ids')->nullable();
+            $table->text('district_ids')->nullable();
+            $table->text('office_ids')->nullable();
+            $table->json('permissions')->nullable();
+            $table->tinyInteger('can_create')->default(0);
+            $table->tinyInteger('can_edit')->default(0);
+            $table->tinyInteger('can_delete')->default(0);
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->timestamps();
+
+            $table->index(['ofc_id', 'ofc_code']);
         });
     }
 
