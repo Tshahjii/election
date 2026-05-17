@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('access_managments', function (Blueprint $table) {
             $table->id();
-            $table->string('user_id',20);
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('emp_type', 20);
             $table->string('department', 20);
             $table->string('district', 20);

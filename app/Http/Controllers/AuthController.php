@@ -188,8 +188,15 @@ class AuthController extends Controller
             ]);
         }
 
+        if (Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => 'New password must be different from the old password.'
+            ]);
+        }
+
         $user->forceFill([
             'password' => Hash::make($data['password']),
+            'password_changed_at' => now(),
         ])->save();
 
         return response()->json([
@@ -211,7 +218,13 @@ class AuthController extends Controller
     private function userPayload(User $user): array
     {
         $data = $user->toArray();
-        $data['must_change_password'] = Hash::check('Admin@123', $user->password);
+        $isDefaultPassword = Hash::check('Admin@123', $user->password);
+        $passwordChangedAt = $user->password_changed_at ?: $user->created_at;
+        $isPasswordExpired = ! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7));
+
+        $data['must_change_password'] = $isDefaultPassword || $isPasswordExpired;
+        $data['password_change_reason'] = $isDefaultPassword ? 'default' : ($isPasswordExpired ? 'expired' : null);
+        $data['password_expires_at'] = $passwordChangedAt ? $passwordChangedAt->copy()->addDays(7)->toISOString() : null;
 
         return $data;
     }

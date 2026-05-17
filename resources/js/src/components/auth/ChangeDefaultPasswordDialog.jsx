@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import Alert from '@mui/material/Alert';
@@ -17,13 +18,14 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 // project imports
-import { changePassword, clearAuthError } from 'store/slices/authSlice';
+import { changePassword, clearAuthError, logoutUser } from 'store/slices/authSlice';
 import { strengthColor, strengthIndicator } from 'utils/passwordStrength';
 
 const defaultPassword = 'Admin@123';
 
 export default function ChangeDefaultPasswordDialog() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { error, loading, user } = useSelector((state) => state.auth);
   const [open, setOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -36,17 +38,37 @@ export default function ChangeDefaultPasswordDialog() {
   const passwordScore = strengthIndicator(form.password);
   const passwordLevel = strengthColor(passwordScore);
   const passwordProgress = Math.min(passwordScore * 20, 100);
+  const isDefaultPassword = user?.password_change_reason === 'default';
+  const isExpiredPassword = user?.password_change_reason === 'expired';
 
   useEffect(() => {
     if (user?.must_change_password) {
+      setForm((current) => ({
+        ...current,
+        old_password: user.password_change_reason === 'default' ? defaultPassword : ''
+      }));
       setOpen(true);
     }
-  }, [user?.must_change_password]);
+  }, [user?.must_change_password, user?.password_change_reason]);
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
     setFormError('');
     dispatch(clearAuthError());
+  };
+
+  const handleLogout = () => {
+    dispatch(logoutUser()).finally(() => navigate('/', { replace: true }));
+  };
+
+  const handleClose = (_event, reason) => {
+    if (loading) {
+      return;
+    }
+
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      handleLogout();
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -73,7 +95,7 @@ export default function ChangeDefaultPasswordDialog() {
       setSuccessMessage(response.message || 'Password changed successfully.');
       setOpen(false);
       setForm({
-        old_password: defaultPassword,
+        old_password: '',
         password: '',
         password_confirmation: ''
       });
@@ -83,12 +105,16 @@ export default function ChangeDefaultPasswordDialog() {
   };
 
   return (
-    <Dialog open={open} maxWidth="xs" fullWidth disableEscapeKeyDown>
+    <Dialog open={open} maxWidth="xs" fullWidth onClose={handleClose}>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>Change Default Password</DialogTitle>
+        <DialogTitle>{isExpiredPassword ? 'Change Expired Password' : 'Change Default Password'}</DialogTitle>
         <DialogContent>
           <Stack sx={{ gap: 2, pt: 1 }}>
-            <Alert severity="warning">Your account is using the default password. Please change it to continue securely.</Alert>
+            <Alert severity="warning">
+              {isDefaultPassword
+                ? 'Your account is using the default password. Please change it to continue securely.'
+                : 'Your password is older than 7 days. Please change it to continue.'}
+            </Alert>
             {successMessage && <Alert severity="success">{successMessage}</Alert>}
             {(formError || error) && <Alert severity="error">{formError || error}</Alert>}
 
@@ -149,6 +175,9 @@ export default function ChangeDefaultPasswordDialog() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button type="button" color="inherit" onClick={handleLogout} disabled={loading}>
+            Logout
+          </Button>
           <Button type="submit" variant="contained" disabled={loading} endIcon={loading ? <CircularProgress color="secondary" size={16} /> : null}>
             Change Password
           </Button>

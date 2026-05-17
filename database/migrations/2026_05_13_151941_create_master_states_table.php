@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('country_id')->constrained('master_countries')->onDelete('cascade');
             $table->string('name', 100);
             $table->string('state_code', 10)->nullable();
+            $table->string('state_logo', 150)->nullable();
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
             $table->timestamps();
         });

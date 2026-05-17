@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('check_otps', function (Blueprint $table) {
             $table->id();
-            $table->string('user_id',20);
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('mobile', 15)->nullable();
             $table->string('otp',6 )->nullable();
             $table->timestamp('verified_at')->nullable();

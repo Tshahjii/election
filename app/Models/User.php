@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
     'email',
     'mobile',
     'password',
+    'password_changed_at',
     'emp_type',
     'department',
     'designation',
@@ -43,6 +44,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'user_verified_at' => 'datetime',
             'last_active' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
