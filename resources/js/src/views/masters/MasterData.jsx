@@ -40,6 +40,8 @@ import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 import InsertDriveFileOutlined from '@mui/icons-material/InsertDriveFileOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
 
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const MASTER_TYPES = [
   {
     key: 'countries',
@@ -284,6 +286,19 @@ export default function MasterData({ masterKey = 'countries' }) {
     }
   };
 
+  const handleAttachmentChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (file && !IMAGE_MIME_TYPES.includes(file.type)) {
+      dispatch(showNotification({ message: 'Logo must be a JPG, PNG or WebP image.', severity: 'error' }));
+      event.target.value = '';
+      setAttachment(null);
+      return;
+    }
+
+    setAttachment(file);
+  };
+
   const handleDelete = async () => {
     if (!deleteRow) return;
 
@@ -517,7 +532,7 @@ export default function MasterData({ masterKey = 'countries' }) {
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Button component="label" fullWidth variant="outlined" startIcon={<FileUploadOutlined />} sx={{ minHeight: 48, justifyContent: 'flex-start' }}>
                   {attachment?.name || 'Upload Logo Image'}
-                  <input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setAttachment(event.target.files?.[0] || null)} />
+                  <input hidden type="file" accept={IMAGE_MIME_TYPES.join(',')} onChange={handleAttachmentChange} />
                 </Button>
                 {modal.row?.attachment_url && !attachment && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>

@@ -108,31 +108,25 @@ class UserAccessController extends Controller
         $access = AccessScope::payload($request->user());
 
         if (! $access['is_super_admin']) {
-            if ($access['country_ids']) {
-                $countries->whereIn('id', $access['country_ids']);
-                $states->whereIn('country_id', $access['country_ids']);
-                $districts->whereIn('country_id', $access['country_ids']);
+            $allowedAccess = $this->assignableAccessIds($request->user());
+
+            if ($allowedAccess['country_ids']) {
+                $countries->whereIn('id', $allowedAccess['country_ids']);
             }
 
-            if ($access['state_ids']) {
-                $states->whereIn('id', $access['state_ids']);
-                $districts->whereIn('state_id', $access['state_ids']);
+            if ($allowedAccess['state_ids']) {
+                $states->whereIn('id', $allowedAccess['state_ids']);
             }
 
-            if ($access['district_ids']) {
-                $districts->whereIn('id', $access['district_ids']);
-                $districtNames = MasterDistrict::query()->whereIn('id', $access['district_ids'])->pluck('name');
-                $offices->whereIn('district', $districtNames);
-            } elseif ($access['state_ids']) {
-                $stateNames = MasterState::query()->whereIn('id', $access['state_ids'])->pluck('name');
-                $offices->whereIn('state', $stateNames);
+            if ($allowedAccess['district_ids']) {
+                $districts->whereIn('id', $allowedAccess['district_ids']);
             }
 
-            if ($access['office_ids']) {
-                $offices->whereIn('ofc_id', $access['office_ids']);
+            if ($allowedAccess['office_ids']) {
+                $offices->whereIn('ofc_id', $allowedAccess['office_ids']);
             }
 
-            if (! $access['country_ids'] && ! $access['state_ids'] && ! $access['district_ids'] && ! $access['office_ids']) {
+            if (! $allowedAccess['country_ids'] && ! $allowedAccess['state_ids'] && ! $allowedAccess['district_ids'] && ! $allowedAccess['office_ids']) {
                 $countries->whereRaw('1 = 0');
                 $states->whereRaw('1 = 0');
                 $districts->whereRaw('1 = 0');
@@ -171,7 +165,7 @@ class UserAccessController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
-        $data = $request->validate([
+        return $request->validate([
             'user_code' => ['nullable', 'string', 'max:30', Rule::unique('users', 'user_code')->ignore($user?->id)],
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user?->id)],
@@ -208,8 +202,82 @@ class UserAccessController extends Controller
         $data['role'] = $user->role;
 
         $this->validateHierarchy($data);
+        $this->validateAssignableAccess($request->user(), $data);
 
         return $data;
+    }
+
+    private function validateAssignableAccess(User $actor, array $data): void
+    {
+        if ((int) $actor->role === 1) {
+            return;
+        }
+
+        $allowedAccess = $this->assignableAccessIds($actor);
+        $this->ensureSubset('country_ids', $data['country_ids'] ?? [], $allowedAccess['country_ids']);
+        $this->ensureSubset('state_ids', $data['state_ids'] ?? [], $allowedAccess['state_ids']);
+        $this->ensureSubset('district_ids', $data['district_ids'] ?? [], $allowedAccess['district_ids']);
+        $this->ensureSubset('office_ids', $data['office_ids'] ?? [], $allowedAccess['office_ids']);
+
+        $actorAccess = AccessScope::payload($actor);
+        $actorPermissions = AccessScope::normalizePermissions($actorAccess['permissions'] ?? []);
+        $requestedPermissions = AccessScope::normalizePermissions($data['permissions'] ?? []);
+
+        foreach ($requestedPermissions as $module => $actions) {
+            foreach ($actions as $action => $enabled) {
+                if ($enabled && empty($actorPermissions[$module][$action])) {
+                    throw ValidationException::withMessages([
+                        'permissions' => 'You can assign only permissions that are already assigned to you.',
+                    ]);
+                }
+            }
+        }
+    }
+
+    private function assignableAccessIds(User $actor): array
+    {
+        $access = AccessScope::payload($actor);
+        $countryIds = collect($access['country_ids'])->map(fn ($id) => (int) $id);
+        $stateIds = collect($access['state_ids'])->map(fn ($id) => (int) $id);
+        $districtIds = collect($access['district_ids'])->map(fn ($id) => (int) $id);
+        $officeIds = collect($access['office_ids'])->map(fn ($id) => (int) $id);
+
+        if ($districtIds->isNotEmpty()) {
+            $districts = MasterDistrict::query()->whereIn('id', $districtIds)->get(['id', 'country_id', 'state_id', 'name']);
+            $stateIds = $stateIds->merge($districts->pluck('state_id'));
+            $countryIds = $countryIds->merge($districts->pluck('country_id'));
+            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('district', $districts->pluck('name'))->pluck('ofc_id'));
+        }
+
+        if ($stateIds->isNotEmpty()) {
+            $states = MasterState::query()->whereIn('id', $stateIds)->get(['id', 'country_id', 'name']);
+            $countryIds = $countryIds->merge($states->pluck('country_id'));
+            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('state', $states->pluck('name'))->pluck('ofc_id'));
+            $districtIds = $districtIds->merge(MasterDistrict::query()->whereIn('state_id', $stateIds)->pluck('id'));
+        }
+
+        if ($countryIds->isNotEmpty()) {
+            $stateIds = $stateIds->merge(MasterState::query()->whereIn('country_id', $countryIds)->pluck('id'));
+        }
+
+        return [
+            'country_ids' => $countryIds->filter()->unique()->values()->all(),
+            'state_ids' => $stateIds->filter()->unique()->values()->all(),
+            'district_ids' => $districtIds->filter()->unique()->values()->all(),
+            'office_ids' => $officeIds->filter()->unique()->values()->all(),
+        ];
+    }
+
+    private function ensureSubset(string $field, array $requestedIds, array $allowedIds): void
+    {
+        $requested = collect($requestedIds)->map(fn ($id) => (int) $id)->filter()->unique();
+        $allowed = collect($allowedIds)->map(fn ($id) => (int) $id)->filter()->unique();
+
+        if ($requested->diff($allowed)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                $field => 'You can assign only access that is already assigned to you.',
+            ]);
+        }
     }
 
     private function validateHierarchy(array $data): void

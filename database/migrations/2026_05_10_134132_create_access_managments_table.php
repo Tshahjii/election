@@ -30,8 +30,8 @@ return new class extends Migration
             $table->tinyInteger('can_create')->default(0);
             $table->tinyInteger('can_edit')->default(0);
             $table->tinyInteger('can_delete')->default(0);
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
 
             $table->index(['ofc_id', 'ofc_code']);

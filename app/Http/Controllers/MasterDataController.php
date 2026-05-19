@@ -111,7 +111,7 @@ class MasterDataController extends Controller
         $config = $this->config($type);
         abort_unless(AccessScope::can($request->user(), $config['module'], 'edit'), 403, 'You do not have edit permission.');
 
-        $row = $this->findRow($config, $id);
+        $row = $this->findRow($config, $id, $request);
         $data = $this->validated($request, $type, $row);
         $data['updated_by'] = $request->user()->id;
         $data = $this->storeFile($request, $config, $data, $row);
@@ -124,12 +124,12 @@ class MasterDataController extends Controller
         ]);
     }
 
-    public function destroy(string $type, string $id): JsonResponse
+    public function destroy(Request $request, string $type, string $id): JsonResponse
     {
         $config = $this->config($type);
-        abort_unless(AccessScope::can(request()->user(), $config['module'], 'delete'), 403, 'You do not have delete permission.');
+        abort_unless(AccessScope::can($request->user(), $config['module'], 'delete'), 403, 'You do not have delete permission.');
 
-        $row = $this->findRow($config, $id);
+        $row = $this->findRow($config, $id, $request);
 
         if ($row->getAttribute('attachment_path')) {
             Storage::disk('public')->delete($row->getAttribute('attachment_path'));
@@ -145,20 +145,32 @@ class MasterDataController extends Controller
         $countries = MasterCountry::query()->where('status', 1);
         $states = MasterState::query()->where('status', 1);
 
-        $access = AccessScope::payload($request->user());
+        $user = $request->user();
+        $access = AccessScope::payload($user);
         if (! $access['is_super_admin']) {
-            if ($access['country_ids']) {
-                $countries->whereIn('id', $access['country_ids']);
-                $states->whereIn('country_id', $access['country_ids']);
-            }
+            if ((int) $user->role !== 2) {
+                $countries->where('created_by', $user->id);
+                $states->where('created_by', $user->id);
+            } else {
+                $countryIds = collect($access['country_ids'])->map(fn ($id) => (int) $id);
+                $stateIds = collect($access['state_ids'])->map(fn ($id) => (int) $id);
 
-            if ($access['state_ids']) {
-                $states->whereIn('id', $access['state_ids']);
-            }
+                if ($access['district_ids']) {
+                    $districts = MasterDistrict::query()->whereIn('id', $access['district_ids'])->get(['country_id', 'state_id']);
+                    $countryIds = $countryIds->merge($districts->pluck('country_id'));
+                    $stateIds = $stateIds->merge($districts->pluck('state_id'));
+                }
 
-            if (! $access['country_ids'] && ! $access['state_ids']) {
-                $countries->whereRaw('1 = 0');
-                $states->whereRaw('1 = 0');
+                if ($stateIds->isNotEmpty()) {
+                    $stateCountries = MasterState::query()->whereIn('id', $stateIds)->pluck('country_id');
+                    $countryIds = $countryIds->merge($stateCountries);
+                }
+
+                $countryIds = $countryIds->filter()->unique()->values();
+                $stateIds = $stateIds->filter()->unique()->values();
+
+                $countryIds->isNotEmpty() ? $countries->whereIn('id', $countryIds) : $countries->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $states->whereIn('id', $stateIds) : $states->whereRaw('1 = 0');
             }
         }
 
@@ -195,13 +207,14 @@ class MasterDataController extends Controller
             return;
         }
 
-        if ($type === 'countries' && $access['country_ids']) {
-            $query->whereIn('id', $access['country_ids']);
+        if ($type === 'states' && $access['state_ids']) {
+            $query->whereIn('id', $access['state_ids']);
             return;
         }
 
-        if ($type === 'states' && $access['state_ids']) {
-            $query->whereIn('id', $access['state_ids']);
+        if ($type === 'states' && $access['district_ids']) {
+            $stateIds = MasterDistrict::query()->whereIn('id', $access['district_ids'])->pluck('state_id');
+            $query->whereIn('id', $stateIds);
             return;
         }
 
@@ -317,12 +330,21 @@ class MasterDataController extends Controller
         return $data;
     }
 
-    private function findRow(array $config, string $id): Model
+    private function findRow(array $config, string $id, ?Request $request = null): Model
     {
         /** @var class-string<Model> $model */
         $model = $config['model'];
 
-        return $model::query()->where($config['primary_key'], $id)->firstOrFail();
+        $query = $model::query()->where($config['primary_key'], $id);
+
+        if ($request) {
+            $type = array_search($config, self::CONFIG, true);
+            if (is_string($type)) {
+                $this->applyUserScope($query, $request, $type);
+            }
+        }
+
+        return $query->firstOrFail();
     }
 
     private function payload(?Model $row, string $primaryKey): ?array

@@ -441,9 +441,9 @@ export default function UserAccessList() {
                     <Chip label={statusLabel(row.is_active)} size="small" color={Number(row.is_active) === 1 ? 'success' : 'error'} variant="outlined" />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" color="primary" aria-label="assign access" onClick={() => handleOpenAccess(row)}>
-                      <LockOpenOutlined fontSize="small" />
-                    </IconButton>
+                    <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => handleOpenAccess(row)} sx={{ mr: 0.75 }}>
+                      Access
+                    </Button>
                     <IconButton size="small" color="success" aria-label="edit user" onClick={() => handleOpenEdit(row)}>
                       <EditOutlined fontSize="small" />
                     </IconButton>
