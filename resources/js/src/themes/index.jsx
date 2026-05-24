@@ -14,8 +14,8 @@ import typography from './typography';
 // ==============================|| DEFAULT THEME - MAIN ||============================== //
 
 export default function ThemeCustomization({ children }) {
-  const { themeMode } = useAppPreferences();
-  const themePalette = useMemo(() => palette(themeMode), [themeMode]);
+  const { themeMode, accentColor } = useAppPreferences();
+  const themePalette = useMemo(() => palette(themeMode, accentColor), [themeMode, accentColor]);
 
   const themeDefault = createTheme({
     palette: themePalette

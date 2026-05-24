@@ -35,13 +35,32 @@ class UserSeeder extends Seeder
             'updated_by' => $superAdminId,
         ]);
 
+        // Seed a System Admin (state-scoped) user
+        $systemAdminId = $this->saveUser([
+            'user_code' => 'USR-1501',
+            'name' => 'System Admin',
+            'email' => 'system.admin@example.com',
+            'mobile' => '9343326000',
+            'designation' => 'System Admin',
+            'role' => 2,
+            'ofc_id' => $masterIds['ceo_office_id'],
+            'ofc_code' => 'CEO-CG',
+            'created_by' => $superAdminId,
+            'updated_by' => $superAdminId,
+        ]);
+
+        // Give System Admin state-scoped access only
+        $this->saveAccess($systemAdminId, $this->adminPermissions(), [
+            'state_ids' => [$masterIds['state_id']],
+        ], $superAdminId);
+
         $adminId = $this->saveUser([
             'user_code' => 'USR-2001',
             'name' => 'Raipur Admin',
             'email' => 'admin.raipur@example.com',
             'mobile' => '9343326001',
             'designation' => 'District Admin',
-            'role' => 2,
+            'role' => 3,
             'ofc_id' => $masterIds['raipur_office_id'],
             'ofc_code' => 'DEO-RP',
             'created_by' => $superAdminId,
@@ -54,7 +73,7 @@ class UserSeeder extends Seeder
             'email' => 'data.entry@example.com',
             'mobile' => '9343326002',
             'designation' => 'Data Entry Operator',
-            'role' => 3,
+            'role' => 4,
             'ofc_id' => $masterIds['raipur_office_id'],
             'ofc_code' => 'DEO-RP',
             'created_by' => $adminId,
@@ -67,7 +86,7 @@ class UserSeeder extends Seeder
             'email' => 'verifier@example.com',
             'mobile' => '9343326003',
             'designation' => 'Verifier',
-            'role' => 4,
+            'role' => 5,
             'ofc_id' => $masterIds['raipur_office_id'],
             'ofc_code' => 'DEO-RP',
             'created_by' => $adminId,
@@ -80,7 +99,7 @@ class UserSeeder extends Seeder
             'email' => 'report.viewer@example.com',
             'mobile' => '9343326004',
             'designation' => 'Report Viewer',
-            'role' => 6,
+            'role' => 7,
             'ofc_id' => $masterIds['durg_office_id'],
             'ofc_code' => 'DEO-DG',
             'district' => 'Durg',
@@ -141,7 +160,7 @@ class UserSeeder extends Seeder
         DB::table('master_states')->updateOrInsert(
             ['country_id' => $countryId, 'state_code' => 'CG'],
             [
-                'name' => 'Chhattisgarh',
+                'name' => 'छत्तीसगढ़',
                 'status' => 1,
                 'created_by' => $actorId,
                 'updated_by' => $actorId,

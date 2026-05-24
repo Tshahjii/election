@@ -31,7 +31,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->tinyInteger('role')
                 ->default(3)
-                ->comment('1 = Super Admin, 2 = Admin, 3 = Data Entry, 4 = Verifier, 5 = Booth Officer, 6 = Report Viewer');
+                ->comment('1 = Super Admin, 2 = System Admin, 3 = Admin, 4 = Data Entry, 5 = Verifier, 6 = Booth Officer, 7 = Report Viewer');
             $table->tinyInteger('is_active')->default(1)->comment('1 = Active, 0 = Inactive');
             $table->timestamp('last_active')->nullable();
             $table->string('last_active_ip', 45)->nullable();

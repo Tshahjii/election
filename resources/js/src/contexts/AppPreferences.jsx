@@ -159,6 +159,8 @@ const getStoredValue = (key, fallback) => {
 export function AppPreferencesProvider({ children }) {
   const [language, setLanguageState] = useState(() => getStoredValue('app_language', 'en'));
   const [themeMode, setThemeModeState] = useState(() => getStoredValue('app_theme_mode', 'light'));
+  const [accentColor, setAccentColorState] = useState(() => getStoredValue('app_accent_color', 'blue'));
+  const [layoutDensity, setLayoutDensityState] = useState(() => getStoredValue('app_layout_density', 'comfortable'));
 
   const setLanguage = (nextLanguage) => {
     setLanguageState(nextLanguage);
@@ -170,6 +172,16 @@ export function AppPreferencesProvider({ children }) {
     localStorage.setItem('app_theme_mode', nextThemeMode);
   };
 
+  const setAccentColor = (nextAccentColor) => {
+    setAccentColorState(nextAccentColor);
+    localStorage.setItem('app_accent_color', nextAccentColor);
+  };
+
+  const setLayoutDensity = (nextLayoutDensity) => {
+    setLayoutDensityState(nextLayoutDensity);
+    localStorage.setItem('app_layout_density', nextLayoutDensity);
+  };
+
   const t = (key) => translations[language]?.[key] || translations.en[key] || key;
 
   const value = useMemo(
@@ -178,9 +190,13 @@ export function AppPreferencesProvider({ children }) {
       setLanguage,
       t,
       themeMode,
-      setThemeMode
+      setThemeMode,
+      accentColor,
+      setAccentColor,
+      layoutDensity,
+      setLayoutDensity
     }),
-    [language, themeMode]
+    [language, themeMode, accentColor, layoutDensity]
   );
 
   return <AppPreferencesContext.Provider value={value}>{children}</AppPreferencesContext.Provider>;

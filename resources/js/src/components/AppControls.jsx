@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 
 // project imports
+import AppCustomizer from './AppCustomizer';
 import { useAppPreferences } from 'contexts/AppPreferences';
 
 // assets
@@ -80,6 +81,7 @@ export default function AppControls({ showTheme = false, inverse = false }) {
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
       <LanguageToggle inverse={inverse} />
       {showTheme && <ThemeModeToggle />}
+      <AppCustomizer inverse={inverse} />
     </Stack>
   );
 }

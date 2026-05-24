@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 
 // material-ui
 import Box from '@mui/material/Box';
@@ -30,6 +31,7 @@ import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
 import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
+import { fetchAuthUser } from 'store/slices/authSlice';
 import { hasPermission } from 'utils/access';
 
 // assets
@@ -149,11 +151,13 @@ function getApiError(error) {
 
 export default function MasterData({ masterKey = 'countries' }) {
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
   const { user } = useSelector((state) => state.auth);
   const [rows, setRows] = useState([]);
   const [options, setOptions] = useState({ countries: [], states: [] });
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ search: '', status: '' });
+  const [filters, setFilters] = useState({ search: searchQuery, status: '' });
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -220,11 +224,30 @@ export default function MasterData({ masterKey = 'countries' }) {
   }, [master.key, filters.search, filters.status, page, rowsPerPage]);
 
   useEffect(() => {
-    setFilters({ search: '', status: '' });
+    setFilters({ search: searchQuery, status: '' });
     setPage(1);
     setRows([]);
     setTotalRows(0);
   }, [master.key]);
+
+  useEffect(() => {
+    setFilters((current) => (current.search === searchQuery ? current : { ...current, search: searchQuery }));
+    setPage(1);
+  }, [searchQuery]);
+
+  const handleSearchFilterChange = (event) => {
+    const value = event.target.value;
+    setFilters((current) => ({ ...current, search: value }));
+    setPage(1);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set('search', value);
+    } else {
+      nextParams.delete('search');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const handleOpenCreate = () => {
     setForm(defaultForm);
@@ -281,6 +304,10 @@ export default function MasterData({ masterKey = 'countries' }) {
       handleCloseModal();
       await fetchOptions();
       await fetchRows();
+      // If states were updated, refresh authenticated user so headers reflect new state logo immediately
+      if (master.key === 'states' && modal.mode === 'edit') {
+        dispatch(fetchAuthUser()).catch(() => {});
+      }
     } catch (error) {
       dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
     }
@@ -395,10 +422,7 @@ export default function MasterData({ masterKey = 'countries' }) {
               fullWidth
               label={`Search ${master.label}`}
               value={filters.search}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, search: event.target.value }));
-                setPage(1);
-              }}
+              onChange={handleSearchFilterChange}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }}
             />
           </Grid>

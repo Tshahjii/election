@@ -1,25 +1,57 @@
 // ==============================|| DEFAULT - PALETTE ||============================== //
 
-export default function palette(mode) {
+const accents = {
+  blue: {
+    lighter: '#dbe8f5',
+    light: '#4f78a0',
+    main: '#24527a',
+    dark: '#153b5c',
+    darker: '#0e2940',
+    contrast: '#ffffff',
+    secondary: '#3f6f58'
+  },
+  green: {
+    lighter: '#e0eee7',
+    light: '#5f8d76',
+    main: '#2f6b4f',
+    dark: '#234d3a',
+    darker: '#173326',
+    contrast: '#ffffff',
+    secondary: '#7a5a2e'
+  },
+  maroon: {
+    lighter: '#eee2e4',
+    light: '#8f6670',
+    main: '#70424d',
+    dark: '#4d2c35',
+    darker: '#321b22',
+    contrast: '#ffffff',
+    secondary: '#315f66'
+  }
+};
+
+export default function palette(mode, accentColor = 'blue') {
   const isDark = mode === 'dark';
+  const accent = accents[accentColor] || accents.blue;
   const lightPalette = {
     common: {
       black: '#232b38'
     },
     primary: {
-      lighter: '#cbe2ff',
-      light: '#4f8ef5',
-      main: '#3366ff',
-      dark: '#0043a9',
-      darker: '#002d75',
-      100: '#4c6fff'
+      lighter: accent.lighter,
+      light: accent.light,
+      main: accent.main,
+      dark: accent.dark,
+      darker: accent.darker,
+      contrastText: accent.contrast,
+      100: accent.light
     },
     secondary: {
-      lighter: '#d3d8db',
-      light: '#727b80',
-      main: '#5d646e',
-      dark: '#272f33',
-      darker: '#161a1c'
+      lighter: '#d9f3f0',
+      light: '#5fc7bd',
+      main: accent.secondary,
+      dark: '#134e4a',
+      darker: '#0f2f2d'
     },
     error: {
       lighter: '#fde4e2',
@@ -63,11 +95,11 @@ export default function palette(mode) {
     divider: '#dcdcdc',
     background: {
       paper: '#ffffff',
-      default: '#f0f2f8'
+      default: '#f4f6f8'
     },
     menu: {
-      hover: '#cbe2ff',
-      selected: '#3366ff'
+      hover: accent.lighter,
+      selected: accent.main
     }
   };
 

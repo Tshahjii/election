@@ -35,9 +35,9 @@ export default function MainDrawer({ window }) {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
               color: theme.palette.common.white,
-              backgroundColor: '#103c5c',
+              backgroundColor: theme.palette.primary.dark,
               backgroundImage: 'none',
-              boxShadow: `0 0.15rem 1.75rem 0 ${alpha(theme.palette.common.black, 0.15)}`,
+              boxShadow: `0 0.15rem 1.25rem 0 ${alpha(theme.palette.common.black, 0.12)}`,
               borderRight: 'none'
             })
           }

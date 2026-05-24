@@ -19,6 +19,7 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware('jwt')->prefix('masters')->group(function () {
     Route::get('options', [MasterDataController::class, 'options']);
+    Route::get('search', [MasterDataController::class, 'search']);
     Route::get('{type}', [MasterDataController::class, 'index']);
     Route::post('{type}', [MasterDataController::class, 'store']);
     Route::post('{type}/{id}', [MasterDataController::class, 'update']);

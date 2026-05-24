@@ -12,9 +12,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // third-party
 import ReactApexChart from 'react-apexcharts';
+import { useSelector } from 'react-redux';
 
 // project imports
 import MainCard from 'components/cards/MainCard';
@@ -105,7 +107,11 @@ const voterPieChart = {
 // ==============================|| DASHBOARD DEFAULT ||============================== //
 
 export default function Default() {
+  const theme = useTheme();
+  const user = useSelector((state) => state.auth.user);
   const { t } = useAppPreferences();
+  const stateName = user?.state_info?.name || user?.office_info?.state || user?.state || 'State';
+  const officeName = user?.office_info?.office_name || 'Election Office';
 
   return (
     <Stack sx={{ gap: GRID_SPACING }}>
@@ -116,8 +122,9 @@ export default function Default() {
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
-          bgcolor: '#103c5c',
-          backgroundImage: 'linear-gradient(135deg, #103c5c 0%, #1f5f75 55%, #276749 100%)'
+          bgcolor: 'primary.dark',
+          backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.darker} 0%, ${theme.palette.primary.dark} 48%, ${theme.palette.secondary.main} 100%)`,
+          boxShadow: `0 18px 48px ${alpha(theme.palette.primary.dark, 0.22)}`
         }}
       >
         <Box
@@ -134,7 +141,7 @@ export default function Default() {
           sx={{ position: 'relative', gap: 3, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between' }}
         >
           <Stack sx={{ gap: 1.5, maxWidth: 650 }}>
-            <Chip label={t('dashboard.liveControlRoom')} sx={{ width: 'fit-content', color: '#103c5c', bgcolor: 'common.white', fontWeight: 700 }} />
+            <Chip label={`${stateName} - ${officeName}`} sx={{ width: 'fit-content', color: 'primary.dark', bgcolor: 'common.white', fontWeight: 700 }} />
             <Typography variant="h1" sx={{ color: 'common.white' }}>
               {t('dashboard.title')}
             </Typography>
@@ -148,7 +155,8 @@ export default function Default() {
               width: { xs: 64, sm: 88 },
               height: { xs: 64, sm: 88 },
               bgcolor: 'rgba(255,255,255,0.14)',
-              border: '1px solid rgba(255,255,255,0.24)'
+              border: '1px solid rgba(255,255,255,0.24)',
+              boxShadow: 'inset 0 0 24px rgba(255,255,255,0.12)'
             }}
           >
             <HowToVoteOutlined sx={{ fontSize: { xs: 36, sm: 48 } }} />
@@ -161,7 +169,15 @@ export default function Default() {
           const Icon = item.icon;
           return (
             <Grid key={item.title} size={{ xs: 12, sm: 6, lg: 3 }}>
-              <MainCard sx={{ height: 1, borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
+              <MainCard
+                sx={{
+                  height: 1,
+                  borderRadius: 2,
+                  border: `1px solid ${alpha(item.color, 0.16)}`,
+                  boxShadow: `0 12px 34px ${alpha(item.color, 0.1)}`,
+                  background: `linear-gradient(180deg, ${alpha(item.color, 0.08)} 0%, ${theme.palette.background.paper} 58%)`
+                }}
+              >
                 <Stack sx={{ gap: 2 }}>
                   <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
                     <Typography variant="subtitle2" color="text.secondary">
@@ -186,7 +202,7 @@ export default function Default() {
         <Grid size={{ xs: 12, lg: 8 }}>
           <MainCard
             title={t('dashboard.turnoutGraph')}
-            sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+            sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >
             <Box sx={{ minHeight: { xs: 260, md: 330 } }}>
@@ -198,7 +214,7 @@ export default function Default() {
         <Grid size={{ xs: 12, lg: 4 }}>
           <MainCard
             title={t('dashboard.voterPieChart')}
-            sx={{ height: 1, borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+            sx={{ height: 1, borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >
             <Box sx={{ minHeight: { xs: 280, md: 320 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -210,7 +226,7 @@ export default function Default() {
         <Grid size={{ xs: 12, lg: 8 }}>
           <MainCard
             title={t('dashboard.monitoring')}
-            sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+            sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >
             <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -229,7 +245,7 @@ export default function Default() {
                     <TableRow key={row.name} hover>
                       <TableCell>
                         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-                          <Avatar sx={{ width: 34, height: 34, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
+                          <Avatar sx={{ width: 34, height: 34, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
                             <BallotOutlined fontSize="small" />
                           </Avatar>
                           <Typography variant="subtitle2">{row.name}</Typography>
@@ -250,7 +266,7 @@ export default function Default() {
                           <LinearProgress
                             variant="determinate"
                             value={row.turnout}
-                            sx={{ height: 7, borderRadius: 5, bgcolor: 'rgba(16,60,92,0.08)', '& .MuiLinearProgress-bar': { bgcolor: '#276749' } }}
+                            sx={{ height: 7, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.08), '& .MuiLinearProgress-bar': { bgcolor: 'secondary.main' } }}
                           />
                         </Stack>
                       </TableCell>
@@ -319,7 +335,7 @@ export default function Default() {
           <Stack sx={{ gap: GRID_SPACING }}>
             <MainCard
               title={t('dashboard.operationsReadiness')}
-              sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+              sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
               headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
             >
               <Stack sx={{ gap: 2.25 }}>
@@ -341,7 +357,7 @@ export default function Default() {
 
             <MainCard
               title={t('dashboard.priorityTasks')}
-              sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+              sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
               headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
             >
               <Stack sx={{ gap: 1.5 }}>

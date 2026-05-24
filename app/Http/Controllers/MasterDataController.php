@@ -86,6 +86,65 @@ class MasterDataController extends Controller
         return response()->json($rows);
     }
 
+    public function search(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->query('q', ''));
+
+        if ($term === '') {
+            return response()->json(['data' => []]);
+        }
+
+        $labels = [
+            'countries' => ['group' => 'Countries', 'singular' => 'Country', 'title' => 'name'],
+            'states' => ['group' => 'States', 'singular' => 'State', 'title' => 'name'],
+            'districts' => ['group' => 'Districts', 'singular' => 'District', 'title' => 'name'],
+            'offices' => ['group' => 'Offices', 'singular' => 'Office', 'title' => 'office_name'],
+        ];
+
+        $results = collect();
+
+        foreach (self::CONFIG as $type => $config) {
+            if (! AccessScope::can($request->user(), $config['module'], 'read')) {
+                continue;
+            }
+
+            /** @var class-string<Model> $model */
+            $model = $config['model'];
+            $query = $model::query();
+            $this->applyUserScope($query, $request, $type);
+            $query->where(function (Builder $builder) use ($config, $term): void {
+                foreach ($config['search'] as $column) {
+                    $builder->orWhere($column, 'like', "%{$term}%");
+                }
+            });
+
+            $rows = $query
+                ->orderBy($config['primary_key'])
+                ->limit(4)
+                ->get();
+
+            foreach ($rows as $row) {
+                $label = $labels[$type];
+                $matchedColumn = collect($config['search'])->first(function (string $column) use ($row, $term): bool {
+                    return str_contains(strtolower((string) $row->getAttribute($column)), strtolower($term));
+                }) ?? $config['search'][0];
+                $title = (string) ($row->getAttribute($label['title']) ?: $row->getAttribute($matchedColumn) ?: $label['singular']);
+
+                $results->push([
+                    'id' => "master-{$type}-".$row->getAttribute($config['primary_key']),
+                    'title' => $title,
+                    'group' => $label['group'],
+                    'url' => "/admin/masters/{$type}?search=".urlencode($term),
+                    'description' => "{$label['singular']} record matched ".str_replace('_', ' ', $matchedColumn).'.',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'data' => $results->take(12)->values(),
+        ]);
+    }
+
     public function store(Request $request, string $type): JsonResponse
     {
         $config = $this->config($type);
@@ -132,7 +191,7 @@ class MasterDataController extends Controller
         $row = $this->findRow($config, $id, $request);
 
         if ($row->getAttribute('attachment_path')) {
-            Storage::disk('public')->delete($row->getAttribute('attachment_path'));
+            $this->deleteUploadedFile($row->getAttribute('attachment_path'));
         }
 
         $row->delete();
@@ -322,12 +381,22 @@ class MasterDataController extends Controller
         }
 
         if ($row?->getAttribute('attachment_path')) {
-            Storage::disk('public')->delete($row->getAttribute('attachment_path'));
+            $this->deleteUploadedFile($row->getAttribute('attachment_path'));
         }
 
-        $data['attachment_path'] = $request->file('attachment')->store($config['file_dir'], 'public');
+        $data['attachment_path'] = $request->file('attachment')->store($config['file_dir'], 'uploads');
 
         return $data;
+    }
+
+    private function deleteUploadedFile(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        Storage::disk('uploads')->delete($this->normalizeUploadPath($path));
+        Storage::disk('public')->delete(str_replace('storage/', '', $path));
     }
 
     private function findRow(array $config, string $id, ?Request $request = null): Model
@@ -357,8 +426,22 @@ class MasterDataController extends Controller
         $path = $row->getAttribute('attachment_path');
 
         $data['key'] = $row->getAttribute($primaryKey);
-        $data['attachment_url'] = $path ? Storage::disk('public')->url($path) : null;
+        $data['attachment_url'] = $path ? $this->uploadedUrl($path) : null;
 
         return $data;
+    }
+
+    private function uploadedUrl(string $path): string
+    {
+        return Storage::disk('uploads')->url($this->normalizeUploadPath($path));
+    }
+
+    private function normalizeUploadPath(string $path): string
+    {
+        if (str_contains($path, '/storage/')) {
+            $path = substr($path, strpos($path, '/storage/') + strlen('/storage/'));
+        }
+
+        return ltrim(str_replace(['/storage/', 'storage/'], '', $path), '/');
     }
 }

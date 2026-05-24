@@ -12,6 +12,7 @@ import Drawer from './Drawer';
 import Header from './Header';
 import Breadcrumbs from 'components/Breadcrumbs';
 import ChangeDefaultPasswordDialog from 'components/auth/ChangeDefaultPasswordDialog';
+import { useAppPreferences } from 'contexts/AppPreferences';
 
 import { DRAWER_WIDTH } from 'config';
 import { handlerDrawerOpen, useGetMenuMaster } from 'states/menu';
@@ -22,7 +23,9 @@ export default function MainLayout() {
   const upLG = useMediaQuery((theme) => theme.breakpoints.up('lg'));
 
   const { menuMaster } = useGetMenuMaster();
+  const { layoutDensity } = useAppPreferences();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const compact = layoutDensity === 'compact';
 
   useEffect(() => {
     handlerDrawerOpen(upLG);
@@ -40,7 +43,7 @@ export default function MainLayout() {
         component="main"
         sx={{
           width: { xs: 1, lg: drawerOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : 1 },
-          p: { xs: 1.5, sm: 2, md: 3 },
+          p: compact ? { xs: 1, sm: 1.5, md: 2 } : { xs: 1.5, sm: 2, md: 3 },
           ml: { xs: 0, lg: 'auto' },
           minHeight: '100vh',
           bgcolor: 'background.default'

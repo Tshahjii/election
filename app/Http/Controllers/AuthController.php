@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CheckOtp;
+use App\Models\MasterOffice;
+use App\Models\MasterState;
 use App\Models\User;
 use App\Services\JwtService;
 use App\Services\TurnstileService;
@@ -11,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -220,6 +223,23 @@ class AuthController extends Controller
     {
         $data = $user->toArray();
         $user->loadMissing('accessManagment');
+        $access = AccessScope::payload($user);
+        $office = MasterOffice::query()
+            ->where('ofc_id', $user->ofc_id)
+            ->first(['ofc_id', 'office_code', 'office_name', 'company_name', 'district', 'state', 'country']);
+        $stateId = collect($access['state_ids'] ?? [])->first();
+        $stateName = $office?->state ?: $user->state;
+        $officeCodeParts = explode('-', (string) ($office?->office_code ?: $user->ofc_code));
+        $stateCode = count($officeCodeParts) > 1 ? end($officeCodeParts) : null;
+        $state = ($stateId || $stateName || $stateCode) ? MasterState::query()
+            ->when($stateId, fn ($query) => $query->where('id', $stateId))
+            ->when(! $stateId && ($stateName || $stateCode), function ($query) use ($stateName, $stateCode): void {
+                $query->where(function ($builder) use ($stateName): void {
+                    $builder->where('name', $stateName)
+                        ->orWhere('state_code', $stateName);
+                })->when($stateCode, fn ($builder) => $builder->orWhere('state_code', $stateCode));
+            })
+            ->first(['id', 'name', 'state_code', 'state_logo', 'attachment_path']) : null;
         $isDefaultPassword = Hash::check('Admin@123', $user->password);
         $passwordChangedAt = $user->password_changed_at ?: $user->created_at;
         $isPasswordExpired = ! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7));
@@ -227,9 +247,43 @@ class AuthController extends Controller
         $data['must_change_password'] = $isDefaultPassword || $isPasswordExpired;
         $data['password_change_reason'] = $isDefaultPassword ? 'default' : ($isPasswordExpired ? 'expired' : null);
         $data['password_expires_at'] = $passwordChangedAt ? $passwordChangedAt->copy()->addDays(7)->toISOString() : null;
-        $data['access'] = AccessScope::payload($user);
+        $data['access'] = $access;
+        $data['office_info'] = $office ? [
+            'ofc_id' => $office->ofc_id,
+            'office_code' => $office->office_code,
+            'office_name' => $office->office_name,
+            'company_name' => $office->company_name,
+            'district' => $office->district,
+            'state' => $office->state,
+            'country' => $office->country,
+        ] : null;
+        $data['state_info'] = $state ? [
+            'id' => $state->id,
+            'name' => $state->name,
+            'state_code' => $state->state_code,
+            'logo_url' => $this->assetUrl($state->state_logo ?: $state->attachment_path),
+        ] : null;
 
         return $data;
+    }
+
+    private function assetUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_contains($path, '/storage/')) {
+            $path = substr($path, strpos($path, '/storage/') + strlen('/storage/'));
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $normalizedPath = ltrim(str_replace(['/storage/', 'storage/'], '', $path), '/');
+
+        return Storage::disk('uploads')->url($normalizedPath);
     }
 
     private function markInactiveIfLoginExpired(User $user): void

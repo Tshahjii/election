@@ -61,7 +61,7 @@ const baseForm = {
   state: '',
   country: 'India',
   address: '',
-  role: 2,
+  role: 3,
   is_active: 1
 };
 
@@ -311,6 +311,20 @@ export default function UserAccessList() {
     event.preventDefault();
     if (!accessModal.row) return;
 
+    // Validate role-specific access rules before submitting
+    const roleNum = Number(accessModal.row?.role);
+    if (roleNum === 2) {
+      // System Admin must have at least one state assigned
+      if (!accessForm.state_ids || accessForm.state_ids.length === 0) {
+        dispatch(showNotification({ message: 'Please assign at least one State for System Admin.', severity: 'error' }));
+        return;
+      }
+      // Ensure other scopes are cleared for state-scoped role
+      accessForm.country_ids = [];
+      accessForm.district_ids = [];
+      accessForm.office_ids = [];
+    }
+
     try {
       await apiClient.put(`/users/${accessModal.row.id}/access`, accessForm);
       dispatch(showNotification({ message: 'Access updated successfully.' }));
@@ -511,31 +525,55 @@ export default function UserAccessList() {
           </DialogTitle>
           <DialogContent dividers>
             <Grid container spacing={2} sx={{ pt: 0.5 }}>
-              {Number(accessModal.row?.role) !== 1 && (
-                <>
-                  <Grid size={{ xs: 12, md: 4 }}><DraggableList title="Countries" type="country" items={availableCountries} /></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}><DraggableList title="States" type="state" items={availableStates} /></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    {accessForm.state_ids.length ? (
-                      <DraggableList title="Districts" type="district" items={availableDistricts} />
-                    ) : (
-                      <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Districts
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Select State Access first.
-                        </Typography>
-                      </Box>
-                    )}
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="Country Access" selected={accessForm.country_ids} items={options.countries} onDropItem={(data) => handleDropAccess('country', data)} onRemove={(id) => removeAccess('country_ids', id)} /></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} /></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="District Access" selected={accessForm.district_ids} items={options.districts} onDropItem={(data) => handleDropAccess('district', data)} onRemove={(id) => removeAccess('district_ids', id)} /></Grid>
-                  <Grid size={12}><DraggableList title="Offices" type="office" items={availableOffices} /></Grid>
-                  <Grid size={12}><AccessDropZone title="Office Access" selected={accessForm.office_ids} items={options.offices} onDropItem={(data) => handleDropAccess('office', data)} onRemove={(id) => removeAccess('office_ids', id)} /></Grid>
-                </>
-              )}
+              {Number(accessModal.row?.role) !== 1 && (() => {
+                const roleNum = Number(accessModal.row?.role);
+                // System Admin (role 2) should be state-scoped only
+                if (roleNum === 2) {
+                  return (
+                    <>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                            Note
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            System Admin is state-scoped. Please assign one or more states only.
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <Grid size={{ xs: 12, md: 4 }}><DraggableList title="Countries" type="country" items={availableCountries} /></Grid>
+                    <Grid size={{ xs: 12, md: 4 }}><DraggableList title="States" type="state" items={availableStates} /></Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      {accessForm.state_ids.length ? (
+                        <DraggableList title="Districts" type="district" items={availableDistricts} />
+                      ) : (
+                        <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                            Districts
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Select State Access first.
+                          </Typography>
+                        </Box>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="Country Access" selected={accessForm.country_ids} items={options.countries} onDropItem={(data) => handleDropAccess('country', data)} onRemove={(id) => removeAccess('country_ids', id)} /></Grid>
+                    <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} /></Grid>
+                    <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="District Access" selected={accessForm.district_ids} items={options.districts} onDropItem={(data) => handleDropAccess('district', data)} onRemove={(id) => removeAccess('district_ids', id)} /></Grid>
+                    <Grid size={12}><DraggableList title="Offices" type="office" items={availableOffices} /></Grid>
+                    <Grid size={12}><AccessDropZone title="Office Access" selected={accessForm.office_ids} items={options.offices} onDropItem={(data) => handleDropAccess('office', data)} onRemove={(id) => removeAccess('office_ids', id)} /></Grid>
+                  </>
+                );
+              })()}
 
               <Grid size={12}>
                 <MainCard title="Permissions" headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }}>

@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import Loadable from 'components/Loadable';
 import ProtectedRoute from 'components/auth/ProtectedRoute';
 import MainLayout from 'layouts/MainLayout';
+import RouteError from 'components/RouteError';
 
 // pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/default')));
@@ -25,6 +26,7 @@ const MainRoutes = {
       <MainLayout />
     </ProtectedRoute>
   ),
+  errorElement: <RouteError />,
   children: [
     {
       path: 'dashboard',
