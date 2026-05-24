@@ -13,7 +13,7 @@ import { handlerDrawerOpen, useGetMenuMaster } from 'states/menu';
 
 // ==============================|| MAIN LAYOUT - DRAWER ||============================== //
 
-export default function MainDrawer({ window }) {
+export default function MainDrawer({ window }: any = {}) {
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
 
   const { menuMaster } = useGetMenuMaster();

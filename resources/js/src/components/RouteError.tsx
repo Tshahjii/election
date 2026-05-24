@@ -3,9 +3,10 @@ import { Box, Button, Container, Typography } from '@mui/material';
 
 export default function RouteError() {
   const error = useRouteError();
+  const routeError = error as any;
   const message = isRouteErrorResponse(error)
     ? `${error.status} ${error.statusText}`
-    : error?.message || 'Unable to load this page. Please try again.';
+    : routeError?.message || 'Unable to load this page. Please try again.';
 
   return (
     <Container maxWidth="md" sx={{ py: 8 }}>

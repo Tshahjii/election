@@ -15,11 +15,21 @@ class MasterOffice extends Model
         'office_type',
         'ofc_parent_id',
         'status',
-        'district',
-        'state',
-        'country',
+        'country_id',
+        'state_id',
+        'district_id',
         'attachment_path',
         'created_by',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'country_id' => 'integer',
+        'state_id' => 'integer',
+        'district_id' => 'integer',
+        'ofc_id' => 'integer',
+        'ofc_parent_id' => 'integer',
+        'office_type' => 'integer',
+        'status' => 'integer',
     ];
 }

@@ -27,7 +27,7 @@ function MainCard({
   sx = {},
   ref,
   ...others
-}) {
+}: any) {
   const theme = useTheme();
 
   const cardColors = useMemo(

@@ -16,7 +16,7 @@ export default function GlobalSnackbar() {
   return (
     <Snackbar open={open} autoHideDuration={3500} onClose={handleClose} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
       <Alert
-        onClose={handleClose}
+        onClose={() => handleClose(null, undefined)}
         severity={severity}
         variant="filled"
         sx={{ width: '100%', color: 'common.white', '& .MuiAlert-icon, & .MuiAlert-action': { color: 'common.white' } }}

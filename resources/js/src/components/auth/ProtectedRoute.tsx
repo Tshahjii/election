@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchAuthUser } from 'store/slices/authSlice';
 import { hasPermission } from 'utils/access';
 
-export default function ProtectedRoute({ children, permission }) {
+export default function ProtectedRoute({ children, permission = '' }) {
   const dispatch = useDispatch();
   const location = useLocation();
   const { isAuthenticated, token, user } = useSelector((state) => state.auth);

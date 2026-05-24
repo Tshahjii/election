@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CheckOtp;
+use App\Models\MasterCountry;
+use App\Models\MasterDistrict;
 use App\Models\MasterOffice;
 use App\Models\MasterState;
 use App\Models\User;
@@ -226,20 +228,16 @@ class AuthController extends Controller
         $access = AccessScope::payload($user);
         $office = MasterOffice::query()
             ->where('ofc_id', $user->ofc_id)
-            ->first(['ofc_id', 'office_code', 'office_name', 'company_name', 'district', 'state', 'country']);
-        $stateId = collect($access['state_ids'] ?? [])->first();
-        $stateName = $office?->state ?: $user->state;
+            ->first(['ofc_id', 'office_code', 'office_name', 'company_name', 'country_id', 'state_id', 'district_id']);
+        $stateId = $user->state_id ?: $office?->state_id ?: collect($access['state_ids'] ?? [])->first();
         $officeCodeParts = explode('-', (string) ($office?->office_code ?: $user->ofc_code));
         $stateCode = count($officeCodeParts) > 1 ? end($officeCodeParts) : null;
-        $state = ($stateId || $stateName || $stateCode) ? MasterState::query()
+        $state = ($stateId || $stateCode) ? MasterState::query()
             ->when($stateId, fn ($query) => $query->where('id', $stateId))
-            ->when(! $stateId && ($stateName || $stateCode), function ($query) use ($stateName, $stateCode): void {
-                $query->where(function ($builder) use ($stateName): void {
-                    $builder->where('name', $stateName)
-                        ->orWhere('state_code', $stateName);
-                })->when($stateCode, fn ($builder) => $builder->orWhere('state_code', $stateCode));
-            })
+            ->when(! $stateId && $stateCode, fn ($query) => $query->where('state_code', $stateCode))
             ->first(['id', 'name', 'state_code', 'state_logo', 'attachment_path']) : null;
+        $country = MasterCountry::query()->whereKey($user->country_id ?: $office?->country_id)->first(['id', 'name']);
+        $district = MasterDistrict::query()->whereKey($user->district_id ?: $office?->district_id)->first(['id', 'name']);
         $isDefaultPassword = Hash::check('Admin@123', $user->password);
         $passwordChangedAt = $user->password_changed_at ?: $user->created_at;
         $isPasswordExpired = ! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7));
@@ -253,15 +251,26 @@ class AuthController extends Controller
             'office_code' => $office->office_code,
             'office_name' => $office->office_name,
             'company_name' => $office->company_name,
-            'district' => $office->district,
-            'state' => $office->state,
-            'country' => $office->country,
+            'district_id' => $office->district_id,
+            'district' => $district?->name,
+            'state_id' => $office->state_id,
+            'state' => $state?->name,
+            'country_id' => $office->country_id,
+            'country' => $country?->name,
+        ] : null;
+        $data['country_info'] = $country ? [
+            'id' => $country->id,
+            'name' => $country->name,
         ] : null;
         $data['state_info'] = $state ? [
             'id' => $state->id,
             'name' => $state->name,
             'state_code' => $state->state_code,
             'logo_url' => $this->assetUrl($state->state_logo ?: $state->attachment_path),
+        ] : null;
+        $data['district_info'] = $district ? [
+            'id' => $district->id,
+            'name' => $district->name,
         ] : null;
 
         return $data;

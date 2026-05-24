@@ -43,7 +43,7 @@ class MasterDataController extends Controller
             'model' => MasterOffice::class,
             'primary_key' => 'ofc_id',
             'module' => 'masters.offices',
-            'search' => ['office_code', 'office_name', 'company_name', 'district', 'state', 'country'],
+            'search' => ['office_code', 'office_name', 'company_name'],
             'file_dir' => 'masters/offices',
         ],
     ];
@@ -203,6 +203,7 @@ class MasterDataController extends Controller
     {
         $countries = MasterCountry::query()->where('status', 1);
         $states = MasterState::query()->where('status', 1);
+        $districts = MasterDistrict::query()->where('status', 1);
 
         $user = $request->user();
         $access = AccessScope::payload($user);
@@ -215,9 +216,9 @@ class MasterDataController extends Controller
                 $stateIds = collect($access['state_ids'])->map(fn ($id) => (int) $id);
 
                 if ($access['district_ids']) {
-                    $districts = MasterDistrict::query()->whereIn('id', $access['district_ids'])->get(['country_id', 'state_id']);
-                    $countryIds = $countryIds->merge($districts->pluck('country_id'));
-                    $stateIds = $stateIds->merge($districts->pluck('state_id'));
+                    $accessDistricts = MasterDistrict::query()->whereIn('id', $access['district_ids'])->get(['country_id', 'state_id']);
+                    $countryIds = $countryIds->merge($accessDistricts->pluck('country_id'));
+                    $stateIds = $stateIds->merge($accessDistricts->pluck('state_id'));
                 }
 
                 if ($stateIds->isNotEmpty()) {
@@ -230,12 +231,14 @@ class MasterDataController extends Controller
 
                 $countryIds->isNotEmpty() ? $countries->whereIn('id', $countryIds) : $countries->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $states->whereIn('id', $stateIds) : $states->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $districts->whereIn('state_id', $stateIds) : $districts->whereRaw('1 = 0');
             }
         }
 
         return response()->json([
             'countries' => $countries->orderBy('name')->get(['id', 'name']),
             'states' => $states->orderBy('name')->get(['id', 'country_id', 'name']),
+            'districts' => $districts->orderBy('name')->get(['id', 'country_id', 'state_id', 'name']),
         ]);
     }
 
@@ -295,12 +298,10 @@ class MasterDataController extends Controller
                 $query->whereIn('ofc_id', $access['office_ids']);
                 return;
             } elseif ($access['district_ids']) {
-                $districtNames = MasterDistrict::query()->whereIn('id', $access['district_ids'])->pluck('name');
-                $query->whereIn('district', $districtNames);
+                $query->whereIn('district_id', $access['district_ids']);
                 return;
             } elseif ($access['state_ids']) {
-                $stateNames = MasterState::query()->whereIn('id', $access['state_ids'])->pluck('name');
-                $query->whereIn('state', $stateNames);
+                $query->whereIn('state_id', $access['state_ids']);
                 return;
             }
         }
@@ -346,9 +347,9 @@ class MasterDataController extends Controller
                 'company_name' => ['nullable', 'string', 'max:100'],
                 'office_type' => ['nullable', 'integer', Rule::in([1, 2])],
                 'ofc_parent_id' => ['nullable', 'integer'],
-                'district' => ['nullable', 'string', 'max:100'],
-                'state' => ['nullable', 'string', 'max:100'],
-                'country' => ['nullable', 'string', 'max:100'],
+                'country_id' => ['required', 'integer', 'exists:master_countries,id'],
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
                 'status' => $statusRule,
                 'attachment' => $fileRule,
             ],
@@ -362,9 +363,36 @@ class MasterDataController extends Controller
         if ($type === 'offices') {
             $data['office_type'] = (int) ($data['office_type'] ?? 1);
             $data['ofc_parent_id'] = (int) ($data['ofc_parent_id'] ?? 0);
+            $this->validateOfficeLocation($data);
         }
 
         return $data;
+    }
+
+    private function validateOfficeLocation(array $data): void
+    {
+        $stateValid = MasterState::query()
+            ->whereKey($data['state_id'])
+            ->where('country_id', $data['country_id'])
+            ->exists();
+
+        if (! $stateValid) {
+            throw ValidationException::withMessages([
+                'state_id' => 'Selected State does not belong to the chosen Country.',
+            ]);
+        }
+
+        $districtValid = MasterDistrict::query()
+            ->whereKey($data['district_id'])
+            ->where('country_id', $data['country_id'])
+            ->where('state_id', $data['state_id'])
+            ->exists();
+
+        if (! $districtValid) {
+            throw ValidationException::withMessages([
+                'district_id' => 'Selected District does not belong to the chosen State.',
+            ]);
+        }
     }
 
     private function uniqueRule(string $table, string $column, ?Model $row, string $primaryKey = 'id'): mixed
@@ -427,6 +455,18 @@ class MasterDataController extends Controller
 
         $data['key'] = $row->getAttribute($primaryKey);
         $data['attachment_url'] = $path ? $this->uploadedUrl($path) : null;
+
+        if (array_key_exists('country_id', $data)) {
+            $data['country_name'] = MasterCountry::query()->whereKey($data['country_id'])->value('name');
+        }
+
+        if (array_key_exists('state_id', $data)) {
+            $data['state_name'] = MasterState::query()->whereKey($data['state_id'])->value('name');
+        }
+
+        if (array_key_exists('district_id', $data)) {
+            $data['district_name'] = MasterDistrict::query()->whereKey($data['district_id'])->value('name');
+        }
 
         return $data;
     }

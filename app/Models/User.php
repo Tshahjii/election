@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
@@ -24,9 +25,9 @@ use Illuminate\Notifications\Notifiable;
     'designation',
     'ofc_id',
     'ofc_code',
-    'district',
-    'state',
-    'country',
+    'country_id',
+    'state_id',
+    'district_id',
     'address',
     'role',
     'is_active',
@@ -53,11 +54,35 @@ class User extends Authenticatable
             'last_active' => 'datetime',
             'password_changed_at' => 'datetime',
             'password' => 'hashed',
+            'country_id' => 'integer',
+            'state_id' => 'integer',
+            'district_id' => 'integer',
+            'ofc_id' => 'integer',
         ];
     }
 
     public function accessManagment(): HasOne
     {
         return $this->hasOne(AccessManagment::class);
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(MasterCountry::class, 'country_id');
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(MasterState::class, 'state_id');
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(MasterDistrict::class, 'district_id');
+    }
+
+    public function office(): BelongsTo
+    {
+        return $this->belongsTo(MasterOffice::class, 'ofc_id', 'ofc_id');
     }
 }

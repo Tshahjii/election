@@ -23,7 +23,7 @@ import MenuTwoToneIcon from '@mui/icons-material/MenuTwoTone';
 
 // AppBar props, including styles that vary based on drawer state and screen size
 const appBar = {
-  position: 'fixed',
+  position: 'fixed' as const,
   sx: (theme) => ({
     width: 1,
     zIndex: { xs: 1100, lg: 1201 },
@@ -41,11 +41,9 @@ export default function Header() {
   const { menuMaster } = useGetMenuMaster();
   const user = useSelector((state) => state.auth.user);
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
-  const stateName = user?.state_info?.name || user?.office_info?.state || user?.state || 'State';
-  const districtName = user?.state_info?.name || user?.office_info?.state || user?.state || 'State';
+  const stateName = user?.state_info?.name || user?.office_info?.state || 'State';
   const companyName = user?.office_info?.company_name || user?.department || 'Election Department';
   const stateLogo = user?.state_info?.logo_url;
-console.log('User Info:', user);
   // Common header content
   const mainHeader = (
     <Toolbar>

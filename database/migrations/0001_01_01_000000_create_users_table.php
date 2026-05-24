@@ -25,9 +25,9 @@ return new class extends Migration
             $table->string('designation', 100);
             $table->unsignedBigInteger('ofc_id')->nullable();
             $table->string('ofc_code', 20)->nullable();
-            $table->string('district', 100);
-            $table->string('state', 100);
-            $table->string('country', 100);
+            $table->unsignedBigInteger('country_id');
+            $table->unsignedBigInteger('state_id');
+            $table->unsignedBigInteger('district_id');
             $table->text('address')->nullable();
             $table->tinyInteger('role')
                 ->default(3)
@@ -42,6 +42,7 @@ return new class extends Migration
 
             $table->index(['is_active', 'last_active']);
             $table->index(['ofc_id', 'ofc_code']);
+            $table->index(['country_id', 'state_id', 'district_id']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

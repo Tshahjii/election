@@ -110,7 +110,7 @@ export default function Default() {
   const theme = useTheme();
   const user = useSelector((state) => state.auth.user);
   const { t } = useAppPreferences();
-  const stateName = user?.state_info?.name || user?.office_info?.state || user?.state || 'State';
+  const stateName = user?.state_info?.name || user?.office_info?.state || 'State';
   const officeName = user?.office_info?.office_name || 'Election Office';
 
   return (
@@ -218,7 +218,7 @@ export default function Default() {
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >
             <Box sx={{ minHeight: { xs: 280, md: 320 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ReactApexChart options={voterPieChart.options} series={voterPieChart.series} type="donut" height={310} />
+              <ReactApexChart options={voterPieChart.options as any} series={voterPieChart.series} type="donut" height={310} />
             </Box>
           </MainCard>
         </Grid>

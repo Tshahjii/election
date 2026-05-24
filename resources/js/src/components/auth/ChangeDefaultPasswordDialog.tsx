@@ -126,7 +126,7 @@ export default function ChangeDefaultPasswordDialog() {
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ autoComplete: 'current-password' }}
+              slotProps={{ htmlInput: { autoComplete: 'current-password' } }}
             />
             <TextField
               name="password"
@@ -136,7 +136,7 @@ export default function ChangeDefaultPasswordDialog() {
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ autoComplete: 'new-password' }}
+              slotProps={{ htmlInput: { autoComplete: 'new-password' } }}
             />
             <Box>
               <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
@@ -169,7 +169,7 @@ export default function ChangeDefaultPasswordDialog() {
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ autoComplete: 'new-password' }}
+              slotProps={{ htmlInput: { autoComplete: 'new-password' } }}
             />
             <FormHelperText>Password change ke baad aap dashboard par logged in rahenge.</FormHelperText>
           </Stack>

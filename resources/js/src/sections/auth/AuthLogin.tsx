@@ -46,7 +46,7 @@ function getTimerColor(seconds) {
 
 // ==============================|| AUTH - LOGIN ||============================== //
 
-export default function AuthLogin({ inputSx }) {
+export default function AuthLogin({ inputSx = {} }: any = {}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { t } = useAppPreferences();
@@ -243,7 +243,7 @@ export default function AuthLogin({ inputSx }) {
             }}
             sx={inputSx}
           />
-          {errors.mobile?.message && <FormHelperText error>{errors.mobile.message}</FormHelperText>}
+          {errors.mobile?.message && <FormHelperText error>{String(errors.mobile.message)}</FormHelperText>}
           {otpSent && (
             <Button size="small" variant="text" onClick={handleChangeMobile} sx={{ minWidth: 'auto', mt: 1, px: 0 }}>
               {t('auth.changeMobile')}
@@ -279,7 +279,7 @@ export default function AuthLogin({ inputSx }) {
               }}
               sx={inputSx}
             />
-            {errors.password?.message && <FormHelperText error>{errors.password.message}</FormHelperText>}
+            {errors.password?.message && <FormHelperText error>{String(errors.password.message)}</FormHelperText>}
           </Box>
         )}
 
@@ -301,7 +301,7 @@ export default function AuthLogin({ inputSx }) {
               slotProps={{ input: { inputProps: { maxLength: 6, inputMode: 'numeric', autoComplete: 'one-time-code' } } }}
               sx={inputSx}
             />
-            {errors.otp?.message && <FormHelperText error>{errors.otp.message}</FormHelperText>}
+            {errors.otp?.message && <FormHelperText error>{String(errors.otp.message)}</FormHelperText>}
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 1, flexWrap: 'wrap' }}>
               <Button size="small" variant="text" onClick={handleResendOtp} sx={{ minWidth: 'auto', p: 0 }}>
                 {t('auth.resendOtp')}

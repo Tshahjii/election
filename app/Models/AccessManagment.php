@@ -13,9 +13,9 @@ class AccessManagment extends Model
         'designation',
         'ofc_id',
         'ofc_code',
-        'district',
-        'state',
-        'country',
+        'country_id',
+        'state_id',
+        'district_id',
         'country_ids',
         'state_ids',
         'district_ids',
@@ -33,5 +33,9 @@ class AccessManagment extends Model
         'can_create' => 'boolean',
         'can_edit' => 'boolean',
         'can_delete' => 'boolean',
+        'country_id' => 'integer',
+        'state_id' => 'integer',
+        'district_id' => 'integer',
+        'ofc_id' => 'integer',
     ];
 }

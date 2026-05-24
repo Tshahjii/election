@@ -22,7 +22,7 @@ export default function Avatar(theme) {
 
     return Object.values(AvatarSize).map((size) => ({
       props: { size },
-      style: styles[size]
+      style: styles[size as keyof typeof styles]
     }));
   };
 
@@ -57,7 +57,7 @@ export default function Avatar(theme) {
             ...sizeVariants(),
             {
               props: { type: 'outlined' },
-              style: ({ color }) => {
+              style: ({ color }: any) => {
                 const paletteColor = color ? theme.palette[color] : null;
 
                 return {

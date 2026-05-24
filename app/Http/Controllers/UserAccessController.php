@@ -20,7 +20,7 @@ class UserAccessController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = User::query()->with('accessManagment');
+        $query = User::query()->with(['accessManagment', 'country', 'state', 'district', 'office']);
         $actor = $request->user();
 
         if ((int) $actor->role === 2) {
@@ -138,7 +138,7 @@ class UserAccessController extends Controller
             'countries' => $countries->orderBy('name')->get(['id', 'name']),
             'states' => $states->orderBy('name')->get(['id', 'country_id', 'name']),
             'districts' => $districts->orderBy('name')->get(['id', 'country_id', 'state_id', 'name']),
-            'offices' => $offices->orderBy('office_name')->get(['ofc_id', 'office_name', 'office_code', 'district', 'state', 'country']),
+            'offices' => $offices->orderBy('office_name')->get(['ofc_id', 'office_name', 'office_code', 'country_id', 'state_id', 'district_id']),
             'modules' => collect(AccessScope::MODULES)->map(fn (string $label, string $key) => ['key' => $key, 'label' => $label])->values(),
             'actions' => AccessScope::ACTIONS,
         ]);
@@ -165,7 +165,7 @@ class UserAccessController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'user_code' => ['nullable', 'string', 'max:30', Rule::unique('users', 'user_code')->ignore($user?->id)],
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user?->id)],
@@ -176,13 +176,58 @@ class UserAccessController extends Controller
             'designation' => ['required', 'string', 'max:100'],
             'ofc_id' => ['nullable', 'integer'],
             'ofc_code' => ['nullable', 'string', 'max:20'],
-            'district' => ['required', 'string', 'max:100'],
-            'state' => ['required', 'string', 'max:100'],
-            'country' => ['required', 'string', 'max:100'],
+            'country_id' => ['required', 'integer', 'exists:master_countries,id'],
+            'state_id' => ['required', 'integer', 'exists:master_states,id'],
+            'district_id' => ['required', 'integer', 'exists:master_districts,id'],
             'address' => ['nullable', 'string'],
-            'role' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6])],
+            'role' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6, 7])],
             'is_active' => ['required', 'integer', Rule::in([0, 1])],
         ]);
+
+        $this->validateLocationIds($data);
+
+        return $data;
+    }
+
+    private function validateLocationIds(array $data): void
+    {
+        $stateValid = MasterState::query()
+            ->whereKey($data['state_id'])
+            ->where('country_id', $data['country_id'])
+            ->exists();
+
+        if (! $stateValid) {
+            throw ValidationException::withMessages([
+                'state_id' => 'Selected State does not belong to the chosen Country.',
+            ]);
+        }
+
+        $districtValid = MasterDistrict::query()
+            ->whereKey($data['district_id'])
+            ->where('country_id', $data['country_id'])
+            ->where('state_id', $data['state_id'])
+            ->exists();
+
+        if (! $districtValid) {
+            throw ValidationException::withMessages([
+                'district_id' => 'Selected District does not belong to the chosen State.',
+            ]);
+        }
+
+        if (! empty($data['ofc_id'])) {
+            $officeValid = MasterOffice::query()
+                ->where('ofc_id', $data['ofc_id'])
+                ->where('country_id', $data['country_id'])
+                ->where('state_id', $data['state_id'])
+                ->where('district_id', $data['district_id'])
+                ->exists();
+
+            if (! $officeValid) {
+                throw ValidationException::withMessages([
+                    'ofc_id' => 'Selected Office does not belong to the chosen District.',
+                ]);
+            }
+        }
     }
 
     private function validatedAccess(Request $request, User $user): array
@@ -243,16 +288,16 @@ class UserAccessController extends Controller
         $officeIds = collect($access['office_ids'])->map(fn ($id) => (int) $id);
 
         if ($districtIds->isNotEmpty()) {
-            $districts = MasterDistrict::query()->whereIn('id', $districtIds)->get(['id', 'country_id', 'state_id', 'name']);
+            $districts = MasterDistrict::query()->whereIn('id', $districtIds)->get(['id', 'country_id', 'state_id']);
             $stateIds = $stateIds->merge($districts->pluck('state_id'));
             $countryIds = $countryIds->merge($districts->pluck('country_id'));
-            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('district', $districts->pluck('name'))->pluck('ofc_id'));
+            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('district_id', $districtIds)->pluck('ofc_id'));
         }
 
         if ($stateIds->isNotEmpty()) {
-            $states = MasterState::query()->whereIn('id', $stateIds)->get(['id', 'country_id', 'name']);
+            $states = MasterState::query()->whereIn('id', $stateIds)->get(['id', 'country_id']);
             $countryIds = $countryIds->merge($states->pluck('country_id'));
-            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('state', $states->pluck('name'))->pluck('ofc_id'));
+            $officeIds = $officeIds->merge(MasterOffice::query()->whereIn('state_id', $stateIds)->pluck('ofc_id'));
             $districtIds = $districtIds->merge(MasterDistrict::query()->whereIn('state_id', $stateIds)->pluck('id'));
         }
 
@@ -341,9 +386,9 @@ class UserAccessController extends Controller
             'designation',
             'ofc_id',
             'ofc_code',
-            'district',
-            'state',
-            'country',
+            'country_id',
+            'state_id',
+            'district_id',
             'address',
             'role',
             'is_active',
@@ -374,9 +419,9 @@ class UserAccessController extends Controller
                 'designation' => $data['designation'] ?? null,
                 'ofc_id' => $data['ofc_id'] ?? null,
                 'ofc_code' => $data['ofc_code'] ?? null,
-                'district' => $data['district'],
-                'state' => $data['state'],
-                'country' => $data['country'],
+                'country_id' => $data['country_id'],
+                'state_id' => $data['state_id'],
+                'district_id' => $data['district_id'],
                 'created_by' => $actor?->id,
                 'updated_by' => $actor?->id,
             ]
@@ -396,9 +441,9 @@ class UserAccessController extends Controller
                 'designation' => $user->designation,
                 'ofc_id' => $user->ofc_id,
                 'ofc_code' => $user->ofc_code,
-                'district' => $user->district,
-                'state' => $user->state,
-                'country' => $user->country,
+                'country_id' => $user->country_id,
+                'state_id' => $user->state_id,
+                'district_id' => $user->district_id,
                 'country_ids' => $isSuperAdmin ? null : AccessScope::csv($data['country_ids'] ?? []),
                 'state_ids' => $isSuperAdmin ? null : AccessScope::csv($data['state_ids'] ?? []),
                 'district_ids' => $isSuperAdmin ? null : AccessScope::csv($data['district_ids'] ?? []),
@@ -425,6 +470,10 @@ class UserAccessController extends Controller
             'office_ids' => AccessScope::ids($access?->office_ids),
             'permissions' => AccessScope::normalizePermissions($access?->permissions ?? []),
         ];
+        $data['country_name'] = $user->country?->name;
+        $data['state_name'] = $user->state?->name;
+        $data['district_name'] = $user->district?->name;
+        $data['office_name'] = $user->office?->office_name;
 
         return $data;
     }

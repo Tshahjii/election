@@ -19,15 +19,16 @@ return new class extends Migration
             $table->tinyInteger('office_type')->default(1)->comment('1 = Head Office, 2 = Branch Office');
             $table->unsignedBigInteger('ofc_parent_id')->default(0)->nullable();
             $table->tinyInteger('status')->default(1)->comment('1 = Active, 0 = Inactive');
-            $table->string('district', 100)->nullable();
-            $table->string('state', 100)->nullable();
-            $table->string('country', 100)->nullable();
+            $table->unsignedBigInteger('country_id')->nullable();
+            $table->unsignedBigInteger('state_id')->nullable();
+            $table->unsignedBigInteger('district_id')->nullable();
             $table->string('attachment_path', 255)->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'office_type']);
+            $table->index(['country_id', 'state_id', 'district_id']);
         });
     }
 

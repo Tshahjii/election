@@ -20,12 +20,12 @@ const flexStyle = { display: 'flex', alignItems: 'center', gap: 0.5 };
 
 // ==============================|| BREADCRUMBS ||============================== //
 
-export default function Breadcrumbs({ data, divider = true, title, icons = false, sx, ...rest }) {
+export default function Breadcrumbs({ data, divider = true, title, icons = false, sx, ...rest }: any = {}) {
   const location = useLocation();
   const { t } = useAppPreferences();
 
-  const [breadcrumbItems, setBreadcrumbItems] = useState([]);
-  const [activeItem, setActiveItem] = useState();
+  const [breadcrumbItems, setBreadcrumbItems] = useState<any[]>([]);
+  const [activeItem, setActiveItem] = useState<any>();
 
   useEffect(() => {
     if (data?.length) {

@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('designation', 100)->nullable();
             $table->unsignedBigInteger('ofc_id')->nullable();
             $table->string('ofc_code', 20)->nullable();
-            $table->string('district', 100);
-            $table->string('state', 100);
-            $table->string('country', 100);
+            $table->unsignedBigInteger('country_id')->nullable();
+            $table->unsignedBigInteger('state_id')->nullable();
+            $table->unsignedBigInteger('district_id')->nullable();
             $table->text('country_ids')->nullable();
             $table->text('state_ids')->nullable();
             $table->text('district_ids')->nullable();
@@ -35,6 +35,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['ofc_id', 'ofc_code']);
+            $table->index(['country_id', 'state_id', 'district_id']);
         });
     }
 

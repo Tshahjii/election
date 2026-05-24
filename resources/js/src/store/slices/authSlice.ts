@@ -19,7 +19,7 @@ const errorMessage = (payload, fallback) =>
   payload?.errors?.otp?.[0] ||
   fallback;
 
-export const sendLoginOtp = createAsyncThunk('auth/sendOtp', async (payload, { dispatch, rejectWithValue }) => {
+export const sendLoginOtp = createAsyncThunk<any, any>('auth/sendOtp', async (payload, { dispatch, rejectWithValue }) => {
   try {
     const { data } = await apiClient.post('/auth/send-otp', payload);
     dispatch(showNotification({ message: data.message || 'OTP sent successfully.', severity: 'success' }));
@@ -31,7 +31,7 @@ export const sendLoginOtp = createAsyncThunk('auth/sendOtp', async (payload, { d
   }
 });
 
-export const verifyLoginOtp = createAsyncThunk('auth/verifyOtp', async (payload, { dispatch, rejectWithValue }) => {
+export const verifyLoginOtp = createAsyncThunk<any, any>('auth/verifyOtp', async (payload, { dispatch, rejectWithValue }) => {
   try {
     const { data } = await apiClient.post('/auth/verify-otp', payload);
     localStorage.setItem('auth_token', data.access_token);
@@ -53,7 +53,7 @@ export const fetchAuthUser = createAsyncThunk('auth/me', async (_, { rejectWithV
   }
 });
 
-export const changePassword = createAsyncThunk('auth/changePassword', async (payload, { dispatch, rejectWithValue }) => {
+export const changePassword = createAsyncThunk<any, any>('auth/changePassword', async (payload, { dispatch, rejectWithValue }) => {
   try {
     const { data } = await apiClient.post('/auth/change-password', payload);
     dispatch(showNotification({ message: data.message || 'Password changed successfully.', severity: 'success' }));

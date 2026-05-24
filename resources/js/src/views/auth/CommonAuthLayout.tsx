@@ -22,7 +22,7 @@ import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined';
 
 // ==============================|| COMMON AUTH LAYOUT ||============================== //
 
-export default function CommonAuthLayout({ title, subHeading, footerLink, children }) {
+export default function CommonAuthLayout({ title, subHeading, footerLink, children }: any) {
   const { t } = useAppPreferences();
 
   return (

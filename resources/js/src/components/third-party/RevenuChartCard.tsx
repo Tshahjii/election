@@ -50,7 +50,7 @@ export default function RevenuChartCard({ title, bottomData, chartData }) {
 
   return (
     <MainCard title={title}>
-      <Grid container spacing={2} direction={onlySM ? 'row' : 'column'}>
+      <Grid container spacing={2} direction={(onlySM ? 'row' : 'column') as any}>
         <Grid size={{ xs: 12, sm: 7, md: 12 }} sx={{ '.apexcharts-active': { color: 'common.white' } }}>
           <ReactApexChart {...chartDatas} type="donut" height={194} />
         </Grid>

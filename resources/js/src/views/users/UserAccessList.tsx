@@ -57,9 +57,9 @@ const baseForm = {
   designation: '',
   ofc_id: '',
   ofc_code: '',
-  district: '',
-  state: '',
-  country: 'India',
+  country_id: '',
+  state_id: '',
+  district_id: '',
   address: '',
   role: 3,
   is_active: 1
@@ -142,7 +142,7 @@ function DraggableList({ title, items, type }) {
 export default function UserAccessList() {
   const dispatch = useDispatch();
   const [filters, setFilters] = useState(initialFilters);
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState<any[]>([]);
   const [options, setOptions] = useState({ countries: [], states: [], districts: [], offices: [], modules: [], actions: ['read', 'create', 'edit', 'delete'] });
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
@@ -150,8 +150,8 @@ export default function UserAccessList() {
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [accessModal, setAccessModal] = useState({ open: false, row: null });
   const [deleteRow, setDeleteRow] = useState(null);
-  const [form, setForm] = useState(baseForm);
-  const [accessForm, setAccessForm] = useState(baseAccessForm);
+  const [form, setForm] = useState<any>(baseForm);
+  const [accessForm, setAccessForm] = useState<any>(baseAccessForm);
 
   const availableStates = useMemo(() => {
     const states = accessForm.country_ids.length ? options.states.filter((state) => accessForm.country_ids.includes(state.country_id)) : options.states;
@@ -164,6 +164,18 @@ export default function UserAccessList() {
   }, [accessForm.district_ids, accessForm.state_ids, options.districts]);
   const availableCountries = useMemo(() => options.countries.filter((country) => !accessForm.country_ids.includes(country.id)), [accessForm.country_ids, options.countries]);
   const availableOffices = useMemo(() => options.offices.filter((office) => !accessForm.office_ids.includes(office.id)), [accessForm.office_ids, options.offices]);
+  const formStates = useMemo(
+    () => (form.country_id ? options.states.filter((state) => Number(state.country_id) === Number(form.country_id)) : options.states),
+    [form.country_id, options.states]
+  );
+  const formDistricts = useMemo(
+    () => (form.state_id ? options.districts.filter((district) => Number(district.state_id) === Number(form.state_id)) : []),
+    [form.state_id, options.districts]
+  );
+  const formOffices = useMemo(
+    () => (form.district_id ? options.offices.filter((office) => Number(office.district_id) === Number(form.district_id)) : options.offices),
+    [form.district_id, options.offices]
+  );
 
   const fetchOptions = async () => {
     const { data } = await apiClient.get('/users/access-options');
@@ -171,7 +183,14 @@ export default function UserAccessList() {
       countries: data.countries || [],
       states: data.states || [],
       districts: data.districts || [],
-      offices: (data.offices || []).map((office) => ({ id: office.ofc_id, name: `${office.office_name}${office.office_code ? ` (${office.office_code})` : ''}` })),
+      offices: (data.offices || []).map((office) => ({
+        id: office.ofc_id,
+        name: `${office.office_name}${office.office_code ? ` (${office.office_code})` : ''}`,
+        office_code: office.office_code,
+        country_id: office.country_id,
+        state_id: office.state_id,
+        district_id: office.district_id
+      })),
       modules: data.modules || [],
       actions: data.actions || ['read', 'create', 'edit', 'delete']
     });
@@ -447,7 +466,7 @@ export default function UserAccessList() {
                       {row.access?.is_super_admin ? (
                         <Chip label="Full Access" size="small" variant="outlined" color="success" />
                       ) : (
-                        <Chip label={`${Object.values(row.access?.permissions || {}).filter((item) => item?.read).length} modules`} size="small" variant="outlined" />
+                        <Chip label={`${Object.values(row.access?.permissions || {}).filter((item: any) => item?.read).length} modules`} size="small" variant="outlined" />
                       )}
                     </Stack>
                   </TableCell>
@@ -494,9 +513,57 @@ export default function UserAccessList() {
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Department" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })} /></Grid>
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Designation" value={form.designation} onChange={(event) => setForm({ ...form, designation: event.target.value })} /></Grid>
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Temporary Password" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></Grid>
-              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Country" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} /></Grid>
-              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="State" value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} /></Grid>
-              <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="District" value={form.district} onChange={(event) => setForm({ ...form, district: event.target.value })} /></Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <FormControl fullWidth required>
+                  <Select
+                    value={form.country_id || ''}
+                    displayEmpty
+                    onChange={(event) => setForm({ ...form, country_id: Number(event.target.value), state_id: '', district_id: '', ofc_id: '', ofc_code: '' })}
+                  >
+                    <MenuItem value="" disabled>Select Country</MenuItem>
+                    {options.countries.map((country) => <MenuItem key={country.id} value={country.id}>{country.name}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <FormControl fullWidth required>
+                  <Select
+                    value={form.state_id || ''}
+                    displayEmpty
+                    onChange={(event) => setForm({ ...form, state_id: Number(event.target.value), district_id: '', ofc_id: '', ofc_code: '' })}
+                  >
+                    <MenuItem value="" disabled>Select State</MenuItem>
+                    {formStates.map((state) => <MenuItem key={state.id} value={state.id}>{state.name}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <FormControl fullWidth required>
+                  <Select
+                    value={form.district_id || ''}
+                    displayEmpty
+                    onChange={(event) => setForm({ ...form, district_id: Number(event.target.value), ofc_id: '', ofc_code: '' })}
+                  >
+                    <MenuItem value="" disabled>Select District</MenuItem>
+                    {formDistricts.map((district) => <MenuItem key={district.id} value={district.id}>{district.name}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth>
+                  <Select
+                    value={form.ofc_id || ''}
+                    displayEmpty
+                    onChange={(event) => {
+                      const office = options.offices.find((item) => Number(item.id) === Number(event.target.value));
+                      setForm({ ...form, ofc_id: Number(event.target.value), ofc_code: office?.office_code || '' });
+                    }}
+                  >
+                    <MenuItem value="">No Office</MenuItem>
+                    {formOffices.map((office) => <MenuItem key={office.id} value={office.id}>{office.name}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid size={12}><TextField fullWidth multiline minRows={2} label="Address" value={form.address || ''} onChange={(event) => setForm({ ...form, address: event.target.value })} /></Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>

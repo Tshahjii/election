@@ -36,7 +36,7 @@ export default function MainLayout() {
   const drawer = useMemo(() => <Drawer />, [drawerOpen]);
 
   return (
-    <Stack direction="row" width={1}>
+    <Stack direction="row" sx={{ width: 1 }}>
       <Header />
       {drawer}
       <Box

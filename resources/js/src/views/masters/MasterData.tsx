@@ -116,8 +116,8 @@ const MASTER_TYPES = [
       { key: 'office_name', label: 'Name' },
       { key: 'company_name', label: 'Department' },
       { key: 'office_type_label', label: 'Type' },
-      { key: 'district', label: 'District' },
-      { key: 'state', label: 'State' }
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
     ],
     fields: [
       { key: 'office_code', label: 'Office Code' },
@@ -125,16 +125,16 @@ const MASTER_TYPES = [
       { key: 'company_name', label: 'Department' },
       { key: 'office_type', label: 'Office Type', type: 'office_type' },
       { key: 'ofc_parent_id', label: 'Parent Office ID', type: 'number' },
-      { key: 'district', label: 'District' },
-      { key: 'state', label: 'State' },
-      { key: 'country', label: 'Country' }
+      { key: 'country_id', label: 'Country', type: 'country', required: true },
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true }
     ]
   }
 ];
 
 export { MASTER_TYPES };
 
-const defaultForm = {
+const defaultForm: Record<string, any> = {
   status: 1,
   office_type: 1,
   ofc_parent_id: 0
@@ -154,8 +154,8 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
   const { user } = useSelector((state) => state.auth);
-  const [rows, setRows] = useState([]);
-  const [options, setOptions] = useState({ countries: [], states: [] });
+  const [rows, setRows] = useState<any[]>([]);
+  const [options, setOptions] = useState<{ countries: any[]; states: any[]; districts: any[] }>({ countries: [], states: [], districts: [] });
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ search: searchQuery, status: '' });
   const [page, setPage] = useState(1);
@@ -163,7 +163,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [totalRows, setTotalRows] = useState(0);
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [deleteRow, setDeleteRow] = useState(null);
-  const [form, setForm] = useState(defaultForm);
+  const [form, setForm] = useState<Record<string, any>>(defaultForm);
   const [attachment, setAttachment] = useState(null);
 
   const master = MASTER_TYPES.find((item) => item.key === masterKey) || MASTER_TYPES[0];
@@ -177,13 +177,17 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!form.country_id) return options.states;
     return options.states.filter((state) => Number(state.country_id) === Number(form.country_id));
   }, [form.country_id, options.states]);
+  const filteredDistrictOptions = useMemo(() => {
+    if (!form.state_id) return [];
+    return options.districts.filter((district) => Number(district.state_id) === Number(form.state_id));
+  }, [form.state_id, options.districts]);
 
   const decoratedRows = useMemo(
     () =>
       rows.map((row) => ({
         ...row,
-        country_name: countriesById.get(Number(row.country_id)) || row.country || '-',
-        state_name: statesById.get(Number(row.state_id)) || row.state || '-',
+        country_name: row.country_name || countriesById.get(Number(row.country_id)) || '-',
+        state_name: row.state_name || statesById.get(Number(row.state_id)) || '-',
         office_type_label: Number(row.office_type) === 2 ? 'Branch Office' : 'Head Office'
       })),
     [countriesById, rows, statesById]
@@ -273,9 +277,13 @@ export default function MasterData({ masterKey = 'countries' }) {
   const handleFormChange = (field) => (event) => {
     const value = event.target.value;
     setForm((current) => {
-      const next = { ...current, [field]: value };
+      const next: Record<string, any> = { ...current, [field]: value };
       if (field === 'country_id') {
         next.state_id = '';
+        next.district_id = '';
+      }
+      if (field === 'state_id') {
+        next.district_id = '';
       }
       return next;
     });
@@ -288,10 +296,10 @@ export default function MasterData({ masterKey = 'countries' }) {
     master.fields.forEach((field) => {
       const value = form[field.key];
       if (value !== undefined && value !== null) {
-        formData.append(field.key, value);
+        formData.append(field.key, value instanceof Blob ? value : String(value));
       }
     });
-    formData.append('status', form.status ?? 1);
+    formData.append('status', String(form.status ?? 1));
 
     if (attachment) {
       formData.append('attachment', attachment);
@@ -368,6 +376,23 @@ export default function MasterData({ masterKey = 'countries' }) {
             {filteredStateOptions.map((state) => (
               <MenuItem key={state.id} value={state.id}>
                 {state.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'district') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <Select value={form[field.key] || ''} displayEmpty onChange={handleFormChange(field.key)}>
+            <MenuItem value="" disabled>
+              Select District
+            </MenuItem>
+            {filteredDistrictOptions.map((district) => (
+              <MenuItem key={district.id} value={district.id}>
+                {district.name}
               </MenuItem>
             ))}
           </Select>
