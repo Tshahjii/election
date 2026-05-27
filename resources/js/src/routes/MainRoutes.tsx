@@ -61,6 +61,18 @@ const MainRoutes = {
       element: <MasterDataPage masterKey="offices" />
     },
     {
+      path: 'masters/cities',
+      element: <MasterDataPage masterKey="cities" />
+    },
+    {
+      path: 'masters/wards',
+      element: <MasterDataPage masterKey="wards" />
+    },
+    {
+      path: 'masters/polling-stations',
+      element: <MasterDataPage masterKey="polling-stations" />
+    },
+    {
       path: 'sample-page',
       element: <SamplePage />
     },

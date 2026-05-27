@@ -15,6 +15,8 @@ import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlin
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import FormatListNumberedOutlinedIcon from '@mui/icons-material/FormatListNumberedOutlined';
 
 // ==============================|| MENU ITEMS - ELECTION DASHBOARD ||============================== //
 
@@ -56,10 +58,21 @@ const dashboard = {
       type: 'collapse',
       icon: StorageOutlinedIcon,
       children: [
-        { id: 'master-country', title: 'Country Master', type: 'item', icon: PublicOutlinedIcon, url: '/admin/masters/countries', permission: 'masters.countries.read' },
-        { id: 'master-state', title: 'State Master', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' },
-        { id: 'master-district', title: 'District Master', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/masters/districts', permission: 'masters.districts.read' },
-        { id: 'master-office', title: 'Office Master', type: 'item', icon: AccountBalanceOutlinedIcon, url: '/admin/masters/offices', permission: 'masters.offices.read' }
+        { id: 'master-country', title: 'Country Master', titleKey: 'menu.masterCountry', type: 'item', icon: PublicOutlinedIcon, url: '/admin/masters/countries', permission: 'masters.countries.read' },
+        { id: 'master-state', title: 'State Master', titleKey: 'menu.masterState', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' },
+        { id: 'master-district', title: 'District Master', titleKey: 'menu.masterDistrict', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/masters/districts', permission: 'masters.districts.read' },
+        { id: 'master-office', title: 'Office Master', titleKey: 'menu.masterOffice', type: 'item', icon: AccountBalanceOutlinedIcon, url: '/admin/masters/offices', permission: 'masters.offices.read' },
+        { id: 'master-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/cities', permission: 'masters.cities.read' },
+        { id: 'master-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/wards', permission: 'masters.wards.read' },
+        {
+          id: 'master-polling-station',
+          title: 'Polling Station Master',
+          titleKey: 'menu.masterPollingStation',
+          type: 'item',
+          icon: BallotOutlinedIcon,
+          url: '/admin/masters/polling-stations',
+          permission: 'masters.polling_stations.read'
+        }
       ]
     },
     {

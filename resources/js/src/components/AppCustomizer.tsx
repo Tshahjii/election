@@ -23,16 +23,32 @@ import TuneOutlined from '@mui/icons-material/TuneOutlined';
 const accentOptions = [
   { value: 'blue', label: 'Blue', color: '#1f6feb' },
   { value: 'green', label: 'Green', color: '#15803d' },
-  { value: 'maroon', label: 'Maroon', color: '#a21caf' }
+  { value: 'maroon', label: 'Maroon', color: '#70424d' },
+  { value: 'indigo', label: 'Indigo', color: '#4338ca' },
+  { value: 'teal', label: 'Teal', color: '#0f766e' },
+  { value: 'saffron', label: 'Saffron', color: '#b45309' }
 ];
 
 export default function AppCustomizer({ inverse = false }) {
-  const { accentColor, setAccentColor, language, setLanguage, layoutDensity, setLayoutDensity, themeMode, setThemeMode } = useAppPreferences();
+  const {
+    accentColor,
+    setAccentColor,
+    language,
+    setLanguage,
+    layoutDensity,
+    setLayoutDensity,
+    themeMode,
+    setThemeMode,
+    fontScale,
+    setFontScale,
+    resetPreferences,
+    t
+  } = useAppPreferences();
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Tooltip title="Customize">
+      <Tooltip title={t('customizer.title')}>
         <IconButton
           size="small"
           onClick={() => setOpen(true)}
@@ -50,7 +66,7 @@ export default function AppCustomizer({ inverse = false }) {
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
             <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
               <PaletteOutlined color="primary" />
-              <Typography variant="h3">Customizer</Typography>
+              <Typography variant="h3">{t('customizer.title')}</Typography>
             </Stack>
             <IconButton onClick={() => setOpen(false)}>
               <CloseOutlined />
@@ -60,26 +76,26 @@ export default function AppCustomizer({ inverse = false }) {
           <Stack sx={{ gap: 3 }}>
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Theme mode
+                {t('customizer.themeMode')}
               </Typography>
               <ToggleButtonGroup value={themeMode} exclusive fullWidth onChange={(_, value) => value && setThemeMode(value)}>
-                <ToggleButton value="light">Light</ToggleButton>
-                <ToggleButton value="dark">Dark</ToggleButton>
+                <ToggleButton value="light">{t('controls.light')}</ToggleButton>
+                <ToggleButton value="dark">{t('controls.dark')}</ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Accent color
+                {t('customizer.accentColor')}
               </Typography>
-              <Stack direction="row" sx={{ gap: 1 }}>
+              <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
                 {accentOptions.map((option) => (
                   <Button
                     key={option.value}
                     variant={accentColor === option.value ? 'contained' : 'outlined'}
                     onClick={() => setAccentColor(option.value)}
                     startIcon={<Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: option.color }} />}
-                    sx={{ flex: 1 }}
+                    sx={{ minWidth: 104, flex: '1 1 30%' }}
                   >
                     {option.label}
                   </Button>
@@ -89,23 +105,37 @@ export default function AppCustomizer({ inverse = false }) {
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Language
+                {t('customizer.language')}
               </Typography>
               <ToggleButtonGroup value={language} exclusive fullWidth onChange={(_, value) => value && setLanguage(value)}>
-                <ToggleButton value="en">English</ToggleButton>
-                <ToggleButton value="hi">Hindi</ToggleButton>
+                <ToggleButton value="en">{t('controls.english')}</ToggleButton>
+                <ToggleButton value="hi">{t('controls.hindi')}</ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Layout density
+                {t('customizer.layoutDensity')}
               </Typography>
               <ToggleButtonGroup value={layoutDensity} exclusive fullWidth onChange={(_, value) => value && setLayoutDensity(value)}>
-                <ToggleButton value="comfortable">Comfort</ToggleButton>
-                <ToggleButton value="compact">Compact</ToggleButton>
+                <ToggleButton value="comfortable">{t('customizer.comfort')}</ToggleButton>
+                <ToggleButton value="compact">{t('customizer.compact')}</ToggleButton>
               </ToggleButtonGroup>
             </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                {t('customizer.fontSize')}
+              </Typography>
+              <ToggleButtonGroup value={fontScale} exclusive fullWidth onChange={(_, value) => value && setFontScale(value)}>
+                <ToggleButton value="normal">{t('customizer.normal')}</ToggleButton>
+                <ToggleButton value="large">{t('customizer.large')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            <Button variant="outlined" color="inherit" onClick={resetPreferences}>
+              {t('customizer.reset')}
+            </Button>
           </Stack>
         </Box>
       </Drawer>

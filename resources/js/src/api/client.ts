@@ -25,6 +25,28 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('auth_token');
     }
 
+    if (error.response?.status >= 500) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.endsWith('/error')) {
+        sessionStorage.setItem(
+          'app_last_error',
+          JSON.stringify({
+            status: error.response.status,
+            message: error.response.data?.message || 'Something went wrong. Please try again later.'
+          })
+        );
+        window.dispatchEvent(
+          new CustomEvent('app:server-error', {
+            detail: {
+              status: error.response.status,
+              message: error.response.data?.message || 'Something went wrong. Please try again later.'
+            }
+          })
+        );
+        window.location.assign('/error');
+      }
+    }
+
     return Promise.reject(error);
   }
 );

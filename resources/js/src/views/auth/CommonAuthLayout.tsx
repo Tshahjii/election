@@ -8,6 +8,7 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // project imports
 import AppControls from 'components/AppControls';
@@ -23,6 +24,7 @@ import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined';
 // ==============================|| COMMON AUTH LAYOUT ||============================== //
 
 export default function CommonAuthLayout({ title, subHeading, footerLink, children }: any) {
+  const theme = useTheme();
   const { t } = useAppPreferences();
 
   return (
@@ -32,8 +34,11 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
         minHeight: '100vh',
         px: 2,
         py: { xs: 3, md: 6 },
-        bgcolor: '#eef3f8',
-        backgroundImage: 'linear-gradient(135deg, rgba(255,153,51,0.16) 0%, rgba(255,255,255,0) 38%, rgba(19,136,8,0.14) 100%)'
+        bgcolor: 'background.default',
+        backgroundImage:
+          theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.12)} 0%, transparent 42%, ${alpha(theme.palette.success.main, 0.12)} 100%)`
+            : 'linear-gradient(135deg, rgba(255,153,51,0.16) 0%, rgba(255,255,255,0) 38%, rgba(19,136,8,0.14) 100%)'
       }}
     >
       <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1 }}>
@@ -119,7 +124,7 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 1,
-                  color: '#103c5c'
+                  color: 'primary.main'
                 }}
               >
                 <HowToVoteOutlined />
@@ -160,7 +165,7 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
                   icon={<VerifiedUserOutlined />}
                   label={t('auth.officialLogin')}
                   size="small"
-                  sx={{ mb: 1.5, bgcolor: 'rgba(19,136,8,0.08)', color: '#1b5e20', '& .MuiChip-icon': { color: '#1b5e20' } }}
+                  sx={{ mb: 1.5, bgcolor: alpha(theme.palette.success.main, 0.12), color: 'success.dark', '& .MuiChip-icon': { color: 'success.dark' } }}
                 />
                 <Typography color="text.primary" gutterBottom variant="h2">
                   {title}

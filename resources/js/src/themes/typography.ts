@@ -1,47 +1,50 @@
 // ==============================|| DEFAULT - TYPOGRAPHY ||============================== //
 
-export default function typography() {
+export default function typography(fontScale = 'normal') {
+  const scale = fontScale === 'large' ? 1.08 : 1;
+  const rem = (value) => `${value * scale}rem`;
+
   return {
     fontFamily: `'Poppins', sans-serif`,
     h6: {
       fontWeight: 600,
-      fontSize: '0.875rem'
+      fontSize: rem(0.875)
     },
     h5: {
-      fontSize: '1.125rem',
+      fontSize: rem(1.125),
       fontWeight: 600
     },
     h4: {
-      fontSize: '1.25rem',
+      fontSize: rem(1.25),
       fontWeight: 500
     },
     h3: {
-      fontSize: '1.5rem',
+      fontSize: rem(1.5),
       fontWeight: 600
     },
     h2: {
-      fontSize: '2rem',
+      fontSize: rem(2),
       fontWeight: 600
     },
     h1: {
-      fontSize: '2.2rem',
+      fontSize: rem(2.2),
       fontWeight: 600
     },
     subtitle1: {
-      fontSize: '0.875rem',
+      fontSize: rem(0.875),
       fontWeight: 500,
       lineHeight: '1.643em'
     },
     subtitle2: {
-      fontSize: '0.8125rem',
+      fontSize: rem(0.8125),
       fontWeight: 400
     },
     caption: {
-      fontSize: '0.68rem',
+      fontSize: rem(0.68),
       fontWeight: 500
     },
     body1: {
-      fontSize: '0.875rem',
+      fontSize: rem(0.875),
       fontWeight: 400,
       lineHeight: '1.643em'
     },
@@ -51,14 +54,14 @@ export default function typography() {
       lineHeight: '1.643em'
     },
     menuCaption: {
-      fontSize: '0.6875rem',
+      fontSize: rem(0.6875),
       fontWeight: 600,
       padding: '5px 15px 5px',
       textTransform: 'uppercase',
       marginTop: '10px'
     },
     subMenuCaption: {
-      fontSize: '0.6875rem',
+      fontSize: rem(0.6875),
       fontWeight: 400,
       textTransform: 'capitalize'
     }

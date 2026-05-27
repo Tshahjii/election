@@ -14,8 +14,6 @@ import FormControl from '@mui/material/FormControl';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -25,9 +23,11 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // project imports
 import MainCard from 'components/cards/MainCard';
+import ChosenSelect from 'components/ChosenSelect';
 import PaginationFooter from 'components/PaginationFooter';
 
 // assets
@@ -66,11 +66,13 @@ function getStatusColor(status) {
 }
 
 export default function VoterList() {
+  const theme = useTheme();
   const [filters, setFilters] = useState(initialFilters);
   const [selectedRows, setSelectedRows] = useState([]);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ gender: '', status: 'Pending' });
 
   const filteredRows = useMemo(
     () =>
@@ -123,9 +125,9 @@ export default function VoterList() {
         </Box>
         <Button
           variant="contained"
+          color="primary"
           startIcon={<AddOutlined />}
           onClick={() => setIsCreateModalOpen(true)}
-          sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}
         >
           Create Voter
         </Button>
@@ -204,13 +206,12 @@ export default function VoterList() {
               Rows per page
             </Typography>
             <FormControl size="small" sx={{ minWidth: 92 }}>
-              <Select value={rowsPerPage} onChange={handleRowsPerPageChange}>
-                {[10, 50, 100, 200, 500].map((value) => (
-                  <MenuItem key={value} value={value}>
-                    {value}
-                  </MenuItem>
-                ))}
-              </Select>
+              <ChosenSelect
+                size="small"
+                value={rowsPerPage}
+                options={[10, 50, 100, 200, 500].map((value) => ({ value, label: String(value) }))}
+                onChange={handleRowsPerPageChange}
+              />
             </FormControl>
           </Stack>
         </Stack>
@@ -246,7 +247,7 @@ export default function VoterList() {
                   <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-                      <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
+                      <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
                         <HowToVoteOutlined fontSize="small" />
                       </Avatar>
                       <Box>
@@ -291,7 +292,7 @@ export default function VoterList() {
                 <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                   <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                     <Checkbox checked={selectedRows.includes(row.id)} onChange={handleSelectRow(row.id)} sx={{ p: 0.25 }} />
-                    <Avatar sx={{ width: 34, height: 34, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
+                    <Avatar sx={{ width: 34, height: 34, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
                       <HowToVoteOutlined fontSize="small" />
                     </Avatar>
                     <Box>
@@ -374,14 +375,16 @@ export default function VoterList() {
             </Grid>
             <Grid size={{ xs: 12, sm: 3 }}>
               <FormControl fullWidth>
-                <Select defaultValue="" displayEmpty>
-                  <MenuItem value="" disabled>
-                    Gender
-                  </MenuItem>
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                  <MenuItem value="Other">Other</MenuItem>
-                </Select>
+                <ChosenSelect
+                  value={createForm.gender}
+                  placeholder="Gender"
+                  options={[
+                    { value: 'Male', label: 'Male' },
+                    { value: 'Female', label: 'Female' },
+                    { value: 'Other', label: 'Other' }
+                  ]}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, gender: event.target.value }))}
+                />
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -395,11 +398,15 @@ export default function VoterList() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
-                <Select defaultValue="Pending">
-                  <MenuItem value="Verified">Verified</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
-                  <MenuItem value="Correction">Correction</MenuItem>
-                </Select>
+                <ChosenSelect
+                  value={createForm.status}
+                  options={[
+                    { value: 'Verified', label: 'Verified' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Correction', label: 'Correction' }
+                  ]}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, status: event.target.value }))}
+                />
               </FormControl>
             </Grid>
             <Grid size={12}>
@@ -411,7 +418,7 @@ export default function VoterList() {
           <Button variant="outlined" color="inherit" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" variant="contained" sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>
+          <Button type="submit" variant="contained" color="primary">
             Save Voter
           </Button>
         </DialogActions>

@@ -15,8 +15,6 @@ import FormControl from '@mui/material/FormControl';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -26,10 +24,12 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // project imports
 import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
+import ChosenSelect from 'components/ChosenSelect';
 import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
 import { ROLE_LABELS } from 'utils/access';
@@ -92,7 +92,7 @@ function AccessDropZone({ title, selected, items, onDropItem, onRemove }) {
         const data = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
         onDropItem(data);
       }}
-      sx={{ minHeight: 116, p: 1.25, border: '1px dashed', borderColor: 'primary.main', borderRadius: 1, bgcolor: 'rgba(16,60,92,0.03)' }}
+      sx={(theme) => ({ minHeight: 116, p: 1.25, border: '1px dashed', borderColor: 'primary.main', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.05) })}
     >
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         {title}
@@ -140,6 +140,7 @@ function DraggableList({ title, items, type }) {
 }
 
 export default function UserAccessList() {
+  const theme = useTheme();
   const dispatch = useDispatch();
   const [filters, setFilters] = useState(initialFilters);
   const [rows, setRows] = useState<any[]>([]);
@@ -375,7 +376,7 @@ export default function UserAccessList() {
             Create users and assign state, district and office access.
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>
+        <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate}>
           Create User
         </Button>
       </Stack>
@@ -393,23 +394,26 @@ export default function UserAccessList() {
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
             <FormControl fullWidth>
-              <Select value={filters.role} onChange={handleFilterChange('role')} displayEmpty>
-                <MenuItem value="">All Roles</MenuItem>
-                {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
+              <ChosenSelect
+                value={filters.role}
+                placeholder="All Roles"
+                options={[{ value: '', label: 'All Roles' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label } as any))]}
+                onChange={handleFilterChange('role')}
+              />
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
             <FormControl fullWidth>
-              <Select value={filters.status} onChange={handleFilterChange('status')} displayEmpty>
-                <MenuItem value="">All Status</MenuItem>
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
-              </Select>
+              <ChosenSelect
+                value={filters.status}
+                placeholder="All Status"
+                options={[
+                  { value: '', label: 'All Status' },
+                  { value: 'Active', label: 'Active' },
+                  { value: 'Inactive', label: 'Inactive' }
+                ]}
+                onChange={handleFilterChange('status')}
+              />
             </FormControl>
           </Grid>
         </Grid>
@@ -418,13 +422,12 @@ export default function UserAccessList() {
       <MainCard title={`User Records (${totalRows})`} sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end', mb: 2 }}>
           <FormControl size="small" sx={{ minWidth: 110 }}>
-            <Select value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}>
-              {[10, 50, 100, 200, 500].map((value) => (
-                <MenuItem key={value} value={value}>
-                  {value}
-                </MenuItem>
-              ))}
-            </Select>
+            <ChosenSelect
+              size="small"
+              value={rowsPerPage}
+              options={[10, 50, 100, 200, 500].map((value) => ({ value, label: String(value) }))}
+              onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}
+            />
           </FormControl>
         </Stack>
         <TableContainer>
@@ -447,7 +450,7 @@ export default function UserAccessList() {
                   <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-                      <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
+                      <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
                         <AdminPanelSettingsOutlined fontSize="small" />
                       </Avatar>
                       <Box>
@@ -505,9 +508,11 @@ export default function UserAccessList() {
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Mobile Number" value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} /></Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
-                  <Select value={form.role} onChange={(event) => setForm({ ...form, role: Number(event.target.value) })}>
-                    {Object.entries(ROLE_LABELS).map(([value, label]) => <MenuItem key={value} value={Number(value)}>{label}</MenuItem>)}
-                  </Select>
+                  <ChosenSelect
+                    value={form.role}
+                    options={Object.entries(ROLE_LABELS).map(([value, label]) => ({ value: Number(value), label } as any))}
+                    onChange={(event) => setForm({ ...form, role: Number(event.target.value) })}
+                  />
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Department" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })} /></Grid>
@@ -515,70 +520,69 @@ export default function UserAccessList() {
               <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Temporary Password" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>
-                  <Select
+                  <ChosenSelect
                     value={form.country_id || ''}
-                    displayEmpty
+                    required
+                    placeholder="Select Country"
+                    options={options.countries.map((country) => ({ value: country.id, label: country.name }))}
                     onChange={(event) => setForm({ ...form, country_id: Number(event.target.value), state_id: '', district_id: '', ofc_id: '', ofc_code: '' })}
-                  >
-                    <MenuItem value="" disabled>Select Country</MenuItem>
-                    {options.countries.map((country) => <MenuItem key={country.id} value={country.id}>{country.name}</MenuItem>)}
-                  </Select>
+                  />
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>
-                  <Select
+                  <ChosenSelect
                     value={form.state_id || ''}
-                    displayEmpty
+                    required
+                    placeholder="Select State"
+                    options={formStates.map((state) => ({ value: state.id, label: state.name }))}
                     onChange={(event) => setForm({ ...form, state_id: Number(event.target.value), district_id: '', ofc_id: '', ofc_code: '' })}
-                  >
-                    <MenuItem value="" disabled>Select State</MenuItem>
-                    {formStates.map((state) => <MenuItem key={state.id} value={state.id}>{state.name}</MenuItem>)}
-                  </Select>
+                  />
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>
-                  <Select
+                  <ChosenSelect
                     value={form.district_id || ''}
-                    displayEmpty
+                    required
+                    placeholder="Select District"
+                    options={formDistricts.map((district) => ({ value: district.id, label: district.name }))}
                     onChange={(event) => setForm({ ...form, district_id: Number(event.target.value), ofc_id: '', ofc_code: '' })}
-                  >
-                    <MenuItem value="" disabled>Select District</MenuItem>
-                    {formDistricts.map((district) => <MenuItem key={district.id} value={district.id}>{district.name}</MenuItem>)}
-                  </Select>
+                  />
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
-                  <Select
+                  <ChosenSelect
                     value={form.ofc_id || ''}
-                    displayEmpty
+                    placeholder="No Office"
+                    options={[{ value: '', label: 'No Office' }, ...formOffices.map((office) => ({ value: office.id, label: office.name }))]}
                     onChange={(event) => {
                       const office = options.offices.find((item) => Number(item.id) === Number(event.target.value));
-                      setForm({ ...form, ofc_id: Number(event.target.value), ofc_code: office?.office_code || '' });
+                      setForm({ ...form, ofc_id: event.target.value ? Number(event.target.value) : '', ofc_code: office?.office_code || '' });
                     }}
-                  >
-                    <MenuItem value="">No Office</MenuItem>
-                    {formOffices.map((office) => <MenuItem key={office.id} value={office.id}>{office.name}</MenuItem>)}
-                  </Select>
+                  />
                 </FormControl>
               </Grid>
               <Grid size={12}><TextField fullWidth multiline minRows={2} label="Address" value={form.address || ''} onChange={(event) => setForm({ ...form, address: event.target.value })} /></Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
-                  <Select value={form.is_active} onChange={(event) => setForm({ ...form, is_active: Number(event.target.value) })}>
-                    <MenuItem value={1}>Active</MenuItem>
-                    <MenuItem value={0}>Inactive</MenuItem>
-                  </Select>
+                  <ChosenSelect
+                    value={form.is_active}
+                    options={[
+                      { value: 1, label: 'Active' },
+                      { value: 0, label: 'Inactive' }
+                    ]}
+                    onChange={(event) => setForm({ ...form, is_active: Number(event.target.value) })}
+                  />
                 </FormControl>
               </Grid>
             </Grid>
           </DialogContent>
           <DialogActions sx={{ px: 3, py: 2 }}>
             <Button variant="outlined" color="inherit" onClick={() => setModal({ open: false, mode: 'create', row: null })}>Cancel</Button>
-            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>Save User</Button>
+            <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />}>Save User</Button>
           </DialogActions>
         </Box>
       </Dialog>
@@ -676,7 +680,7 @@ export default function UserAccessList() {
           </DialogContent>
           <DialogActions sx={{ px: 3, py: 2 }}>
             <Button variant="outlined" color="inherit" onClick={() => setAccessModal({ open: false, row: null })}>Cancel</Button>
-            <Button type="submit" variant="contained" startIcon={<SaveOutlined />} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>Save Access</Button>
+            <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />}>Save Access</Button>
           </DialogActions>
         </Box>
       </Dialog>

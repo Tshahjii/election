@@ -48,16 +48,23 @@ const constituencyRows = [
 ];
 
 const operations = [
-  { label: 'Voter verification queue', value: 74, color: '#103c5c' },
-  { label: 'EVM/VVPAT readiness', value: 91, color: '#276749' },
-  { label: 'Officer attendance', value: 86, color: '#c76a16' }
+  { label: 'Voter verification queue', labelKey: 'dashboard.verificationQueue', value: 74, color: '#103c5c' },
+  { label: 'EVM/VVPAT readiness', labelKey: 'dashboard.evmReadiness', value: 91, color: '#276749' },
+  { label: 'Officer attendance', labelKey: 'dashboard.officerAttendance', value: 86, color: '#c76a16' }
 ];
 
 const tasks = [
-  'Approve pending booth officer replacements',
-  'Review high-priority incident reports',
-  'Publish 4 PM turnout bulletin',
-  'Validate strong room security checklist'
+  { label: 'Approve pending booth officer replacements', labelKey: 'dashboard.task1' },
+  { label: 'Review high-priority incident reports', labelKey: 'dashboard.task2' },
+  { label: 'Publish 4 PM turnout bulletin', labelKey: 'dashboard.task3' },
+  { label: 'Validate strong room security checklist', labelKey: 'dashboard.task4' }
+];
+
+const insightCards = [
+  { value: '96%', labelKey: 'dashboard.helpdeskCalls', color: '#103c5c' },
+  { value: '3,842', labelKey: 'dashboard.formsProcessed', color: '#276749' },
+  { value: '218', labelKey: 'dashboard.teamsDeployed', color: '#c76a16' },
+  { value: '99.2%', labelKey: 'dashboard.materialKits', color: '#b42318' }
 ];
 
 const turnoutChart = {
@@ -199,6 +206,29 @@ export default function Default() {
           );
         })}
 
+        <Grid size={{ xs: 12 }}>
+          <MainCard
+            title={t('dashboard.quickInsights')}
+            sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
+            headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
+          >
+            <Grid container spacing={2}>
+              {insightCards.map((item) => (
+                <Grid key={item.labelKey} size={{ xs: 12, sm: 6, lg: 3 }}>
+                  <Box sx={{ p: 1.5, border: `1px solid ${alpha(item.color, 0.2)}`, borderRadius: 1, bgcolor: alpha(item.color, 0.05) }}>
+                    <Typography variant="h3" sx={{ color: item.color }}>
+                      {item.value}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t(item.labelKey)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </MainCard>
+        </Grid>
+
         <Grid size={{ xs: 12, lg: 8 }}>
           <MainCard
             title={t('dashboard.turnoutGraph')}
@@ -272,7 +302,7 @@ export default function Default() {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={row.status}
+                          label={t(`data.${row.status.toLowerCase()}`)}
                           size="small"
                           color={row.status === 'Normal' ? 'success' : row.status === 'Review' ? 'warning' : 'error'}
                           variant="outlined"
@@ -289,13 +319,13 @@ export default function Default() {
                   <Stack sx={{ gap: 1.25 }}>
                     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                       <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(16,60,92,0.08)', color: '#103c5c' }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
                           <BallotOutlined fontSize="small" />
                         </Avatar>
                         <Typography variant="subtitle2">{row.name}</Typography>
                       </Stack>
                       <Chip
-                        label={row.status}
+                        label={t(`data.${row.status.toLowerCase()}`)}
                         size="small"
                         color={row.status === 'Normal' ? 'success' : row.status === 'Review' ? 'warning' : 'error'}
                         variant="outlined"
@@ -321,7 +351,7 @@ export default function Default() {
                       <LinearProgress
                         variant="determinate"
                         value={row.turnout}
-                        sx={{ height: 7, borderRadius: 5, bgcolor: 'rgba(16,60,92,0.08)', '& .MuiLinearProgress-bar': { bgcolor: '#276749' } }}
+                        sx={{ height: 7, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1), '& .MuiLinearProgress-bar': { bgcolor: 'success.main' } }}
                       />
                     </Stack>
                   </Stack>
@@ -342,13 +372,13 @@ export default function Default() {
                 {operations.map((item) => (
                   <Stack key={item.label} sx={{ gap: 0.85 }}>
                     <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 1 }}>
-                      <Typography variant="body2">{item.label}</Typography>
+                      <Typography variant="body2">{item.labelKey ? t(item.labelKey) : item.label}</Typography>
                       <Typography variant="subtitle2">{item.value}%</Typography>
                     </Stack>
                     <LinearProgress
                       variant="determinate"
                       value={item.value}
-                      sx={{ height: 8, borderRadius: 5, bgcolor: 'rgba(16,60,92,0.08)', '& .MuiLinearProgress-bar': { bgcolor: item.color } }}
+                      sx={{ height: 8, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1), '& .MuiLinearProgress-bar': { bgcolor: item.color } }}
                     />
                   </Stack>
                 ))}
@@ -362,11 +392,19 @@ export default function Default() {
             >
               <Stack sx={{ gap: 1.5 }}>
                 {tasks.map((task, index) => (
-                  <Stack key={task} direction="row" sx={{ alignItems: 'flex-start', gap: 1.25 }}>
-                    <Avatar sx={{ width: 28, height: 28, fontSize: 13, bgcolor: index < 2 ? '#fff4e5' : 'rgba(39,103,73,0.1)', color: index < 2 ? '#c76a16' : '#276749' }}>
+                  <Stack key={task.labelKey} direction="row" sx={{ alignItems: 'flex-start', gap: 1.25 }}>
+                    <Avatar
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        fontSize: 13,
+                        bgcolor: index < 2 ? alpha(theme.palette.warning.main, 0.14) : alpha(theme.palette.success.main, 0.14),
+                        color: index < 2 ? 'warning.dark' : 'success.dark'
+                      }}
+                    >
                       {index + 1}
                     </Avatar>
-                    <Typography variant="body2">{task}</Typography>
+                    <Typography variant="body2">{t(task.labelKey)}</Typography>
                   </Stack>
                 ))}
               </Stack>
@@ -375,39 +413,39 @@ export default function Default() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <MainCard sx={{ borderRadius: 2, bgcolor: '#fff8ef', border: '1px solid #ffe0b2' }}>
+          <MainCard sx={{ borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.08), border: `1px solid ${alpha(theme.palette.warning.main, 0.24)}` }}>
             <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-              <AssignmentTurnedInOutlined sx={{ color: '#c76a16' }} />
+              <AssignmentTurnedInOutlined sx={{ color: 'warning.dark' }} />
               <Box>
                 <Typography variant="h4">1,032</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Booth checklists completed
+                  {t('dashboard.boothChecklists')}
                 </Typography>
               </Box>
             </Stack>
           </MainCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MainCard sx={{ borderRadius: 2, bgcolor: '#eef8f0', border: '1px solid #cde9d3' }}>
+          <MainCard sx={{ borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.08), border: `1px solid ${alpha(theme.palette.success.main, 0.24)}` }}>
             <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-              <SecurityOutlined sx={{ color: '#276749' }} />
+              <SecurityOutlined sx={{ color: 'success.dark' }} />
               <Box>
                 <Typography variant="h4">98.6%</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Strong room security compliance
+                  {t('dashboard.securityCompliance')}
                 </Typography>
               </Box>
             </Stack>
           </MainCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MainCard sx={{ borderRadius: 2, bgcolor: '#eef4fb', border: '1px solid #c7d8ea' }}>
+          <MainCard sx={{ borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.08), border: `1px solid ${alpha(theme.palette.primary.main, 0.24)}` }}>
             <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-              <HowToVoteOutlined sx={{ color: '#103c5c' }} />
+              <HowToVoteOutlined sx={{ color: 'primary.main' }} />
               <Box>
                 <Typography variant="h4">24 min</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Average field update interval
+                  {t('dashboard.fieldUpdateInterval')}
                 </Typography>
               </Box>
             </Stack>

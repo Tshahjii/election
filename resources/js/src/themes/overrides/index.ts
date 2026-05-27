@@ -8,6 +8,7 @@ import CardContent from './CardContent';
 import CardHeader from './CardHeader';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
+import CssBaseline from './CssBaseline';
 import FormHelperText from './FormHelperText';
 import ListItem from './ListItem';
 import ListItemButton from './ListItemButton';
@@ -26,6 +27,7 @@ export default function ComponentsOverrides(theme) {
     CardHeader(theme),
     Checkbox(theme),
     Chip(theme),
+    CssBaseline(theme),
     FormHelperText(theme),
     ListItem(theme),
     ListItemButton(theme),

@@ -97,13 +97,15 @@ export default function NavCollapse({ item, level }) {
           '&.Mui-selected': {
             color: 'common.white',
             bgcolor: 'rgba(255,255,255,0.16)',
+            '& .MuiListItemIcon-root': { color: 'common.white' },
+            '& .MuiSvgIcon-root': { color: 'common.white' },
             '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
           },
           ...(level > 1 && { bgcolor: 'transparent !important', py: 1 })
         }}
         onClick={handleClick}
       >
-        {<ListItemIcon sx={{ minWidth: !item.icon ? 25 : 'unset', color: 'inherit', '& svg': { color: 'inherit' } }}>{menuIcon}</ListItemIcon>}
+        {<ListItemIcon sx={{ minWidth: 34, flexShrink: 0, color: 'inherit', '& svg': { color: 'inherit', fontSize: level > 0 ? '1.25rem' : '1.35rem' } }}>{menuIcon}</ListItemIcon>}
         <ListItemText
           primary={
             <Typography variant={selected === item.id ? 'subtitle1' : 'body1'} color="inherit" sx={{ pl: 1.9 }}>

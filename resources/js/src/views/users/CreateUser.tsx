@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // material-ui
@@ -5,14 +6,13 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import Grid from "@mui/material/Grid";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
 // project imports
 import MainCard from "components/cards/MainCard";
+import ChosenSelect from "components/ChosenSelect";
 
 // assets
 import ArrowBackOutlined from "@mui/icons-material/ArrowBackOutlined";
@@ -20,6 +20,7 @@ import SaveOutlined from "@mui/icons-material/SaveOutlined";
 
 export default function CreateUser() {
     const navigate = useNavigate();
+    const [form, setForm] = useState({ role: "", department: "", status: "Active" });
 
     return (
         <Stack sx={{ gap: 2 }}>
@@ -112,53 +113,49 @@ export default function CreateUser() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth>
-                                <Select defaultValue="" displayEmpty>
-                                    <MenuItem value="" disabled>
-                                        Select Role
-                                    </MenuItem>
-                                    <MenuItem value={1}>Super Admin</MenuItem>
-                                    <MenuItem value={2}>Admin</MenuItem>
-                                    <MenuItem value={3}>Data Entry</MenuItem>
-                                    <MenuItem value={4}>Verifier</MenuItem>
-                                    <MenuItem value={5}>Booth Officer</MenuItem>
-                                    <MenuItem value={6}>Report Viewer</MenuItem>
-                                </Select>
+                                <ChosenSelect
+                                    value={form.role}
+                                    placeholder="Select Role"
+                                    options={[
+                                        { value: 1, label: "Super Admin" },
+                                        { value: 2, label: "Admin" },
+                                        { value: 3, label: "Data Entry" },
+                                        { value: 4, label: "Verifier" },
+                                        { value: 5, label: "Booth Officer" },
+                                        { value: 6, label: "Report Viewer" },
+                                    ]}
+                                    onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
+                                />
                             </FormControl>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth>
-                                <Select defaultValue="" displayEmpty>
-                                    <MenuItem value="" disabled>
-                                        Select Department
-                                    </MenuItem>
-                                    <MenuItem value="Election Office">
-                                        Election Office
-                                    </MenuItem>
-                                    <MenuItem value="Voter Cell">
-                                        Voter Cell
-                                    </MenuItem>
-                                    <MenuItem value="Polling Operations">
-                                        Polling Operations
-                                    </MenuItem>
-                                    <MenuItem value="Verification Team">
-                                        Verification Team
-                                    </MenuItem>
-                                    <MenuItem value="Reports">Reports</MenuItem>
-                                    <MenuItem value="Access Management">
-                                        Access Management
-                                    </MenuItem>
-                                </Select>
+                                <ChosenSelect
+                                    value={form.department}
+                                    placeholder="Select Department"
+                                    options={[
+                                        { value: "Election Office", label: "Election Office" },
+                                        { value: "Voter Cell", label: "Voter Cell" },
+                                        { value: "Polling Operations", label: "Polling Operations" },
+                                        { value: "Verification Team", label: "Verification Team" },
+                                        { value: "Reports", label: "Reports" },
+                                        { value: "Access Management", label: "Access Management" },
+                                    ]}
+                                    onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
+                                />
                             </FormControl>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth>
-                                <Select defaultValue="Active">
-                                    <MenuItem value="Active">Active</MenuItem>
-                                    <MenuItem value="Pending">Pending</MenuItem>
-                                    <MenuItem value="Inactive">
-                                        Inactive
-                                    </MenuItem>
-                                </Select>
+                                <ChosenSelect
+                                    value={form.status}
+                                    options={[
+                                        { value: "Active", label: "Active" },
+                                        { value: "Pending", label: "Pending" },
+                                        { value: "Inactive", label: "Inactive" },
+                                    ]}
+                                    onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+                                />
                             </FormControl>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
@@ -204,11 +201,8 @@ export default function CreateUser() {
                         <Button
                             type="submit"
                             variant="contained"
+                            color="primary"
                             startIcon={<SaveOutlined />}
-                            sx={{
-                                bgcolor: "#103c5c",
-                                "&:hover": { bgcolor: "#0c314b" },
-                            }}
                         >
                             Save User
                         </Button>

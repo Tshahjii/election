@@ -13,6 +13,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // third party
 import { useForm } from 'react-hook-form';
@@ -47,6 +48,7 @@ function getTimerColor(seconds) {
 // ==============================|| AUTH - LOGIN ||============================== //
 
 export default function AuthLogin({ inputSx = {} }: any = {}) {
+  const theme = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { t } = useAppPreferences();
@@ -212,9 +214,9 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
         <Stack sx={{ gap: 3 }}>
-        <Box sx={{ px: 2, py: 1.5, borderRadius: 1, bgcolor: 'rgba(16, 60, 92, 0.05)', border: '1px solid rgba(16, 60, 92, 0.12)' }}>
+        <Box sx={{ px: 2, py: 1.5, borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.08), border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}` }}>
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-            <LockOutlined fontSize="small" sx={{ color: '#103c5c' }} />
+            <LockOutlined fontSize="small" sx={{ color: 'primary.main' }} />
             <Typography variant="body2" color="text.secondary">
               {t('auth.otpIntro')}
             </Typography>
@@ -352,14 +354,13 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
         <Button
           type="submit"
           variant="contained"
+          color="primary"
           fullWidth
           disabled={loading || (otpSent && (!captchaToken || isOtpExpired))}
           endIcon={loading ? <CircularProgress color="secondary" size={16} /> : null}
           sx={{
             minWidth: 120,
             mt: { xs: 2, sm: 3 },
-            bgcolor: '#103c5c',
-            '&:hover': { bgcolor: '#0c314b' },
             '& .MuiButton-endIcon': { ml: 1 }
           }}
         >

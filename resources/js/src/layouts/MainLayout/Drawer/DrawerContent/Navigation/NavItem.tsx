@@ -60,13 +60,15 @@ export default function NavItem({ item, level = 0 }) {
         '&.Mui-selected': {
           color: 'common.white',
           bgcolor: 'rgba(255,255,255,0.16)',
+          '& .MuiListItemIcon-root': { color: 'common.white' },
+          '& .MuiSvgIcon-root': { color: 'common.white' },
           '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
         },
         ...(level === 0 && { '&.Mui-selected': { color: 'common.white' } }),
         ...(level > 1 && { bgcolor: 'transparent !important', py: 1 })
       }}
     >
-      <ListItemIcon sx={{ minWidth: 25, color: 'inherit', '& svg': { color: 'inherit' } }}>{itemIcon}</ListItemIcon>
+      <ListItemIcon sx={{ minWidth: 34, flexShrink: 0, color: 'inherit', '& svg': { color: 'inherit', fontSize: level > 0 ? '1.25rem' : '1.35rem' } }}>{itemIcon}</ListItemIcon>
       <ListItemText
         primary={
           <Typography sx={{ pl: level > 1 ? 2 : 1.4 }} variant={openItem === item.id ? 'subtitle1' : 'body1'} color="inherit">

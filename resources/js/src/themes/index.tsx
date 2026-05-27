@@ -14,7 +14,7 @@ import typography from './typography';
 // ==============================|| DEFAULT THEME - MAIN ||============================== //
 
 export default function ThemeCustomization({ children }) {
-  const { themeMode, accentColor } = useAppPreferences();
+  const { themeMode, accentColor, fontScale } = useAppPreferences();
   const themePalette = useMemo(() => palette(themeMode, accentColor), [themeMode, accentColor]);
 
   const themeDefault = createTheme({
@@ -24,7 +24,7 @@ export default function ThemeCustomization({ children }) {
   // create duplicate theme due to responsive typography and fontFamily
   const theme = createTheme({
     ...themeDefault,
-    typography: typography()
+    typography: typography(fontScale)
   });
 
   theme.components = componentsOverride(theme);

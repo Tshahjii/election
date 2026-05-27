@@ -6,6 +6,8 @@ import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 // third party
 import { useSelector } from 'react-redux';
@@ -38,6 +40,8 @@ const appBar = {
 // ==============================|| MAIN LAYOUT - HEADER ||============================== //
 
 export default function Header() {
+  const theme = useTheme();
+  const downSM = useMediaQuery(theme.breakpoints.down('sm'));
   const { menuMaster } = useGetMenuMaster();
   const user = useSelector((state) => state.auth.user);
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
@@ -46,16 +50,16 @@ export default function Header() {
   const stateLogo = user?.state_info?.logo_url;
   // Common header content
   const mainHeader = (
-    <Toolbar>
-      <Stack direction="row" sx={{ gap: 1.25, width: { xs: 1, md: DRAWER_WIDTH }, alignItems: 'center' }}>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0, flex: 1, display: { xs: 'none', md: 'flex' } }}>
+    <Toolbar sx={{ minHeight: { xs: 72, sm: 64 }, gap: { xs: 1, sm: 1.5 }, px: { xs: 1.5, sm: 2 } }}>
+      <Stack direction="row" sx={{ gap: 1.25, width: { xs: 1, md: DRAWER_WIDTH }, alignItems: 'center', minWidth: 0 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0, flex: 1 }}>
           <Avatar
             src={stateLogo || undefined}
             alt={stateName}
             variant="rounded"
             sx={{
-              width: 42,
-              height: 42,
+              width: { xs: 38, sm: 42 },
+              height: { xs: 38, sm: 42 },
               bgcolor: 'common.white',
               color: 'primary.dark',
               fontWeight: 700,
@@ -66,17 +70,39 @@ export default function Header() {
             {stateName.charAt(0)}
           </Avatar>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography noWrap sx={{ color: 'common.white', fontSize: 24, fontWeight: 700, lineHeight: 1.12 }}>
+            <Typography
+              sx={{
+                color: 'common.white',
+                fontSize: { xs: 18, sm: 22, md: 24 },
+                fontWeight: 700,
+                lineHeight: 1.12,
+                overflowWrap: 'anywhere',
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: { xs: 2, sm: 1 }
+              }}
+            >
               {stateName} Shasan
             </Typography>
-            <Typography variant="caption" noWrap sx={{ display: 'block', color: 'rgba(255,255,255,0.78)' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'rgba(255,255,255,0.78)',
+                overflowWrap: 'anywhere',
+                lineHeight: 1.25,
+                WebkitLineClamp: 1,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical'
+              }}
+            >
               {companyName}, {stateName}
             </Typography>
           </Box>
         </Stack>
         <IconButton
           edge="start"
-          sx={{ ml: 'auto', mr: { xs: 0, sm: 1.25 }, color: 'background.paper' }}
+          sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 'auto' }, mr: { xs: 0, sm: 1.25 }, color: 'background.paper' }}
           aria-label="open drawer"
           onClick={() => handlerDrawerOpen(!drawerOpen)}
           size="large"
@@ -84,12 +110,12 @@ export default function Header() {
           <MenuTwoToneIcon sx={{ fontSize: '1.5rem' }} />
         </IconButton>
       </Stack>
-      <Box sx={{ flexGrow: 1 }} />
-      <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+      <Box sx={{ flexGrow: { xs: 0, sm: 1 } }} />
+      <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1 }, display: { xs: 'none', sm: 'flex' } }}>
         <AppControls showTheme inverse />
-        <Search />
-        <Notification />
-        <Profile />
+        {!downSM && <Search />}
+        {!downSM && <Notification />}
+        {!downSM && <Profile />}
       </Stack>
     </Toolbar>
   );

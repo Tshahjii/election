@@ -27,6 +27,33 @@ const accents = {
     darker: '#321b22',
     contrast: '#ffffff',
     secondary: '#315f66'
+  },
+  indigo: {
+    lighter: '#e0e7ff',
+    light: '#6366f1',
+    main: '#4338ca',
+    dark: '#312e81',
+    darker: '#1e1b4b',
+    contrast: '#ffffff',
+    secondary: '#0f766e'
+  },
+  teal: {
+    lighter: '#ccfbf1',
+    light: '#14b8a6',
+    main: '#0f766e',
+    dark: '#115e59',
+    darker: '#134e4a',
+    contrast: '#ffffff',
+    secondary: '#7c3aed'
+  },
+  saffron: {
+    lighter: '#ffedd5',
+    light: '#f59e0b',
+    main: '#b45309',
+    dark: '#92400e',
+    darker: '#78350f',
+    contrast: '#ffffff',
+    secondary: '#2563eb'
   }
 };
 

@@ -7,6 +7,7 @@ import RouteError from 'components/RouteError';
 
 // pages
 const LoginPage = Loadable(lazy(() => import('views/auth/Login')));
+const ErrorPage = Loadable(lazy(() => import('views/pages/ErrorPage')));
 
 // ==============================|| PAGES ROUTES ||============================== //
 
@@ -24,6 +25,10 @@ const PagesRoutes = {
         {
           path: 'login',
           element: <LoginPage />
+        },
+        {
+          path: 'error',
+          element: <ErrorPage />
         }
       ]
     }

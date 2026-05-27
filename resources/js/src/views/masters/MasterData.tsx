@@ -14,8 +14,6 @@ import FormControl from '@mui/material/FormControl';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -29,7 +27,9 @@ import Typography from '@mui/material/Typography';
 // project imports
 import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
+import ChosenSelect from 'components/ChosenSelect';
 import PaginationFooter from 'components/PaginationFooter';
+import { useAppPreferences } from 'contexts/AppPreferences';
 import { showNotification } from 'store/slices/notificationSlice';
 import { fetchAuthUser } from 'store/slices/authSlice';
 import { hasPermission } from 'utils/access';
@@ -49,8 +49,11 @@ const MASTER_TYPES = [
     key: 'countries',
     module: 'masters.countries',
     label: 'Countries',
+    labelKey: 'masters.countries',
     title: 'Country',
+    titleKey: 'masters.country',
     primaryKey: 'id',
+    supportsAttachment: true,
     columns: [
       { key: 'name', label: 'Name' },
       { key: 'iso2', label: 'ISO2' },
@@ -73,8 +76,11 @@ const MASTER_TYPES = [
     key: 'states',
     module: 'masters.states',
     label: 'States',
+    labelKey: 'masters.states',
     title: 'State',
+    titleKey: 'masters.state',
     primaryKey: 'id',
+    supportsAttachment: true,
     columns: [
       { key: 'name', label: 'Name' },
       { key: 'state_code', label: 'Code' },
@@ -90,8 +96,11 @@ const MASTER_TYPES = [
     key: 'districts',
     module: 'masters.districts',
     label: 'Districts',
+    labelKey: 'masters.districts',
     title: 'District',
+    titleKey: 'masters.district',
     primaryKey: 'id',
+    supportsAttachment: true,
     columns: [
       { key: 'name', label: 'Name' },
       { key: 'district_code', label: 'Code' },
@@ -109,8 +118,11 @@ const MASTER_TYPES = [
     key: 'offices',
     module: 'masters.offices',
     label: 'Offices',
+    labelKey: 'masters.offices',
     title: 'Office',
+    titleKey: 'masters.office',
     primaryKey: 'ofc_id',
+    supportsAttachment: true,
     columns: [
       { key: 'office_code', label: 'Code' },
       { key: 'office_name', label: 'Name' },
@@ -128,6 +140,71 @@ const MASTER_TYPES = [
       { key: 'country_id', label: 'Country', type: 'country', required: true },
       { key: 'state_id', label: 'State', type: 'state', required: true },
       { key: 'district_id', label: 'District', type: 'district', required: true }
+    ]
+  },
+  {
+    key: 'cities',
+    module: 'masters.cities',
+    label: 'Cities',
+    labelKey: 'masters.cities',
+    title: 'City',
+    titleKey: 'masters.city',
+    primaryKey: 'id',
+    columns: [
+      { key: 'city_name', label: 'City Name' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_name', label: 'City Name', required: true }
+    ]
+  },
+  {
+    key: 'wards',
+    module: 'masters.wards',
+    label: 'Wards',
+    labelKey: 'masters.wards',
+    title: 'Ward',
+    titleKey: 'masters.ward',
+    primaryKey: 'id',
+    columns: [
+      { key: 'ward_no', label: 'Ward No' },
+      { key: 'ward_name', label: 'Ward Name' },
+      { key: 'city_name_label', label: 'City' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_id', label: 'City', type: 'city', required: true },
+      { key: 'ward_no', label: 'Ward No', type: 'number', required: true },
+      { key: 'ward_name', label: 'Ward Name', required: true }
+    ]
+  },
+  {
+    key: 'polling-stations',
+    module: 'masters.polling_stations',
+    label: 'Polling Stations',
+    labelKey: 'masters.pollingStations',
+    title: 'Polling Station',
+    titleKey: 'masters.pollingStation',
+    primaryKey: 'id',
+    columns: [
+      { key: 'polling_station_name', label: 'Polling Station Name' },
+      { key: 'ward_name_label', label: 'Ward' },
+      { key: 'city_name_label', label: 'City' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_id', label: 'City', type: 'city', required: true },
+      { key: 'ward_id', label: 'Ward', type: 'ward', required: true },
+      { key: 'polling_station_name', label: 'Polling Station Name', required: true }
     ]
   }
 ];
@@ -151,13 +228,20 @@ function getApiError(error) {
 
 export default function MasterData({ masterKey = 'countries' }) {
   const dispatch = useDispatch();
+  const { t, tl } = useAppPreferences();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
   const { user } = useSelector((state) => state.auth);
   const [rows, setRows] = useState<any[]>([]);
-  const [options, setOptions] = useState<{ countries: any[]; states: any[]; districts: any[] }>({ countries: [], states: [], districts: [] });
+  const [options, setOptions] = useState<{ countries: any[]; states: any[]; districts: any[]; cities: any[]; wards: any[] }>({
+    countries: [],
+    states: [],
+    districts: [],
+    cities: [],
+    wards: []
+  });
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ search: searchQuery, status: '' });
+  const [filters, setFilters] = useState({ search: searchQuery, status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -167,6 +251,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [attachment, setAttachment] = useState(null);
 
   const master = MASTER_TYPES.find((item) => item.key === masterKey) || MASTER_TYPES[0];
+  const tableColumnCount = master.columns.length + (master.supportsAttachment ? 4 : 3);
   const canCreate = hasPermission(user, `${master.module}.create`);
   const canEdit = hasPermission(user, `${master.module}.edit`);
   const canDelete = hasPermission(user, `${master.module}.delete`);
@@ -181,6 +266,31 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!form.state_id) return [];
     return options.districts.filter((district) => Number(district.state_id) === Number(form.state_id));
   }, [form.state_id, options.districts]);
+  const filteredCityOptions = useMemo(() => {
+    if (!form.district_id) return [];
+    return options.cities.filter((city) => Number(city.district_id) === Number(form.district_id));
+  }, [form.district_id, options.cities]);
+  const filteredWardOptions = useMemo(() => {
+    if (!form.city_id) return [];
+    return options.wards.filter((ward) => Number(ward.city_id) === Number(form.city_id));
+  }, [form.city_id, options.wards]);
+
+  const filterDistrictOptions = useMemo(() => {
+    if (!filters.state_id) return options.districts;
+    return options.districts.filter((district) => Number(district.state_id) === Number(filters.state_id));
+  }, [filters.state_id, options.districts]);
+  const filterStateOptions = useMemo(() => {
+    if (!filters.country_id) return options.states;
+    return options.states.filter((state) => Number(state.country_id) === Number(filters.country_id));
+  }, [filters.country_id, options.states]);
+  const filterCityOptions = useMemo(() => {
+    if (!filters.district_id) return options.cities;
+    return options.cities.filter((city) => Number(city.district_id) === Number(filters.district_id));
+  }, [filters.district_id, options.cities]);
+  const filterWardOptions = useMemo(() => {
+    if (!filters.city_id) return options.wards;
+    return options.wards.filter((ward) => Number(ward.city_id) === Number(filters.city_id));
+  }, [filters.city_id, options.wards]);
 
   const decoratedRows = useMemo(
     () =>
@@ -188,7 +298,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         ...row,
         country_name: row.country_name || countriesById.get(Number(row.country_id)) || '-',
         state_name: row.state_name || statesById.get(Number(row.state_id)) || '-',
-        office_type_label: Number(row.office_type) === 2 ? 'Branch Office' : 'Head Office'
+        office_type_label: Number(row.office_type) === 2 ? t('data.branchOffice') : t('data.headOffice')
       })),
     [countriesById, rows, statesById]
   );
@@ -206,6 +316,11 @@ export default function MasterData({ masterKey = 'countries' }) {
         params: {
           search: filters.search || undefined,
           status: filters.status === '' ? undefined : filters.status,
+          country_id: filters.country_id || undefined,
+          state_id: filters.state_id || undefined,
+          district_id: filters.district_id || undefined,
+          city_id: filters.city_id || undefined,
+          ward_id: filters.ward_id || undefined,
           page,
           per_page: rowsPerPage
         }
@@ -225,10 +340,10 @@ export default function MasterData({ masterKey = 'countries' }) {
 
   useEffect(() => {
     fetchRows();
-  }, [master.key, filters.search, filters.status, page, rowsPerPage]);
+  }, [master.key, filters.search, filters.status, filters.country_id, filters.state_id, filters.district_id, filters.city_id, filters.ward_id, page, rowsPerPage]);
 
   useEffect(() => {
-    setFilters({ search: searchQuery, status: '' });
+    setFilters({ search: searchQuery, status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
     setPage(1);
     setRows([]);
     setTotalRows(0);
@@ -281,9 +396,20 @@ export default function MasterData({ masterKey = 'countries' }) {
       if (field === 'country_id') {
         next.state_id = '';
         next.district_id = '';
+        next.city_id = '';
+        next.ward_id = '';
       }
       if (field === 'state_id') {
         next.district_id = '';
+        next.city_id = '';
+        next.ward_id = '';
+      }
+      if (field === 'district_id') {
+        next.city_id = '';
+        next.ward_id = '';
+      }
+      if (field === 'city_id') {
+        next.ward_id = '';
       }
       return next;
     });
@@ -308,7 +434,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     try {
       const url = modal.mode === 'edit' ? `/masters/${master.key}/${modal.row[master.primaryKey]}` : `/masters/${master.key}`;
       await apiClient.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      dispatch(showNotification({ message: `${master.title} saved successfully.` }));
+      dispatch(showNotification({ message: `${t(master.titleKey || '') || master.title} saved successfully.` }));
       handleCloseModal();
       await fetchOptions();
       await fetchRows();
@@ -339,7 +465,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     try {
       await apiClient.delete(`/masters/${master.key}/${deleteRow[master.primaryKey]}`);
-      dispatch(showNotification({ message: `${master.title} deleted successfully.` }));
+      dispatch(showNotification({ message: `${t(master.titleKey || '') || master.title} deleted successfully.` }));
       setDeleteRow(null);
       await fetchOptions();
       await fetchRows();
@@ -352,16 +478,13 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'country') {
       return (
         <FormControl fullWidth required={field.required}>
-          <Select value={form[field.key] || ''} displayEmpty onChange={handleFormChange(field.key)}>
-            <MenuItem value="" disabled>
-              Select Country
-            </MenuItem>
-            {options.countries.map((country) => (
-              <MenuItem key={country.id} value={country.id}>
-                {country.name}
-              </MenuItem>
-            ))}
-          </Select>
+          <ChosenSelect
+            required={field.required}
+            value={form[field.key] || ''}
+            placeholder={t('field.country')}
+            options={options.countries.map((country) => ({ value: country.id, label: country.name }))}
+            onChange={handleFormChange(field.key)}
+          />
         </FormControl>
       );
     }
@@ -369,16 +492,13 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'state') {
       return (
         <FormControl fullWidth required={field.required}>
-          <Select value={form[field.key] || ''} displayEmpty onChange={handleFormChange(field.key)}>
-            <MenuItem value="" disabled>
-              Select State
-            </MenuItem>
-            {filteredStateOptions.map((state) => (
-              <MenuItem key={state.id} value={state.id}>
-                {state.name}
-              </MenuItem>
-            ))}
-          </Select>
+          <ChosenSelect
+            required={field.required}
+            value={form[field.key] || ''}
+            placeholder={t('field.state')}
+            options={filteredStateOptions.map((state) => ({ value: state.id, label: state.name }))}
+            onChange={handleFormChange(field.key)}
+          />
         </FormControl>
       );
     }
@@ -386,16 +506,41 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'district') {
       return (
         <FormControl fullWidth required={field.required}>
-          <Select value={form[field.key] || ''} displayEmpty onChange={handleFormChange(field.key)}>
-            <MenuItem value="" disabled>
-              Select District
-            </MenuItem>
-            {filteredDistrictOptions.map((district) => (
-              <MenuItem key={district.id} value={district.id}>
-                {district.name}
-              </MenuItem>
-            ))}
-          </Select>
+          <ChosenSelect
+            required={field.required}
+            value={form[field.key] || ''}
+            placeholder={t('field.district')}
+            options={filteredDistrictOptions.map((district) => ({ value: district.id, label: district.name }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'city') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            value={form[field.key] || ''}
+            placeholder={t('field.city')}
+            options={filteredCityOptions.map((city) => ({ value: city.id, label: city.city_name }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'ward') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            value={form[field.key] || ''}
+            placeholder={t('field.ward')}
+            options={filteredWardOptions.map((ward) => ({ value: ward.id, label: `${ward.ward_no} - ${ward.ward_name}` }))}
+            onChange={handleFormChange(field.key)}
+          />
         </FormControl>
       );
     }
@@ -403,10 +548,14 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'office_type') {
       return (
         <FormControl fullWidth>
-          <Select value={form[field.key] || 1} onChange={handleFormChange(field.key)}>
-            <MenuItem value={1}>Head Office</MenuItem>
-            <MenuItem value={2}>Branch Office</MenuItem>
-          </Select>
+          <ChosenSelect
+            value={form[field.key] || 1}
+            options={[
+              { value: 1, label: t('data.headOffice') },
+              { value: 2, label: t('data.branchOffice') }
+            ]}
+            onChange={handleFormChange(field.key)}
+          />
         </FormControl>
       );
     }
@@ -415,7 +564,7 @@ export default function MasterData({ masterKey = 'countries' }) {
       <TextField
         fullWidth
         required={field.required}
-        label={field.label}
+        label={tl(field.label)}
         type={field.type || 'text'}
         value={form[field.key] ?? ''}
         onChange={handleFormChange(field.key)}
@@ -428,14 +577,14 @@ export default function MasterData({ masterKey = 'countries' }) {
     <Stack sx={{ gap: 2 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2 }}>
         <Box>
-          <Typography variant="h2">Master</Typography>
+          <Typography variant="h2">{t('masters.master')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Manage {master.label.toLowerCase()} master records.
+            {t('masters.managePrefix')} {(t(master.labelKey || '') || master.label).toLowerCase()} {t('masters.manageSuffix')}
           </Typography>
         </Box>
         {canCreate && (
-          <Button variant="contained" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>
-            Create {master.title}
+          <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate}>
+            {t('common.create')} {t(master.titleKey || '') || master.title}
           </Button>
         )}
       </Stack>
@@ -445,7 +594,7 @@ export default function MasterData({ masterKey = 'countries' }) {
           <Grid size={{ xs: 12, md: 8 }}>
             <TextField
               fullWidth
-              label={`Search ${master.label}`}
+              label={`${t('common.search')} ${t(master.labelKey || '') || master.label}`}
               value={filters.search}
               onChange={handleSearchFilterChange}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }}
@@ -453,36 +602,112 @@ export default function MasterData({ masterKey = 'countries' }) {
           </Grid>
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth>
-              <Select
+              <ChosenSelect
                 value={filters.status}
-                displayEmpty
+                placeholder={t('common.allStatus')}
+                options={[
+                  { value: '', label: t('common.allStatus') },
+                  { value: 1, label: t('common.active') },
+                  { value: 0, label: t('common.inactive') }
+                ]}
                 onChange={(event) => {
                   setFilters((current) => ({ ...current, status: event.target.value }));
                   setPage(1);
                 }}
-              >
-                <MenuItem value="">All Status</MenuItem>
-                <MenuItem value={1}>Active</MenuItem>
-                <MenuItem value={0}>Inactive</MenuItem>
-              </Select>
+              />
             </FormControl>
           </Grid>
+          {master.fields.some((field) => field.type === 'state') && (
+            master.fields.some((field) => field.type === 'country') && (
+              <Grid size={{ xs: 12, md: 2 }}>
+                <FormControl fullWidth>
+                  <ChosenSelect
+                    value={filters.country_id}
+                    placeholder={t('field.country')}
+                    options={[{ value: '', label: t('field.country') }, ...options.countries.map((country) => ({ value: country.id, label: country.name }))]}
+                    onChange={(event) => {
+                      setFilters((current) => ({ ...current, country_id: event.target.value, state_id: '', district_id: '', city_id: '', ward_id: '' }));
+                      setPage(1);
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+            )
+          )}
+          {master.fields.some((field) => field.type === 'state') && (
+            <Grid size={{ xs: 12, md: 2 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  value={filters.state_id}
+                  placeholder={t('common.allStates')}
+                  options={[{ value: '', label: t('common.allStates') }, ...filterStateOptions.map((state) => ({ value: state.id, label: state.name }))]}
+                  onChange={(event) => {
+                    setFilters((current) => ({ ...current, state_id: event.target.value, district_id: '', city_id: '', ward_id: '' }));
+                    setPage(1);
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
+          {master.fields.some((field) => field.type === 'district') && (
+            <Grid size={{ xs: 12, md: 2 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  value={filters.district_id}
+                  placeholder={t('common.allDistricts')}
+                  options={[{ value: '', label: t('common.allDistricts') }, ...filterDistrictOptions.map((district) => ({ value: district.id, label: district.name }))]}
+                  onChange={(event) => {
+                    setFilters((current) => ({ ...current, district_id: event.target.value, city_id: '', ward_id: '' }));
+                    setPage(1);
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
+          {master.fields.some((field) => field.type === 'city') && (
+            <Grid size={{ xs: 12, md: 2 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  value={filters.city_id}
+                  placeholder={t('common.allCities')}
+                  options={[{ value: '', label: t('common.allCities') }, ...filterCityOptions.map((city) => ({ value: city.id, label: city.city_name }))]}
+                  onChange={(event) => {
+                    setFilters((current) => ({ ...current, city_id: event.target.value, ward_id: '' }));
+                    setPage(1);
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
+          {master.fields.some((field) => field.type === 'ward') && (
+            <Grid size={{ xs: 12, md: 2 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  value={filters.ward_id}
+                  placeholder={t('common.allWards')}
+                  options={[{ value: '', label: t('common.allWards') }, ...filterWardOptions.map((ward) => ({ value: ward.id, label: `${ward.ward_no} - ${ward.ward_name}` }))]}
+                  onChange={(event) => {
+                    setFilters((current) => ({ ...current, ward_id: event.target.value }));
+                    setPage(1);
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth>
-              <Select value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}>
-                {[10, 25, 50, 100].map((value) => (
-                  <MenuItem key={value} value={value}>
-                    {value} rows
-                  </MenuItem>
-                ))}
-              </Select>
+              <ChosenSelect
+                value={rowsPerPage}
+                options={[10, 25, 50, 100].map((value) => ({ value, label: `${value} ${t('common.rows') || 'rows'}` }))}
+                onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}
+              />
             </FormControl>
           </Grid>
         </Grid>
       </MainCard>
 
       <MainCard
-        title={`${master.label} (${totalRows})`}
+        title={`${t(master.labelKey || '') || master.label} (${totalRows})`}
         sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
         headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }}
         contentSX={{ p: 2, '&:last-child': { pb: 2 } }}
@@ -491,13 +716,13 @@ export default function MasterData({ masterKey = 'countries' }) {
           <Table sx={{ minWidth: 960 }}>
             <TableHead>
               <TableRow>
-                <TableCell>S.No</TableCell>
+                <TableCell>{t('common.sno')}</TableCell>
                 {master.columns.map((column) => (
-                  <TableCell key={column.key}>{column.label}</TableCell>
+                  <TableCell key={column.key}>{tl(column.label)}</TableCell>
                 ))}
-                <TableCell>Attachment</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Action</TableCell>
+                {master.supportsAttachment && <TableCell>{t('common.attachment')}</TableCell>}
+                <TableCell>{t('common.status')}</TableCell>
+                <TableCell align="right">{t('common.action')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -507,27 +732,27 @@ export default function MasterData({ masterKey = 'countries' }) {
                   {master.columns.map((column) => (
                     <TableCell key={column.key}>{row[column.key] || '-'}</TableCell>
                   ))}
-                  <TableCell>
+                  {master.supportsAttachment && <TableCell>
                     {row.attachment_url ? (
                       <Button component="a" href={row.attachment_url} target="_blank" rel="noreferrer" size="small" startIcon={<InsertDriveFileOutlined />}>
-                        View
+                        {t('common.view')}
                       </Button>
                     ) : (
                       '-'
                     )}
-                  </TableCell>
+                  </TableCell>}
                   <TableCell>
-                    <Chip label={Number(row.status) === 1 ? 'Active' : 'Inactive'} size="small" color={Number(row.status) === 1 ? 'success' : 'error'} variant="outlined" />
+                    <Chip label={Number(row.status) === 1 ? t('common.active') : t('common.inactive')} size="small" color={Number(row.status) === 1 ? 'success' : 'error'} variant="outlined" />
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 0.5 }}>
                       {canEdit && (
-                        <IconButton size="small" color="success" aria-label={`edit ${master.title}`} onClick={() => handleOpenEdit(row)}>
+                        <IconButton size="small" color="success" aria-label={`edit ${t(master.titleKey || '') || master.title}`} onClick={() => handleOpenEdit(row)}>
                           <EditOutlined fontSize="small" />
                         </IconButton>
                       )}
                       {canDelete && (
-                        <IconButton size="small" color="error" aria-label={`delete ${master.title}`} onClick={() => setDeleteRow(row)}>
+                        <IconButton size="small" color="error" aria-label={`delete ${t(master.titleKey || '') || master.title}`} onClick={() => setDeleteRow(row)}>
                           <DeleteOutlineOutlined fontSize="small" />
                         </IconButton>
                       )}
@@ -537,15 +762,15 @@ export default function MasterData({ masterKey = 'countries' }) {
               ))}
               {!loading && decoratedRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={master.columns.length + 4} align="center">
-                    No records found.
+                  <TableCell colSpan={tableColumnCount} align="center">
+                    {t('common.noRecords')}
                   </TableCell>
                 </TableRow>
               )}
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={master.columns.length + 4} align="center">
-                    Loading...
+                  <TableCell colSpan={tableColumnCount} align="center">
+                    {t('common.loading')}
                   </TableCell>
                 </TableRow>
               )}
@@ -560,7 +785,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <Box component="form" onSubmit={handleSubmit}>
           <DialogTitle component="div" sx={{ pb: 1 }}>
             <Typography variant="h3" component="h2">
-              {modal.mode === 'edit' ? 'Update' : 'Create'} {master.title}
+              {modal.mode === 'edit' ? t('common.update') : t('common.create')} {t(master.titleKey || '') || master.title}
             </Typography>
           </DialogTitle>
           <DialogContent dividers>
@@ -572,49 +797,53 @@ export default function MasterData({ masterKey = 'countries' }) {
               ))}
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
-                  <Select value={form.status ?? 1} onChange={handleFormChange('status')}>
-                    <MenuItem value={1}>Active</MenuItem>
-                    <MenuItem value={0}>Inactive</MenuItem>
-                  </Select>
+                  <ChosenSelect
+                    value={form.status ?? 1}
+                    options={[
+                      { value: 1, label: t('common.active') },
+                      { value: 0, label: t('common.inactive') }
+                    ]}
+                    onChange={handleFormChange('status')}
+                  />
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              {master.supportsAttachment && <Grid size={{ xs: 12, sm: 6 }}>
                 <Button component="label" fullWidth variant="outlined" startIcon={<FileUploadOutlined />} sx={{ minHeight: 48, justifyContent: 'flex-start' }}>
-                  {attachment?.name || 'Upload Logo Image'}
+                  {attachment?.name || t('common.uploadLogo')}
                   <input hidden type="file" accept={IMAGE_MIME_TYPES.join(',')} onChange={handleAttachmentChange} />
                 </Button>
                 {modal.row?.attachment_url && !attachment && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                    Existing file will remain unchanged.
+                    {t('common.existingFile')}
                   </Typography>
                 )}
-              </Grid>
+              </Grid>}
             </Grid>
           </DialogContent>
           <DialogActions sx={{ px: 3, py: 2 }}>
             <Button variant="outlined" color="inherit" onClick={handleCloseModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
-            <Button type="submit" variant="contained" startIcon={<AddOutlined />} sx={{ bgcolor: '#103c5c', '&:hover': { bgcolor: '#0c314b' } }}>
-              Save
+            <Button type="submit" variant="contained" color="primary" startIcon={<AddOutlined />}>
+              {t('common.save')}
             </Button>
           </DialogActions>
         </Box>
       </Dialog>
 
       <Dialog open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Delete {master.title}</DialogTitle>
+        <DialogTitle>{t('common.delete')} {t(master.titleKey || '') || master.title}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            This record will be permanently deleted.
+            {t('common.deleteConfirm')}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button variant="outlined" color="inherit" onClick={() => setDeleteRow(null)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="contained" color="error" startIcon={<DeleteOutlineOutlined />} onClick={handleDelete}>
-            Delete
+            {t('common.delete')}
           </Button>
         </DialogActions>
       </Dialog>

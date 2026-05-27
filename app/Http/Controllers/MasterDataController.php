@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\MasterCountry;
+use App\Models\MasterCity;
 use App\Models\MasterDistrict;
 use App\Models\MasterOffice;
+use App\Models\MasterPollingStation;
 use App\Models\MasterState;
+use App\Models\MasterWard;
 use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -46,6 +49,27 @@ class MasterDataController extends Controller
             'search' => ['office_code', 'office_name', 'company_name'],
             'file_dir' => 'masters/offices',
         ],
+        'cities' => [
+            'model' => MasterCity::class,
+            'primary_key' => 'id',
+            'module' => 'masters.cities',
+            'search' => ['city_name'],
+            'file_dir' => 'masters/cities',
+        ],
+        'wards' => [
+            'model' => MasterWard::class,
+            'primary_key' => 'id',
+            'module' => 'masters.wards',
+            'search' => ['ward_no', 'ward_name'],
+            'file_dir' => 'masters/wards',
+        ],
+        'polling-stations' => [
+            'model' => MasterPollingStation::class,
+            'primary_key' => 'id',
+            'module' => 'masters.polling_stations',
+            'search' => ['polling_station_name'],
+            'file_dir' => 'masters/polling-stations',
+        ],
     ];
 
     public function index(Request $request, string $type): JsonResponse
@@ -72,7 +96,7 @@ class MasterDataController extends Controller
             $query->where('status', (int) $request->query('status'));
         }
 
-        foreach (['country_id', 'state_id'] as $filter) {
+        foreach (['country_id', 'state_id', 'district_id', 'city_id', 'ward_id'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
@@ -99,6 +123,9 @@ class MasterDataController extends Controller
             'states' => ['group' => 'States', 'singular' => 'State', 'title' => 'name'],
             'districts' => ['group' => 'Districts', 'singular' => 'District', 'title' => 'name'],
             'offices' => ['group' => 'Offices', 'singular' => 'Office', 'title' => 'office_name'],
+            'cities' => ['group' => 'Cities', 'singular' => 'City', 'title' => 'city_name'],
+            'wards' => ['group' => 'Wards', 'singular' => 'Ward', 'title' => 'ward_name'],
+            'polling-stations' => ['group' => 'Polling Stations', 'singular' => 'Polling Station', 'title' => 'polling_station_name'],
         ];
 
         $results = collect();
@@ -204,6 +231,8 @@ class MasterDataController extends Controller
         $countries = MasterCountry::query()->where('status', 1);
         $states = MasterState::query()->where('status', 1);
         $districts = MasterDistrict::query()->where('status', 1);
+        $cities = MasterCity::query()->where('status', 1);
+        $wards = MasterWard::query()->where('status', 1);
 
         $user = $request->user();
         $access = AccessScope::payload($user);
@@ -232,6 +261,8 @@ class MasterDataController extends Controller
                 $countryIds->isNotEmpty() ? $countries->whereIn('id', $countryIds) : $countries->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $states->whereIn('id', $stateIds) : $states->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $districts->whereIn('state_id', $stateIds) : $districts->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $cities->whereIn('state_id', $stateIds) : $cities->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $wards->whereIn('state_id', $stateIds) : $wards->whereRaw('1 = 0');
             }
         }
 
@@ -239,6 +270,8 @@ class MasterDataController extends Controller
             'countries' => $countries->orderBy('name')->get(['id', 'name']),
             'states' => $states->orderBy('name')->get(['id', 'country_id', 'name']),
             'districts' => $districts->orderBy('name')->get(['id', 'country_id', 'state_id', 'name']),
+            'cities' => $cities->orderBy('city_name')->get(['id', 'state_id', 'district_id', 'city_name']),
+            'wards' => $wards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']),
         ]);
     }
 
@@ -264,7 +297,7 @@ class MasterDataController extends Controller
             return;
         }
 
-        if (in_array($type, ['countries', 'offices'], true)) {
+        if ($type === 'countries') {
             $query->whereRaw('1 = 0');
             return;
         }
@@ -280,15 +313,23 @@ class MasterDataController extends Controller
             return;
         }
 
-        if ($type === 'districts') {
+        if (in_array($type, ['districts', 'cities', 'wards', 'polling-stations'], true)) {
             if ($access['district_ids']) {
-                $query->whereIn('id', $access['district_ids']);
+                $type === 'districts'
+                    ? $query->whereIn('id', $access['district_ids'])
+                    : $query->whereIn('district_id', $access['district_ids']);
                 return;
             } elseif ($access['state_ids']) {
                 $query->whereIn('state_id', $access['state_ids']);
                 return;
             } elseif ($access['country_ids']) {
-                $query->whereIn('country_id', $access['country_ids']);
+                if ($type === 'districts') {
+                    $query->whereIn('country_id', $access['country_ids']);
+                    return;
+                }
+
+                $stateIds = MasterState::query()->whereIn('country_id', $access['country_ids'])->pluck('id');
+                $query->whereIn('state_id', $stateIds);
                 return;
             }
         }
@@ -353,6 +394,28 @@ class MasterDataController extends Controller
                 'status' => $statusRule,
                 'attachment' => $fileRule,
             ],
+            'cities' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_name' => ['required', 'string', 'max:150'],
+                'status' => $statusRule,
+            ],
+            'wards' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
+                'ward_no' => ['required', 'integer', 'min:1'],
+                'ward_name' => ['required', 'string', 'max:150'],
+                'status' => $statusRule,
+            ],
+            'polling-stations' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
+                'ward_id' => ['required', 'integer', 'exists:master_wards,id'],
+                'polling_station_name' => ['required', 'string', 'max:150'],
+                'status' => $statusRule,
+            ],
         };
 
         $data = $request->validate($rules);
@@ -366,7 +429,54 @@ class MasterDataController extends Controller
             $this->validateOfficeLocation($data);
         }
 
+        if (in_array($type, ['cities', 'wards', 'polling-stations'], true)) {
+            $this->validateLocalBodyLocation($data, $type);
+        }
+
         return $data;
+    }
+
+    private function validateLocalBodyLocation(array $data, string $type): void
+    {
+        $districtValid = MasterDistrict::query()
+            ->whereKey($data['district_id'])
+            ->where('state_id', $data['state_id'])
+            ->exists();
+
+        if (! $districtValid) {
+            throw ValidationException::withMessages([
+                'district_id' => 'Selected District does not belong to the chosen State.',
+            ]);
+        }
+
+        if (in_array($type, ['wards', 'polling-stations'], true)) {
+            $cityValid = MasterCity::query()
+                ->whereKey($data['city_id'])
+                ->where('state_id', $data['state_id'])
+                ->where('district_id', $data['district_id'])
+                ->exists();
+
+            if (! $cityValid) {
+                throw ValidationException::withMessages([
+                    'city_id' => 'Selected City does not belong to the chosen District.',
+                ]);
+            }
+        }
+
+        if ($type === 'polling-stations') {
+            $wardValid = MasterWard::query()
+                ->whereKey($data['ward_id'])
+                ->where('state_id', $data['state_id'])
+                ->where('district_id', $data['district_id'])
+                ->where('city_id', $data['city_id'])
+                ->exists();
+
+            if (! $wardValid) {
+                throw ValidationException::withMessages([
+                    'ward_id' => 'Selected Ward does not belong to the chosen City.',
+                ]);
+            }
+        }
     }
 
     private function validateOfficeLocation(array $data): void
@@ -466,6 +576,15 @@ class MasterDataController extends Controller
 
         if (array_key_exists('district_id', $data)) {
             $data['district_name'] = MasterDistrict::query()->whereKey($data['district_id'])->value('name');
+        }
+
+        if (array_key_exists('city_id', $data)) {
+            $data['city_name_label'] = MasterCity::query()->whereKey($data['city_id'])->value('city_name');
+        }
+
+        if (array_key_exists('ward_id', $data)) {
+            $ward = MasterWard::query()->whereKey($data['ward_id'])->first(['ward_no', 'ward_name']);
+            $data['ward_name_label'] = $ward ? trim($ward->ward_no.' - '.$ward->ward_name) : null;
         }
 
         return $data;
