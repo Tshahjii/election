@@ -48,7 +48,7 @@ export function LanguageToggle({ inverse = false }) {
 
 LanguageToggle.propTypes = { inverse: PropTypes.bool };
 
-export function ThemeModeToggle() {
+export function ThemeModeToggle({ inverse = false }) {
   const { themeMode, setThemeMode, t } = useAppPreferences();
   const isDark = themeMode === 'dark';
 
@@ -61,11 +61,11 @@ export function ThemeModeToggle() {
         onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
         sx={{
           minWidth: { xs: 34, sm: 78 },
-          color: 'common.white',
-          borderColor: 'rgba(255,255,255,0.55)',
+          color: inverse ? 'common.white' : 'text.primary',
+          borderColor: inverse ? 'rgba(255,255,255,0.55)' : 'divider',
           px: { xs: 0.75, sm: 1.25 },
           '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.5 } },
-          '&:hover': { borderColor: 'common.white' }
+          '&:hover': { borderColor: inverse ? 'common.white' : 'primary.main' }
         }}
       >
         <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
@@ -76,11 +76,13 @@ export function ThemeModeToggle() {
   );
 }
 
+ThemeModeToggle.propTypes = { inverse: PropTypes.bool };
+
 export default function AppControls({ showTheme = false, inverse = false }) {
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
       <LanguageToggle inverse={inverse} />
-      {showTheme && <ThemeModeToggle />}
+      {showTheme && <ThemeModeToggle inverse={inverse} />}
       <AppCustomizer inverse={inverse} />
     </Stack>
   );

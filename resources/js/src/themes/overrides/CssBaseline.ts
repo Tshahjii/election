@@ -6,11 +6,34 @@ export default function CssBaseline(theme) {
       styleOverrides: {
         body: {
           backgroundColor: theme.palette.background.default,
-          color: theme.palette.text.primary
+          color: theme.palette.text.primary,
+          minWidth: 0,
+          overflowX: 'hidden'
+        },
+        '#root': {
+          minWidth: 0,
+          overflowX: 'hidden'
+        },
+        '*': {
+          boxSizing: 'border-box'
         },
         '.MuiTableCell-root': {
           color: theme.palette.text.primary,
           borderColor: theme.palette.divider
+        },
+        '.MuiTableContainer-root': {
+          width: '100%',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        },
+        '.MuiCardHeader-root': {
+          minWidth: 0
+        },
+        '.MuiCardHeader-content': {
+          minWidth: 0
+        },
+        '.MuiCardHeader-title': {
+          overflowWrap: 'break-word'
         },
         '.MuiInputBase-root, .MuiOutlinedInput-root': {
           color: theme.palette.text.primary

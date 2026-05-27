@@ -1,10 +1,16 @@
+import { useState } from 'react';
+
 // material-ui
 import AppBar from '@mui/material/AppBar';
 import Avatar from '@mui/material/Avatar';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Popper from '@mui/material/Popper';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -18,10 +24,10 @@ import Notification from './Notification';
 import Profile from './Profile';
 import Search from './Search';
 
-import { DRAWER_WIDTH } from 'config';
 import { handlerDrawerOpen, useGetMenuMaster } from 'states/menu';
 
 import MenuTwoToneIcon from '@mui/icons-material/MenuTwoTone';
+import MoreVertOutlined from '@mui/icons-material/MoreVertOutlined';
 
 // AppBar props, including styles that vary based on drawer state and screen size
 const appBar = {
@@ -41,45 +47,61 @@ const appBar = {
 
 export default function Header() {
   const theme = useTheme();
-  const downSM = useMediaQuery(theme.breakpoints.down('sm'));
+  const downLG = useMediaQuery(theme.breakpoints.down('lg'));
+  const [actionsAnchor, setActionsAnchor] = useState(null);
   const { menuMaster } = useGetMenuMaster();
   const user = useSelector((state) => state.auth.user);
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const stateName = user?.state_info?.name || user?.office_info?.state || 'State';
   const companyName = user?.office_info?.company_name || user?.department || 'Election Department';
   const stateLogo = user?.state_info?.logo_url;
+  const actionsOpen = Boolean(actionsAnchor);
+
+  const handleActionsClick = (event) => {
+    setActionsAnchor((current) => (current ? null : event.currentTarget));
+  };
+
   // Common header content
   const mainHeader = (
-    <Toolbar sx={{ minHeight: { xs: 72, sm: 64 }, gap: { xs: 1, sm: 1.5 }, px: { xs: 1.5, sm: 2 } }}>
-      <Stack direction="row" sx={{ gap: 1.25, width: { xs: 1, md: DRAWER_WIDTH }, alignItems: 'center', minWidth: 0 }}>
-        <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0, flex: 1 }}>
+    <Toolbar
+      sx={{
+        minHeight: { xs: 64, sm: 68, lg: 72 },
+        gap: { xs: 0.75, sm: 1.5 },
+        px: { xs: 1.25, sm: 2 },
+        py: { xs: 0.75, sm: 0.75 },
+        alignItems: 'center',
+        overflow: 'hidden'
+      }}
+    >
+      <Stack direction="row" sx={{ gap: { xs: 0.75, sm: 1 }, alignItems: 'center', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.75, sm: 1.25 }, minWidth: 0, flex: 1 }}>
           <Avatar
             src={stateLogo || undefined}
             alt={stateName}
             variant="rounded"
             sx={{
-              width: { xs: 38, sm: 42 },
-              height: { xs: 38, sm: 42 },
+              width: { xs: 34, sm: 40, lg: 42 },
+              height: { xs: 34, sm: 40, lg: 42 },
               bgcolor: 'common.white',
               color: 'primary.dark',
               fontWeight: 700,
+              fontSize: { xs: 17, sm: 20 },
               p: stateLogo ? 0.45 : 0,
               '& img': { objectFit: 'contain' }
             }}
           >
             {stateName.charAt(0)}
           </Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
             <Typography
               sx={{
                 color: 'common.white',
-                fontSize: { xs: 18, sm: 22, md: 24 },
+                fontSize: { xs: 14, sm: 18, md: 20, lg: 24 },
                 fontWeight: 700,
                 lineHeight: 1.12,
-                overflowWrap: 'anywhere',
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: { xs: 2, sm: 1 }
+                wordBreak: 'keep-all',
+                overflowWrap: 'normal',
+                whiteSpace: 'normal'
               }}
             >
               {stateName} Shasan
@@ -87,13 +109,12 @@ export default function Header() {
             <Typography
               variant="caption"
               sx={{
+                display: { xs: 'none', sm: 'block' },
                 color: 'rgba(255,255,255,0.78)',
-                overflowWrap: 'anywhere',
+                wordBreak: 'keep-all',
+                overflowWrap: 'normal',
                 lineHeight: 1.25,
-                WebkitLineClamp: 1,
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical'
+                whiteSpace: 'normal'
               }}
             >
               {companyName}, {stateName}
@@ -101,22 +122,82 @@ export default function Header() {
           </Box>
         </Stack>
         <IconButton
-          edge="start"
-          sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 'auto' }, mr: { xs: 0, sm: 1.25 }, color: 'background.paper' }}
+          edge="end"
+          sx={{
+            flexShrink: 0,
+            color: 'common.white',
+            ml: { xs: 0.25, sm: 1 },
+            width: { xs: 34, sm: 40 },
+            height: { xs: 34, sm: 40 }
+          }}
           aria-label="open drawer"
           onClick={() => handlerDrawerOpen(!drawerOpen)}
           size="large"
         >
           <MenuTwoToneIcon sx={{ fontSize: '1.5rem' }} />
         </IconButton>
+        <IconButton
+          edge="end"
+          sx={{
+            display: { xs: 'inline-flex', lg: 'none' },
+            flexShrink: 0,
+            color: 'common.white',
+            width: { xs: 34, sm: 40 },
+            height: { xs: 34, sm: 40 }
+          }}
+          aria-label="open header actions"
+          onClick={handleActionsClick}
+          size="large"
+        >
+          <MoreVertOutlined sx={{ fontSize: '1.45rem' }} />
+        </IconButton>
       </Stack>
-      <Box sx={{ flexGrow: { xs: 0, sm: 1 } }} />
-      <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1 }, display: { xs: 'none', sm: 'flex' } }}>
+      <Box sx={{ flexGrow: { xs: 0, lg: 1 }, minWidth: { xs: 0, lg: 12 } }} />
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          gap: { xs: 0.5, sm: 1 },
+          display: { xs: 'none', lg: 'flex' },
+          flexShrink: 1,
+          minWidth: 0
+        }}
+      >
         <AppControls showTheme inverse />
-        {!downSM && <Search />}
-        {!downSM && <Notification />}
-        {!downSM && <Profile />}
+        {!downLG && <Search />}
+        {!downLG && <Notification inverse />}
+        {!downLG && <Profile inverse />}
       </Stack>
+      <Popper open={actionsOpen} anchorEl={actionsAnchor} placement="bottom-end" sx={{ zIndex: 1400 }}>
+        <ClickAwayListener onClickAway={() => setActionsAnchor(null)}>
+          <Paper
+            elevation={8}
+            sx={{
+              mt: 1,
+              mr: 1,
+              width: { xs: 'calc(100vw - 24px)', sm: 380 },
+              maxWidth: 420,
+              p: 1.5,
+              borderRadius: 1.5
+            }}
+          >
+            <Stack sx={{ gap: 1.5 }}>
+              <AppControls showTheme inverse={false} />
+              <Search forceField inverse={false} />
+              <Divider />
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Alerts and account
+                </Typography>
+                <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+                  <Notification inverse={false} />
+                  <Profile inverse={false} />
+                </Stack>
+              </Stack>
+            </Stack>
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
     </Toolbar>
   );
 

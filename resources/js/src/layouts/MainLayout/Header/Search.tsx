@@ -36,13 +36,13 @@ const fallbackDescriptions = {
   'access-management': 'Create users, assign roles and manage module permissions.'
 };
 
-const color = 'grey.100';
-
 // ==============================|| SEARCH ||============================== //
 
-export default function Search() {
+export default function Search({ forceField = false, inverse = true }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')) && !forceField;
+  const iconColor = inverse ? 'grey.100' : 'text.secondary';
+  const inputColor = inverse ? 'grey.100' : 'text.primary';
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const inputRef = useRef(null);
@@ -138,7 +138,7 @@ export default function Search() {
   const searchField = (
     <TextField
       inputRef={inputRef}
-      autoFocus={isMobile}
+      autoFocus={isMobile || forceField}
       placeholder="Search in election portal"
       size="small"
       value={query}
@@ -152,25 +152,25 @@ export default function Search() {
         input: {
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon sx={{ color }} />
+              <SearchIcon sx={{ color: iconColor }} />
             </InputAdornment>
           ),
           endAdornment: query ? (
             <InputAdornment position="end">
               <IconButton size="small" onClick={() => setQuery('')}>
-                <CloseIcon sx={{ color }} fontSize="small" />
+                <CloseIcon sx={{ color: iconColor }} fontSize="small" />
               </IconButton>
             </InputAdornment>
           ) : null
         }
       }}
       sx={{
-        width: { xs: 1, sm: 250, md: 330 },
-        bgcolor: alpha(theme.palette.common.white, 0.14),
-        ':hover': { bgcolor: alpha(theme.palette.common.white, 0.2) },
+        width: forceField ? 1 : { xs: 1, sm: 250, md: 330 },
+        bgcolor: inverse ? alpha(theme.palette.common.white, 0.14) : 'background.default',
+        ':hover': { bgcolor: inverse ? alpha(theme.palette.common.white, 0.2) : 'background.default' },
         borderRadius: 1,
-        '& .MuiInputBase-input': { color: 'grey.100' },
-        '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+        '& .MuiInputBase-input': { color: inputColor },
+        '& .MuiOutlinedInput-notchedOutline': { border: inverse ? 'none' : undefined }
       }}
     />
   );
@@ -216,10 +216,10 @@ export default function Search() {
 
   return (
     <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
-      <Box sx={{ mr: { xs: 0, sm: 2 }, width: { xs: 1, sm: 'auto' } }}>
+      <Box sx={{ mr: forceField ? 0 : { xs: 0, sm: 2 }, width: forceField ? 1 : { xs: 1, sm: 'auto' } }}>
         {isMobile ? (
           <IconButton size="small" onClick={(event) => setAnchorEl(anchorEl ? null : event.currentTarget)}>
-            <SearchIcon sx={{ color }} />
+            <SearchIcon sx={{ color: iconColor }} />
           </IconButton>
         ) : searchField}
 

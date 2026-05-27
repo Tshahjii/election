@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
@@ -41,7 +42,7 @@ const menuItems: any[] = [
 
 // ==============================|| PROFILE ||============================== //
 
-export default function Profile() {
+export default function Profile({ inverse = true }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [open, setOpen] = useState(false);
@@ -82,16 +83,16 @@ export default function Profile() {
     <ClickAwayListener onClickAway={handleClickAway}>
       <Box>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-          <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right', maxWidth: 160 }}>
-            <Typography variant="subtitle2" noWrap sx={{ color: 'common.white', lineHeight: 1.1 }}>
+          <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right', maxWidth: { sm: 150, lg: 220 } }}>
+            <Typography variant="subtitle2" sx={{ color: inverse ? 'common.white' : 'text.primary', lineHeight: 1.1, overflowWrap: 'break-word' }}>
               {user?.name || 'User'}
             </Typography>
-            <Typography variant="caption" noWrap sx={{ display: 'block', color: 'rgba(255,255,255,0.72)' }}>
+            <Typography variant="caption" sx={{ display: 'block', color: inverse ? 'rgba(255,255,255,0.72)' : 'text.secondary', overflowWrap: 'break-word' }}>
               {roleLabel}
             </Typography>
           </Box>
           <IconButton size="small" onClick={handleClick}>
-            <AccountCircleTwoToneIcon sx={{ fontSize: { sm: 24 }, color: 'background.paper' }} />
+            <AccountCircleTwoToneIcon sx={{ fontSize: { xs: 22, sm: 24 }, color: inverse ? 'common.white' : 'text.primary' }} />
           </IconButton>
         </Stack>
 
@@ -132,3 +133,5 @@ export default function Profile() {
     </ClickAwayListener>
   );
 }
+
+Profile.propTypes = { inverse: PropTypes.bool };

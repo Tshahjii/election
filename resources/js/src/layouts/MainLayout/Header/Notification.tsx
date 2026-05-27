@@ -62,7 +62,7 @@ function NotificationItem({ avatar, name, time, message }) {
 
 // ==============================|| NOTIFICATION ||============================== //
 
-export default function Notification() {
+export default function Notification({ inverse = true }) {
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -82,7 +82,7 @@ export default function Notification() {
     <ClickAwayListener onClickAway={handleClickAway}>
       <Box>
         <IconButton size="small" onClick={handleClick}>
-          <NotificationsNoneTwoToneIcon sx={{ fontSize: { sm: 24 }, color: 'background.paper' }} />
+          <NotificationsNoneTwoToneIcon sx={{ fontSize: { xs: 22, sm: 24 }, color: inverse ? 'common.white' : 'text.primary' }} />
         </IconButton>
 
         <Popper
@@ -123,3 +123,4 @@ export default function Notification() {
 }
 
 NotificationItem.propTypes = { avatar: PropTypes.string, name: PropTypes.string, time: PropTypes.string, message: PropTypes.string };
+Notification.propTypes = { inverse: PropTypes.bool };

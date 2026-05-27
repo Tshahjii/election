@@ -64,6 +64,7 @@ function MainCard({
           (variant.type === CardVariant.FILLED
             ? { bgcolor: cardColors[variant.color || 'primary'], color: 'common.white' }
             : variant.type === CardVariant.OUTLINED && variant.color && { borderColor: cardColors[variant.color] })),
+        minWidth: 0,
         ...sx
       }}
       {...others}

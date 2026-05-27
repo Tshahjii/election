@@ -42,11 +42,13 @@ export default function MainLayout() {
       <Box
         component="main"
         sx={{
+          minWidth: 0,
           width: { xs: 1, lg: drawerOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : 1 },
-          p: compact ? { xs: 1, sm: 1.5, md: 2 } : { xs: 1.5, sm: 2, md: 3 },
+          p: compact ? { xs: 1, sm: 1.5, md: 2 } : { xs: 1, sm: 2, md: 3 },
           ml: { xs: 0, lg: 'auto' },
           minHeight: '100vh',
-          bgcolor: 'background.default'
+          bgcolor: 'background.default',
+          overflowX: 'hidden'
         }}
       >
         <Toolbar />
