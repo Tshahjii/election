@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\UserAccessController;
 use Illuminate\Support\Facades\Route;
@@ -33,4 +34,12 @@ Route::middleware('jwt')->prefix('users')->group(function () {
     Route::put('{user}', [UserAccessController::class, 'update']);
     Route::put('{user}/access', [UserAccessController::class, 'updateAccess']);
     Route::delete('{user}', [UserAccessController::class, 'destroy']);
+});
+
+Route::middleware('jwt')->prefix('calendar-events')->group(function () {
+    Route::get('/', [CalendarEventController::class, 'index']);
+    Route::get('reminders', [CalendarEventController::class, 'reminders']);
+    Route::post('/', [CalendarEventController::class, 'store']);
+    Route::put('{calendarEvent}', [CalendarEventController::class, 'update']);
+    Route::delete('{calendarEvent}', [CalendarEventController::class, 'destroy']);
 });

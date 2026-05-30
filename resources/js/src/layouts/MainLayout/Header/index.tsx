@@ -20,6 +20,8 @@ import { useSelector } from 'react-redux';
 
 // project imports
 import AppControls from 'components/AppControls';
+import HeaderCalendar from 'components/calendar/HeaderCalendar';
+import CalendarDialog from 'components/calendar/CalendarDialog';
 import Notification from './Notification';
 import Profile from './Profile';
 import Search from './Search';
@@ -49,6 +51,7 @@ export default function Header() {
   const theme = useTheme();
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
   const [actionsAnchor, setActionsAnchor] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const { menuMaster } = useGetMenuMaster();
   const user = useSelector((state) => state.auth.user);
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
@@ -59,6 +62,11 @@ export default function Header() {
 
   const handleActionsClick = (event) => {
     setActionsAnchor((current) => (current ? null : event.currentTarget));
+  };
+
+  const handleCalendarOpen = () => {
+    setCalendarOpen(true);
+    setActionsAnchor(null);
   };
 
   // Common header content
@@ -165,6 +173,7 @@ export default function Header() {
       >
         <AppControls showTheme inverse />
         {!downLG && <Search />}
+        {!downLG && <HeaderCalendar inverse onOpen={handleCalendarOpen} />}
         {!downLG && <Notification inverse />}
         {!downLG && <Profile inverse />}
       </Stack>
@@ -191,6 +200,7 @@ export default function Header() {
                 </Typography>
                 <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
                   <Notification inverse={false} />
+                  <HeaderCalendar inverse={false} onOpen={handleCalendarOpen} />
                   <Profile inverse={false} />
                 </Stack>
               </Stack>
@@ -201,5 +211,10 @@ export default function Header() {
     </Toolbar>
   );
 
-  return <AppBar {...appBar}>{mainHeader}</AppBar>;
+  return (
+    <>
+      <AppBar {...appBar}>{mainHeader}</AppBar>
+      <CalendarDialog open={calendarOpen} onClose={() => setCalendarOpen(false)} />
+    </>
+  );
 }
