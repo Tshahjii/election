@@ -31,12 +31,9 @@ const uniqueEvents = (events: ReminderEntry[]) => {
 
 export default function CalendarReminderProvider() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const user = useSelector((state) => state.auth.user);
   const [events, setEvents] = useState<ReminderEntry[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<string[]>([]);
   const [openedToday, setOpenedToday] = useState(false);
-  const todayKey = new Date().toLocaleDateString('en-CA');
-  const storageKey = `calendar_reminders_closed:${user?.id || 'guest'}:${todayKey}`;
 
   const visibleEvents = useMemo(() => events.filter((event) => !dismissedKeys.includes(event.reminderKey)), [dismissedKeys, events]);
   const open = isAuthenticated && visibleEvents.length > 0;
@@ -66,23 +63,13 @@ export default function CalendarReminderProvider() {
       return undefined;
     }
 
-    try {
-      setDismissedKeys(JSON.parse(localStorage.getItem(storageKey) || '[]'));
-    } catch {
-      setDismissedKeys([]);
-    }
-
     loadReminders();
     const timer = window.setInterval(loadReminders, 30000);
     return () => window.clearInterval(timer);
-  }, [isAuthenticated, loadReminders, storageKey]);
+  }, [isAuthenticated, loadReminders]);
 
   const handleClose = () => {
-    setDismissedKeys((prev) => {
-      const next = Array.from(new Set([...prev, ...visibleEvents.map((event) => event.reminderKey)]));
-      localStorage.setItem(storageKey, JSON.stringify(next));
-      return next;
-    });
+    setDismissedKeys((prev) => Array.from(new Set([...prev, ...visibleEvents.map((event) => event.reminderKey)])));
   };
 
   return (
