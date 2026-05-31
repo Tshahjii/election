@@ -102,7 +102,7 @@ export default function Profile({ inverse = true }) {
           anchorEl={anchorEl}
           placement="bottom-start"
           transition
-          disablePortal
+          sx={{ zIndex: 1400 }}
           modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
         >
           {({ TransitionProps }) => (

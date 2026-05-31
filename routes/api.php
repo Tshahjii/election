@@ -29,6 +29,7 @@ Route::middleware('jwt')->prefix('masters')->group(function () {
 
 Route::middleware('jwt')->prefix('users')->group(function () {
     Route::get('access-options', [UserAccessController::class, 'accessOptions']);
+    Route::get('reset/{id}', [UserAccessController::class, 'resetPassword']);
     Route::get('/', [UserAccessController::class, 'index']);
     Route::post('/', [UserAccessController::class, 'store']);
     Route::put('{user}', [UserAccessController::class, 'update']);
