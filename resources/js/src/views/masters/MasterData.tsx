@@ -43,6 +43,7 @@ import InsertDriveFileOutlined from '@mui/icons-material/InsertDriveFileOutlined
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
 
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_DOB = '2000-05-18';
 
 const MASTER_TYPES = [
   {
@@ -55,21 +56,10 @@ const MASTER_TYPES = [
     primaryKey: 'id',
     supportsAttachment: true,
     columns: [
-      { key: 'name', label: 'Name' },
-      { key: 'iso2', label: 'ISO2' },
-      { key: 'iso3', label: 'ISO3' },
-      { key: 'phone_code', label: 'Phone Code' },
-      { key: 'currency', label: 'Currency' },
-      { key: 'nationality', label: 'Nationality' }
+      { key: 'name', label: 'Name' }
     ],
     fields: [
-      { key: 'name', label: 'Country Name', required: true },
-      { key: 'iso2', label: 'ISO2', required: true, maxLength: 2 },
-      { key: 'iso3', label: 'ISO3', maxLength: 3 },
-      { key: 'phone_code', label: 'Phone Code' },
-      { key: 'currency', label: 'Currency' },
-      { key: 'currency_symbol', label: 'Currency Symbol' },
-      { key: 'nationality', label: 'Nationality' }
+      { key: 'name', label: 'Country Name', required: true }
     ]
   },
   {
@@ -122,7 +112,6 @@ const MASTER_TYPES = [
     title: 'Office',
     titleKey: 'masters.office',
     primaryKey: 'ofc_id',
-    supportsAttachment: true,
     columns: [
       { key: 'office_code', label: 'Code' },
       { key: 'office_name', label: 'Name' },
@@ -206,6 +195,99 @@ const MASTER_TYPES = [
       { key: 'ward_id', label: 'Ward', type: 'ward', required: true },
       { key: 'polling_station_name', label: 'Polling Station Name', required: true }
     ]
+  },
+  {
+    key: 'emp-types',
+    module: 'hrms.emp_types',
+    label: 'Employee Types',
+    labelKey: 'masters.employeeTypes',
+    title: 'Employee Type',
+    titleKey: 'masters.employeeType',
+    primaryKey: 'id',
+    columns: [{ key: 'emp_type', label: 'Employee Type' }],
+    fields: [{ key: 'emp_type', label: 'Employee Type', required: true }]
+  },
+  {
+    key: 'designations',
+    module: 'hrms.designations',
+    label: 'Designations',
+    labelKey: 'masters.designations',
+    title: 'Designation',
+    titleKey: 'masters.designation',
+    primaryKey: 'id',
+    columns: [{ key: 'designation', label: 'Designation' }],
+    fields: [{ key: 'designation', label: 'Designation', required: true }]
+  },
+  {
+    key: 'departments',
+    module: 'hrms.departments',
+    label: 'Departments',
+    labelKey: 'masters.departments',
+    title: 'Department',
+    titleKey: 'masters.department',
+    primaryKey: 'id',
+    columns: [{ key: 'department', label: 'Department' }],
+    fields: [{ key: 'department', label: 'Department', required: true }]
+  },
+  {
+    key: 'pay-levels',
+    module: 'hrms.pay_levels',
+    label: 'Pay Levels',
+    labelKey: 'masters.payLevels',
+    title: 'Pay Level',
+    titleKey: 'masters.payLevel',
+    primaryKey: 'id',
+    columns: [
+      { key: 'level', label: 'Level' },
+      { key: 'amount_pay', label: 'Amount Pay' },
+      { key: 'grade_pay', label: 'Grade Pay' }
+    ],
+    fields: [
+      { key: 'level', label: 'Level', required: true },
+      { key: 'amount_pay', label: 'Amount Pay', required: true },
+      { key: 'grade_pay', label: 'Grade Pay', required: true }
+    ]
+  },
+  {
+    key: 'employees',
+    module: 'hrms.employees',
+    label: 'Employees',
+    labelKey: 'masters.employees',
+    title: 'Employee',
+    titleKey: 'masters.employee',
+    primaryKey: 'id',
+    columns: [
+      { key: 'emp_code', label: 'Employee Code' },
+      { key: 'name', label: 'Name' },
+      { key: 'mobile', label: 'Mobile' },
+      { key: 'emp_type_name', label: 'Employee Type' },
+      { key: 'department_name', label: 'Department' },
+      { key: 'designation_name', label: 'Designation' },
+      { key: 'pay_level_name', label: 'Pay Level' },
+      { key: 'office_name', label: 'Office' }
+    ],
+    fields: [
+      { key: 'emp_code', label: 'Employee Code' },
+      { key: 'title', label: 'Title', required: true },
+      { key: 'name', label: 'Name', required: true },
+      { key: 'gender', label: 'Gender', type: 'gender', required: true },
+      { key: 'dob', label: 'Date of Birth', type: 'date', required: true },
+      { key: 'mobile', label: 'Mobile', required: true, maxLength: 10 },
+      { key: 'email', label: 'Email', type: 'email', required: true },
+      { key: 'emp_type_id', label: 'Employee Type', type: 'emp_type', required: true },
+      { key: 'department_id', label: 'Department', type: 'department', required: true },
+      { key: 'designation_id', label: 'Designation', type: 'designation', required: true },
+      { key: 'pay_level_id', label: 'Pay Level', type: 'pay_level', required: true },
+      { key: 'basic_pay', label: 'Basic Pay', required: true },
+      { key: 'country_id', label: 'Country', type: 'country', required: true },
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_type', label: 'City Type', type: 'city_type', required: true },
+      { key: 'city_id', label: 'City', type: 'city', required: true },
+      { key: 'ofc_id', label: 'Office', type: 'office' },
+      { key: 'any_disability', label: 'Any Disability', type: 'boolean', required: true },
+      { key: 'remark', label: 'Remark', multiline: true }
+    ]
   }
 ];
 
@@ -214,7 +296,10 @@ export { MASTER_TYPES };
 const defaultForm: Record<string, any> = {
   status: 1,
   office_type: 1,
-  ofc_parent_id: 0
+  ofc_parent_id: 0,
+  gender: 1,
+  city_type: 'urban',
+  any_disability: 0
 };
 
 function getApiError(error) {
@@ -233,12 +318,28 @@ export default function MasterData({ masterKey = 'countries' }) {
   const searchQuery = searchParams.get('search') || '';
   const { user } = useSelector((state) => state.auth);
   const [rows, setRows] = useState<any[]>([]);
-  const [options, setOptions] = useState<{ countries: any[]; states: any[]; districts: any[]; cities: any[]; wards: any[] }>({
+  const [options, setOptions] = useState<{
+    countries: any[];
+    states: any[];
+    districts: any[];
+    cities: any[];
+    wards: any[];
+    offices: any[];
+    emp_types: any[];
+    designations: any[];
+    departments: any[];
+    pay_levels: any[];
+  }>({
     countries: [],
     states: [],
     districts: [],
     cities: [],
-    wards: []
+    wards: [],
+    offices: [],
+    emp_types: [],
+    designations: [],
+    departments: [],
+    pay_levels: []
   });
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ search: searchQuery, status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
@@ -274,6 +375,10 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!form.city_id) return [];
     return options.wards.filter((ward) => Number(ward.city_id) === Number(form.city_id));
   }, [form.city_id, options.wards]);
+  const filteredOfficeOptions = useMemo(() => {
+    if (!form.district_id) return options.offices;
+    return options.offices.filter((office) => Number(office.district_id) === Number(form.district_id));
+  }, [form.district_id, options.offices]);
 
   const filterDistrictOptions = useMemo(() => {
     if (!filters.state_id) return options.districts;
@@ -403,10 +508,12 @@ export default function MasterData({ masterKey = 'countries' }) {
         next.district_id = '';
         next.city_id = '';
         next.ward_id = '';
+        next.ofc_id = '';
       }
       if (field === 'district_id') {
         next.city_id = '';
         next.ward_id = '';
+        next.ofc_id = '';
       }
       if (field === 'city_id') {
         next.ward_id = '';
@@ -475,11 +582,14 @@ export default function MasterData({ masterKey = 'countries' }) {
   };
 
   const renderField = (field) => {
+    const label = tl(field.label);
+
     if (field.type === 'country') {
       return (
         <FormControl fullWidth required={field.required}>
           <ChosenSelect
             required={field.required}
+            label={label}
             value={form[field.key] || ''}
             placeholder={t('field.country')}
             options={options.countries.map((country) => ({ value: country.id, label: country.name }))}
@@ -494,6 +604,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <FormControl fullWidth required={field.required}>
           <ChosenSelect
             required={field.required}
+            label={label}
             value={form[field.key] || ''}
             placeholder={t('field.state')}
             options={filteredStateOptions.map((state) => ({ value: state.id, label: state.name }))}
@@ -508,6 +619,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <FormControl fullWidth required={field.required}>
           <ChosenSelect
             required={field.required}
+            label={label}
             value={form[field.key] || ''}
             placeholder={t('field.district')}
             options={filteredDistrictOptions.map((district) => ({ value: district.id, label: district.name }))}
@@ -522,6 +634,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <FormControl fullWidth required={field.required}>
           <ChosenSelect
             required={field.required}
+            label={label}
             value={form[field.key] || ''}
             placeholder={t('field.city')}
             options={filteredCityOptions.map((city) => ({ value: city.id, label: city.city_name }))}
@@ -536,6 +649,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <FormControl fullWidth required={field.required}>
           <ChosenSelect
             required={field.required}
+            label={label}
             value={form[field.key] || ''}
             placeholder={t('field.ward')}
             options={filteredWardOptions.map((ward) => ({ value: ward.id, label: `${ward.ward_no} - ${ward.ward_name}` }))}
@@ -549,10 +663,140 @@ export default function MasterData({ masterKey = 'countries' }) {
       return (
         <FormControl fullWidth>
           <ChosenSelect
+            label={label}
             value={form[field.key] || 1}
             options={[
               { value: 1, label: t('data.headOffice') },
               { value: 2, label: t('data.branchOffice') }
+            ]}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'office') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={filteredOfficeOptions.map((office) => ({ value: office.ofc_id, label: office.office_name }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'emp_type') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={options.emp_types.map((item) => ({ value: item.id, label: item.emp_type }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'department') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={options.departments.map((item) => ({ value: item.id, label: item.department }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'designation') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={options.designations.map((item) => ({ value: item.id, label: item.designation }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'pay_level') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={options.pay_levels.map((item) => ({ value: item.id, label: `${item.level} - ${item.amount_pay}` }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'gender') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || 1}
+            placeholder={tl(field.label)}
+            options={[
+              { value: 1, label: 'Male' },
+              { value: 2, label: 'Female' }
+            ]}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'city_type') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || 'urban'}
+            placeholder={tl(field.label)}
+            options={[
+              { value: 'urban', label: 'Urban' },
+              { value: 'rural', label: 'Rural' }
+            ]}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'boolean') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] ?? 0}
+            placeholder={tl(field.label)}
+            options={[
+              { value: 0, label: 'No' },
+              { value: 1, label: 'Yes' }
             ]}
             onChange={handleFormChange(field.key)}
           />
@@ -566,9 +810,21 @@ export default function MasterData({ masterKey = 'countries' }) {
         required={field.required}
         label={tl(field.label)}
         type={field.type || 'text'}
+        multiline={field.multiline}
+        minRows={field.multiline ? 3 : undefined}
         value={form[field.key] ?? ''}
         onChange={handleFormChange(field.key)}
-        slotProps={{ input: { inputProps: { maxLength: field.maxLength } } }}
+        onKeyDown={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
+        onPaste={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
+        slotProps={{
+          inputLabel: { shrink: field.type === 'date' ? true : undefined },
+          input: {
+            inputProps: {
+              max: field.key === 'dob' ? MAX_DOB : undefined,
+              maxLength: field.maxLength
+            }
+          }
+        }}
       />
     );
   };
@@ -603,6 +859,7 @@ export default function MasterData({ masterKey = 'countries' }) {
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth>
               <ChosenSelect
+                label={t('common.status')}
                 value={filters.status}
                 placeholder={t('common.allStatus')}
                 options={[
@@ -622,6 +879,7 @@ export default function MasterData({ masterKey = 'countries' }) {
               <Grid size={{ xs: 12, md: 2 }}>
                 <FormControl fullWidth>
                   <ChosenSelect
+                    label={t('field.country')}
                     value={filters.country_id}
                     placeholder={t('field.country')}
                     options={[{ value: '', label: t('field.country') }, ...options.countries.map((country) => ({ value: country.id, label: country.name }))]}
@@ -638,6 +896,7 @@ export default function MasterData({ masterKey = 'countries' }) {
             <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth>
                 <ChosenSelect
+                  label={t('common.allStates')}
                   value={filters.state_id}
                   placeholder={t('common.allStates')}
                   options={[{ value: '', label: t('common.allStates') }, ...filterStateOptions.map((state) => ({ value: state.id, label: state.name }))]}
@@ -653,6 +912,7 @@ export default function MasterData({ masterKey = 'countries' }) {
             <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth>
                 <ChosenSelect
+                  label={t('common.allDistricts')}
                   value={filters.district_id}
                   placeholder={t('common.allDistricts')}
                   options={[{ value: '', label: t('common.allDistricts') }, ...filterDistrictOptions.map((district) => ({ value: district.id, label: district.name }))]}
@@ -668,6 +928,7 @@ export default function MasterData({ masterKey = 'countries' }) {
             <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth>
                 <ChosenSelect
+                  label={t('common.allCities')}
                   value={filters.city_id}
                   placeholder={t('common.allCities')}
                   options={[{ value: '', label: t('common.allCities') }, ...filterCityOptions.map((city) => ({ value: city.id, label: city.city_name }))]}
@@ -683,6 +944,7 @@ export default function MasterData({ masterKey = 'countries' }) {
             <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth>
                 <ChosenSelect
+                  label={t('common.allWards')}
                   value={filters.ward_id}
                   placeholder={t('common.allWards')}
                   options={[{ value: '', label: t('common.allWards') }, ...filterWardOptions.map((ward) => ({ value: ward.id, label: `${ward.ward_no} - ${ward.ward_name}` }))]}
@@ -697,6 +959,7 @@ export default function MasterData({ masterKey = 'countries' }) {
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth>
               <ChosenSelect
+                label={t('common.rows') || 'Rows'}
                 value={rowsPerPage}
                 options={[10, 25, 50, 100].map((value) => ({ value, label: `${value} ${t('common.rows') || 'rows'}` }))}
                 onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}
@@ -798,6 +1061,7 @@ export default function MasterData({ masterKey = 'countries' }) {
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <ChosenSelect
+                    label={t('common.status')}
                     value={form.status ?? 1}
                     options={[
                       { value: 1, label: t('common.active') },

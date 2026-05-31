@@ -17,6 +17,11 @@ import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import FormatListNumberedOutlinedIcon from '@mui/icons-material/FormatListNumberedOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CorporateFareOutlinedIcon from '@mui/icons-material/CorporateFareOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 
 // ==============================|| MENU ITEMS - ELECTION DASHBOARD ||============================== //
 
@@ -72,7 +77,11 @@ const dashboard = {
           icon: BallotOutlinedIcon,
           url: '/admin/masters/polling-stations',
           permission: 'masters.polling_stations.read'
-        }
+        },
+        { id: 'master-employee-type', title: 'Employee Type', titleKey: 'menu.employeeType', type: 'item', icon: BadgeOutlinedIcon, url: '/admin/masters/emp-types', permission: 'hrms.emp_types.read' },
+        { id: 'master-designation', title: 'Designation', titleKey: 'menu.designation', type: 'item', icon: PersonOutlineOutlinedIcon, url: '/admin/masters/designations', permission: 'hrms.designations.read' },
+        { id: 'master-department', title: 'Department', titleKey: 'menu.department', type: 'item', icon: CorporateFareOutlinedIcon, url: '/admin/masters/departments', permission: 'hrms.departments.read' },
+        { id: 'master-pay-level', title: 'Pay Scale / Pay Level', titleKey: 'menu.payLevel', type: 'item', icon: PaymentsOutlinedIcon, url: '/admin/masters/pay-levels', permission: 'hrms.pay_levels.read' }
       ]
     },
     {
@@ -90,6 +99,24 @@ const dashboard = {
           icon: SecurityOutlinedIcon,
           url: '/admin/users/access-management',
           permission: 'users.access.read'
+        }
+      ]
+    },
+    {
+      id: 'hrms',
+      title: 'HRMS',
+      titleKey: 'menu.hrms',
+      type: 'collapse',
+      icon: BusinessCenterOutlinedIcon,
+      children: [
+        {
+          id: 'master-employee',
+          title: 'Master Employee',
+          titleKey: 'menu.masterEmployee',
+          type: 'item',
+          icon: BadgeOutlinedIcon,
+          url: '/admin/hrms/master-employee',
+          permission: 'hrms.employees.read'
         }
       ]
     },

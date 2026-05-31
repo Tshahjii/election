@@ -18,7 +18,6 @@ class MasterOffice extends Model
         'country_id',
         'state_id',
         'district_id',
-        'attachment_path',
         'created_by',
         'updated_by',
     ];

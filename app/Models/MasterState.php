@@ -10,7 +10,6 @@ class MasterState extends Model
         'country_id',
         'name',
         'state_code',
-        'state_logo',
         'attachment_path',
         'status',
         'created_by',

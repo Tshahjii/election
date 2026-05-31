@@ -235,7 +235,7 @@ class AuthController extends Controller
         $state = ($stateId || $stateCode) ? MasterState::query()
             ->when($stateId, fn ($query) => $query->where('id', $stateId))
             ->when(! $stateId && $stateCode, fn ($query) => $query->where('state_code', $stateCode))
-            ->first(['id', 'name', 'state_code', 'state_logo', 'attachment_path']) : null;
+            ->first(['id', 'name', 'state_code', 'attachment_path']) : null;
         $country = MasterCountry::query()->whereKey($user->country_id ?: $office?->country_id)->first(['id', 'name']);
         $district = MasterDistrict::query()->whereKey($user->district_id ?: $office?->district_id)->first(['id', 'name']);
         $isDefaultPassword = Hash::check('Admin@123', $user->password);
@@ -266,7 +266,7 @@ class AuthController extends Controller
             'id' => $state->id,
             'name' => $state->name,
             'state_code' => $state->state_code,
-            'logo_url' => $this->assetUrl($state->state_logo ?: $state->attachment_path),
+            'logo_url' => $this->assetUrl($state->attachment_path),
         ] : null;
         $data['district_info'] = $district ? [
             'id' => $district->id,

@@ -13,6 +13,7 @@ type ChosenSelectProps = {
   value?: SelectValue | null;
   options: ChosenSelectOption[];
   onChange: (event: { target: { value: any } }) => void;
+  label?: string;
   placeholder?: string;
   required?: boolean;
   size?: 'small' | 'medium';
@@ -23,6 +24,7 @@ export default function ChosenSelect({
   value,
   options,
   onChange,
+  label,
   placeholder,
   required = false,
   size = 'medium',
@@ -44,7 +46,7 @@ export default function ChosenSelect({
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, selected) => String(option.value) === String(selected.value)}
       onChange={(_, option) => onChange({ target: { value: option?.value ?? '' } })}
-      renderInput={(params) => <TextField {...params} required={required} placeholder={placeholder} />}
+      renderInput={(params) => <TextField {...params} required={required} label={label} placeholder={placeholder} />}
     />
   );
 }

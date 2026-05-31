@@ -22,6 +22,9 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
+
+            $table->unique(['state_id', 'name']);
+            $table->unique(['state_id', 'district_code']);
         });
     }
 

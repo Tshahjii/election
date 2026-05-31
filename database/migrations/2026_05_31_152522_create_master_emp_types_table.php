@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('master_emp_types', function (Blueprint $table) {
             $table->id();
+            $table->string('emp_type', 50)->unique();
+            $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
         });
     }

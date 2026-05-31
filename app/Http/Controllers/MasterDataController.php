@@ -4,8 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\MasterCountry;
 use App\Models\MasterCity;
+use App\Models\MasterDepartment;
 use App\Models\MasterDistrict;
+use App\Models\MasterDesignation;
+use App\Models\MasterEmployee;
+use App\Models\MasterEmpType;
 use App\Models\MasterOffice;
+use App\Models\MasterPayLevel;
 use App\Models\MasterPollingStation;
 use App\Models\MasterState;
 use App\Models\MasterWard;
@@ -25,7 +30,7 @@ class MasterDataController extends Controller
             'model' => MasterCountry::class,
             'primary_key' => 'id',
             'module' => 'masters.countries',
-            'search' => ['name', 'iso2', 'iso3', 'phone_code', 'currency', 'nationality'],
+            'search' => ['name'],
             'file_dir' => 'masters/countries',
         ],
         'states' => [
@@ -47,7 +52,6 @@ class MasterDataController extends Controller
             'primary_key' => 'ofc_id',
             'module' => 'masters.offices',
             'search' => ['office_code', 'office_name', 'company_name'],
-            'file_dir' => 'masters/offices',
         ],
         'cities' => [
             'model' => MasterCity::class,
@@ -69,6 +73,41 @@ class MasterDataController extends Controller
             'module' => 'masters.polling_stations',
             'search' => ['polling_station_name'],
             'file_dir' => 'masters/polling-stations',
+        ],
+        'emp-types' => [
+            'model' => MasterEmpType::class,
+            'primary_key' => 'id',
+            'module' => 'hrms.emp_types',
+            'search' => ['emp_type'],
+            'file_dir' => 'masters/emp-types',
+        ],
+        'designations' => [
+            'model' => MasterDesignation::class,
+            'primary_key' => 'id',
+            'module' => 'hrms.designations',
+            'search' => ['designation'],
+            'file_dir' => 'masters/designations',
+        ],
+        'departments' => [
+            'model' => MasterDepartment::class,
+            'primary_key' => 'id',
+            'module' => 'hrms.departments',
+            'search' => ['department'],
+            'file_dir' => 'masters/departments',
+        ],
+        'pay-levels' => [
+            'model' => MasterPayLevel::class,
+            'primary_key' => 'id',
+            'module' => 'hrms.pay_levels',
+            'search' => ['level', 'amount_pay', 'grade_pay'],
+            'file_dir' => 'masters/pay-levels',
+        ],
+        'employees' => [
+            'model' => MasterEmployee::class,
+            'primary_key' => 'id',
+            'module' => 'hrms.employees',
+            'search' => ['emp_code', 'name', 'mobile', 'email'],
+            'file_dir' => 'masters/employees',
         ],
     ];
 
@@ -126,6 +165,11 @@ class MasterDataController extends Controller
             'cities' => ['group' => 'Cities', 'singular' => 'City', 'title' => 'city_name'],
             'wards' => ['group' => 'Wards', 'singular' => 'Ward', 'title' => 'ward_name'],
             'polling-stations' => ['group' => 'Polling Stations', 'singular' => 'Polling Station', 'title' => 'polling_station_name'],
+            'emp-types' => ['group' => 'Employee Types', 'singular' => 'Employee Type', 'title' => 'emp_type'],
+            'designations' => ['group' => 'Designations', 'singular' => 'Designation', 'title' => 'designation'],
+            'departments' => ['group' => 'Departments', 'singular' => 'Department', 'title' => 'department'],
+            'pay-levels' => ['group' => 'Pay Levels', 'singular' => 'Pay Level', 'title' => 'level'],
+            'employees' => ['group' => 'Employees', 'singular' => 'Employee', 'title' => 'name'],
         ];
 
         $results = collect();
@@ -161,7 +205,7 @@ class MasterDataController extends Controller
                     'id' => "master-{$type}-".$row->getAttribute($config['primary_key']),
                     'title' => $title,
                     'group' => $label['group'],
-                    'url' => "/admin/masters/{$type}?search=".urlencode($term),
+                    'url' => $this->frontendUrl($type, $term),
                     'description' => "{$label['singular']} record matched ".str_replace('_', ' ', $matchedColumn).'.',
                 ]);
             }
@@ -233,6 +277,11 @@ class MasterDataController extends Controller
         $districts = MasterDistrict::query()->where('status', 1);
         $cities = MasterCity::query()->where('status', 1);
         $wards = MasterWard::query()->where('status', 1);
+        $offices = MasterOffice::query()->where('status', 1);
+        $empTypes = MasterEmpType::query()->where('status', 1);
+        $designations = MasterDesignation::query()->where('status', 1);
+        $departments = MasterDepartment::query()->where('status', 1);
+        $payLevels = MasterPayLevel::query()->where('status', 1);
 
         $user = $request->user();
         $access = AccessScope::payload($user);
@@ -263,6 +312,7 @@ class MasterDataController extends Controller
                 $stateIds->isNotEmpty() ? $districts->whereIn('state_id', $stateIds) : $districts->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $cities->whereIn('state_id', $stateIds) : $cities->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $wards->whereIn('state_id', $stateIds) : $wards->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $offices->whereIn('state_id', $stateIds) : $offices->whereRaw('1 = 0');
             }
         }
 
@@ -272,6 +322,11 @@ class MasterDataController extends Controller
             'districts' => $districts->orderBy('name')->get(['id', 'country_id', 'state_id', 'name']),
             'cities' => $cities->orderBy('city_name')->get(['id', 'state_id', 'district_id', 'city_name']),
             'wards' => $wards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']),
+            'offices' => $offices->orderBy('office_name')->get(['ofc_id', 'state_id', 'district_id', 'office_name']),
+            'emp_types' => $empTypes->orderBy('emp_type')->get(['id', 'emp_type']),
+            'designations' => $designations->orderBy('designation')->get(['id', 'designation']),
+            'departments' => $departments->orderBy('department')->get(['id', 'department']),
+            'pay_levels' => $payLevels->orderBy('level')->get(['id', 'level', 'amount_pay', 'grade_pay']),
         ]);
     }
 
@@ -297,6 +352,10 @@ class MasterDataController extends Controller
             return;
         }
 
+        if (in_array($type, ['emp-types', 'designations', 'departments', 'pay-levels'], true)) {
+            return;
+        }
+
         if ($type === 'countries') {
             $query->whereRaw('1 = 0');
             return;
@@ -313,7 +372,7 @@ class MasterDataController extends Controller
             return;
         }
 
-        if (in_array($type, ['districts', 'cities', 'wards', 'polling-stations'], true)) {
+        if (in_array($type, ['districts', 'cities', 'wards', 'polling-stations', 'employees'], true)) {
             if ($access['district_ids']) {
                 $type === 'districts'
                     ? $query->whereIn('id', $access['district_ids'])
@@ -334,7 +393,7 @@ class MasterDataController extends Controller
             }
         }
 
-        if ($type === 'offices') {
+        if (in_array($type, ['offices', 'employees'], true)) {
             if ($access['office_ids']) {
                 $query->whereIn('ofc_id', $access['office_ids']);
                 return;
@@ -357,19 +416,13 @@ class MasterDataController extends Controller
 
         $rules = match ($type) {
             'countries' => [
-                'name' => ['required', 'string', 'max:100'],
-                'iso2' => ['required', 'string', 'size:2', $this->uniqueRule('master_countries', 'iso2', $row)],
-                'iso3' => ['nullable', 'string', 'size:3', $this->uniqueRule('master_countries', 'iso3', $row)],
-                'phone_code' => ['nullable', 'string', 'max:10'],
-                'currency' => ['nullable', 'string', 'max:10'],
-                'currency_symbol' => ['nullable', 'string', 'max:10'],
-                'nationality' => ['nullable', 'string', 'max:100'],
+                'name' => ['required', 'string', 'max:100', $this->uniqueRule('master_countries', 'name', $row)],
                 'status' => $statusRule,
                 'attachment' => $fileRule,
             ],
             'states' => [
                 'country_id' => ['required', 'integer', 'exists:master_countries,id'],
-                'name' => ['required', 'string', 'max:100'],
+                'name' => ['required', 'string', 'max:100', $this->uniqueRule('master_states', 'name', $row)],
                 'state_code' => ['nullable', 'string', 'max:10'],
                 'status' => $statusRule,
                 'attachment' => $fileRule,
@@ -377,7 +430,7 @@ class MasterDataController extends Controller
             'districts' => [
                 'country_id' => ['required', 'integer', 'exists:master_countries,id'],
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
-                'name' => ['required', 'string', 'max:100'],
+                'name' => ['required', 'string', 'max:100', $this->uniqueRule('master_districts', 'name', $row)],
                 'district_code' => ['nullable', 'string', 'max:10'],
                 'status' => $statusRule,
                 'attachment' => $fileRule,
@@ -397,7 +450,7 @@ class MasterDataController extends Controller
             'cities' => [
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
-                'city_name' => ['required', 'string', 'max:150'],
+                'city_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_cities', 'city_name', $row)],
                 'status' => $statusRule,
             ],
             'wards' => [
@@ -405,7 +458,7 @@ class MasterDataController extends Controller
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
                 'city_id' => ['required', 'integer', 'exists:master_cities,id'],
                 'ward_no' => ['required', 'integer', 'min:1'],
-                'ward_name' => ['required', 'string', 'max:150'],
+                'ward_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_wards', 'ward_name', $row)],
                 'status' => $statusRule,
             ],
             'polling-stations' => [
@@ -413,7 +466,48 @@ class MasterDataController extends Controller
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
                 'city_id' => ['required', 'integer', 'exists:master_cities,id'],
                 'ward_id' => ['required', 'integer', 'exists:master_wards,id'],
-                'polling_station_name' => ['required', 'string', 'max:150'],
+                'polling_station_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_polling_stations', 'polling_station_name', $row)],
+                'status' => $statusRule,
+            ],
+            'emp-types' => [
+                'emp_type' => ['required', 'string', 'max:50', $this->uniqueRule('master_emp_types', 'emp_type', $row)],
+                'status' => $statusRule,
+            ],
+            'designations' => [
+                'designation' => ['required', 'string', 'max:100', $this->uniqueRule('master_designations', 'designation', $row)],
+                'status' => $statusRule,
+            ],
+            'departments' => [
+                'department' => ['required', 'string', 'max:100', $this->uniqueRule('master_departments', 'department', $row)],
+                'status' => $statusRule,
+            ],
+            'pay-levels' => [
+                'level' => ['required', 'string', 'max:50', $this->uniqueRule('master_pay_levels', 'level', $row)],
+                'amount_pay' => ['required', 'string', 'max:100'],
+                'grade_pay' => ['required', 'string', 'max:50'],
+                'status' => $statusRule,
+            ],
+            'employees' => [
+                'emp_code' => ['nullable', 'string', 'max:30', $this->uniqueRule('master_employees', 'emp_code', $row)],
+                'title' => ['required', 'string', 'max:100'],
+                'name' => ['required', 'string', 'max:100'],
+                'gender' => ['required', 'integer', Rule::in([1, 2])],
+                'dob' => ['required', 'date', 'before_or_equal:2000-05-18'],
+                'mobile' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/', $this->uniqueRule('master_employees', 'mobile', $row)],
+                'email' => ['required', 'email', 'max:100', $this->uniqueRule('master_employees', 'email', $row)],
+                'emp_type_id' => ['required', 'integer', 'exists:master_emp_types,id'],
+                'department_id' => ['required', 'integer', 'exists:master_departments,id'],
+                'designation_id' => ['required', 'integer', 'exists:master_designations,id'],
+                'ofc_id' => ['nullable', 'integer', 'exists:master_offices,ofc_id'],
+                'pay_level_id' => ['required', 'integer', 'exists:master_pay_levels,id'],
+                'basic_pay' => ['required', 'string', 'max:50'],
+                'country_id' => ['required', 'integer', 'exists:master_countries,id'],
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_type' => ['required', 'string', Rule::in(['urban', 'rural'])],
+                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
+                'any_disability' => ['required', 'integer', Rule::in([0, 1])],
+                'remark' => ['nullable', 'string', 'max:1000'],
                 'status' => $statusRule,
             ],
         };
@@ -429,7 +523,11 @@ class MasterDataController extends Controller
             $this->validateOfficeLocation($data);
         }
 
-        if (in_array($type, ['cities', 'wards', 'polling-stations'], true)) {
+        if ($type === 'employees') {
+            $this->validateOfficeLocation($data);
+        }
+
+        if (in_array($type, ['cities', 'wards', 'polling-stations', 'employees'], true)) {
             $this->validateLocalBodyLocation($data, $type);
         }
 
@@ -449,7 +547,7 @@ class MasterDataController extends Controller
             ]);
         }
 
-        if (in_array($type, ['wards', 'polling-stations'], true)) {
+        if (in_array($type, ['wards', 'polling-stations', 'employees'], true)) {
             $cityValid = MasterCity::query()
                 ->whereKey($data['city_id'])
                 ->where('state_id', $data['state_id'])
@@ -514,7 +612,7 @@ class MasterDataController extends Controller
 
     private function storeFile(Request $request, array $config, array $data, ?Model $row = null): array
     {
-        if (! $request->hasFile('attachment')) {
+        if (empty($config['file_dir']) || ! $request->hasFile('attachment')) {
             return $data;
         }
 
@@ -587,12 +685,43 @@ class MasterDataController extends Controller
             $data['ward_name_label'] = $ward ? trim($ward->ward_no.' - '.$ward->ward_name) : null;
         }
 
+        if (array_key_exists('emp_type_id', $data)) {
+            $data['emp_type_name'] = MasterEmpType::query()->whereKey($data['emp_type_id'])->value('emp_type');
+        }
+
+        if (array_key_exists('department_id', $data)) {
+            $data['department_name'] = MasterDepartment::query()->whereKey($data['department_id'])->value('department');
+        }
+
+        if (array_key_exists('designation_id', $data)) {
+            $data['designation_name'] = MasterDesignation::query()->whereKey($data['designation_id'])->value('designation');
+        }
+
+        if (array_key_exists('pay_level_id', $data)) {
+            $payLevel = MasterPayLevel::query()->whereKey($data['pay_level_id'])->first(['level', 'amount_pay', 'grade_pay']);
+            $data['pay_level_name'] = $payLevel ? trim($payLevel->level.' - '.$payLevel->amount_pay) : null;
+            $data['grade_pay'] = $payLevel?->grade_pay;
+        }
+
+        if (array_key_exists('ofc_id', $data)) {
+            $data['office_name'] = MasterOffice::query()->where('ofc_id', $data['ofc_id'])->value('office_name');
+        }
+
         return $data;
     }
 
     private function uploadedUrl(string $path): string
     {
         return Storage::disk('uploads')->url($this->normalizeUploadPath($path));
+    }
+
+    private function frontendUrl(string $type, string $term): string
+    {
+        $base = $type === 'employees'
+            ? '/admin/hrms/master-employee'
+            : "/admin/masters/{$type}";
+
+        return $base.'?search='.urlencode($term);
     }
 
     private function normalizeUploadPath(string $path): string

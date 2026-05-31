@@ -73,6 +73,26 @@ const MainRoutes = {
       element: <MasterDataPage masterKey="polling-stations" />
     },
     {
+      path: 'masters/emp-types',
+      element: <MasterDataPage masterKey="emp-types" />
+    },
+    {
+      path: 'masters/designations',
+      element: <MasterDataPage masterKey="designations" />
+    },
+    {
+      path: 'masters/departments',
+      element: <MasterDataPage masterKey="departments" />
+    },
+    {
+      path: 'masters/pay-levels',
+      element: <MasterDataPage masterKey="pay-levels" />
+    },
+    {
+      path: 'hrms/master-employee',
+      element: <MasterDataPage masterKey="employees" />
+    },
+    {
       path: 'sample-page',
       element: <SamplePage />
     },

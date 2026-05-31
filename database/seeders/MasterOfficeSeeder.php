@@ -20,7 +20,6 @@ class MasterOfficeSeeder extends Seeder
                 'country_id' => 1,
                 'state_id' => 5,
                 'district_id' => 1,
-                'attachment_path' => null,
                 'created_by' => 1,
                 'updated_by' => 1,
                 'created_at' => now(),

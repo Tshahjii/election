@@ -22,7 +22,6 @@ return new class extends Migration
             $table->unsignedBigInteger('country_id')->nullable();
             $table->unsignedBigInteger('state_id')->nullable();
             $table->unsignedBigInteger('district_id')->nullable();
-            $table->string('attachment_path', 255)->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

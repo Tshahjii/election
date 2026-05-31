@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('master_designations', function (Blueprint $table) {
             $table->id();
+            $table->string('designation', 100)->unique();
+            $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
         });
     }

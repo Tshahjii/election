@@ -13,13 +13,7 @@ return new class extends Migration
     {
         Schema::create('master_countries', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100);
-            $table->string('iso2', 2)->unique();
-            $table->string('iso3', 3)->nullable()->unique();
-            $table->string('phone_code', 10)->nullable();
-            $table->string('currency', 10)->nullable();
-            $table->string('currency_symbol', 10)->nullable();
-            $table->string('nationality', 100)->nullable();
+            $table->string('name', 100)->unique();
             $table->string('attachment_path', 255)->nullable();
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
             $table->unsignedBigInteger('created_by')->nullable();

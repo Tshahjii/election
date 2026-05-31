@@ -22,6 +22,9 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
+
+            $table->unique(['city_id', 'ward_no']);
+            $table->unique(['city_id', 'ward_name']);
         });
     }
 
