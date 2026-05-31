@@ -16,6 +16,7 @@ import AccessTimeTwoToneIcon from '@mui/icons-material/AccessTimeTwoTone';
 import EventNoteTwoToneIcon from '@mui/icons-material/EventNoteTwoTone';
 
 import { CalendarEventItem, fetchCalendarReminders } from 'api/calendarEvents';
+import { hasPermission } from 'utils/access';
 
 type ReminderEntry = CalendarEventItem & {
   reminderKey: string;
@@ -30,16 +31,19 @@ const uniqueEvents = (events: ReminderEntry[]) => {
 };
 
 export default function CalendarReminderProvider() {
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = useSelector((state: any) => state.auth.isAuthenticated);
+  const user = useSelector((state: any) => state.auth.user);
   const [events, setEvents] = useState<ReminderEntry[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<string[]>([]);
   const [openedToday, setOpenedToday] = useState(false);
 
+  const hasReminderPermission = hasPermission(user, 'calendar.reminders.read');
+
   const visibleEvents = useMemo(() => events.filter((event) => !dismissedKeys.includes(event.reminderKey)), [dismissedKeys, events]);
-  const open = isAuthenticated && visibleEvents.length > 0;
+  const open = isAuthenticated && hasReminderPermission && visibleEvents.length > 0;
 
   const loadReminders = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !hasReminderPermission) return;
 
     try {
       const data = await fetchCalendarReminders();
@@ -53,10 +57,10 @@ export default function CalendarReminderProvider() {
     } catch {
       // Reminder polling should not interrupt normal panel work.
     }
-  }, [isAuthenticated, openedToday]);
+  }, [isAuthenticated, hasReminderPermission, openedToday]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !hasReminderPermission) {
       setEvents([]);
       setDismissedKeys([]);
       setOpenedToday(false);
@@ -66,7 +70,7 @@ export default function CalendarReminderProvider() {
     loadReminders();
     const timer = window.setInterval(loadReminders, 30000);
     return () => window.clearInterval(timer);
-  }, [isAuthenticated, loadReminders]);
+  }, [isAuthenticated, hasReminderPermission, loadReminders]);
 
   const handleClose = () => {
     setDismissedKeys((prev) => Array.from(new Set([...prev, ...visibleEvents.map((event) => event.reminderKey)])));

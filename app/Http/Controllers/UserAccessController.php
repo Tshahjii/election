@@ -99,6 +99,21 @@ class UserAccessController extends Controller
         return response()->json(['message' => 'User deleted successfully.']);
     }
 
+    public function resetPassword(Request $request, int $id): JsonResponse
+    {
+        abort_unless(AccessScope::can($request->user(), 'users.access', 'edit'), 403, 'You do not have edit permission.');
+
+        $user = User::findOrFail($id);
+        abort_unless($this->canTouchUser($request->user(), $user), 403, 'You cannot reset password for this user.');
+
+        $user->forceFill([
+            'password' => Hash::make('Admin@123'),
+            'password_changed_at' => null,
+        ])->save();
+
+        return response()->json(['message' => 'Password reset successfully.']);
+    }
+
     public function accessOptions(Request $request): JsonResponse
     {
         $countries = MasterCountry::query()->where('status', 1);

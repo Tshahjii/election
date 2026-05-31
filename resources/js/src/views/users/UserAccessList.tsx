@@ -372,7 +372,7 @@ export default function UserAccessList() {
         if (!resetPassword) return;
         try {
             await apiClient.get(`/users/reset/${resetPassword.id}`);
-            dispatch(showNotification({ message: 'User deleted successfully.' }));
+            dispatch(showNotification({ message: 'Password reset successfully.' }));
             setResetPassword(null);
             await fetchRows();
         } catch (error) {
@@ -491,7 +491,7 @@ export default function UserAccessList() {
                                         <Chip label={statusLabel(row.is_active)} size="small" color={Number(row.is_active) === 1 ? 'success' : 'error'} variant="outlined" />
                                     </TableCell>
                                     <TableCell>
-                                        <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => handleResetPassword(row)} sx={{ mr: 0.75 }}>
+                                        <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => setResetPassword(row)} sx={{ mr: 0.75 }}>
                                             Reset
                                         </Button>
                                     </TableCell>
@@ -712,6 +712,19 @@ export default function UserAccessList() {
                 <DialogActions sx={{ px: 3, py: 2 }}>
                     <Button variant="outlined" color="inherit" onClick={() => setDeleteRow(null)}>Cancel</Button>
                     <Button variant="contained" color="error" startIcon={<DeleteOutlineOutlined />} onClick={handleDelete}>Delete</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={Boolean(resetPassword)} onClose={() => setResetPassword(null)} fullWidth maxWidth="xs">
+                <DialogTitle>Reset Password</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        Are you sure you want to reset the password for {resetPassword?.name}?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button variant="outlined" color="inherit" onClick={() => setResetPassword(null)}>Cancel</Button>
+                    <Button variant="contained" color="primary" startIcon={<LockOpenOutlined fontSize="small" />} onClick={handleResetPassword}>Reset</Button>
                 </DialogActions>
             </Dialog>
         </Stack>

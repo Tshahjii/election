@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CalendarEvent;
+use App\Support\AccessScope;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,8 @@ class CalendarEventController extends Controller
 
     public function reminders(Request $request): JsonResponse
     {
+        abort_unless(AccessScope::can($request->user(), 'calendar.reminders', 'read'), 403, 'You do not have permission to access reminders.');
+
         $now = now();
         $startOfDay = $now->copy()->startOfDay();
         $endOfDay = $now->copy()->endOfDay();

@@ -362,7 +362,7 @@ class UserSeeder extends Seeder
     private function readOnlyPermissions(?array $modules = null): array
     {
         $permissions = AccessScope::normalizePermissions([]);
-        $modules ??= array_keys(AccessScope::MODULES);
+        $modules ??= array_diff(array_keys(AccessScope::MODULES), ['calendar.reminders']);
 
         foreach ($modules as $module) {
             $permissions[$module]['read'] = true;

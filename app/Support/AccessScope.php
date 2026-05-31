@@ -24,6 +24,7 @@ class AccessScope
         'polling.turnout' => 'Turnout Monitor',
         'reports.election' => 'Election Reports',
         'reports.audit' => 'Audit Log',
+        'calendar.reminders' => 'Calendar Reminders',
     ];
 
     public const ACTIONS = ['read', 'create', 'edit', 'delete'];
