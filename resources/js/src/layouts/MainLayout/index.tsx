@@ -12,6 +12,7 @@ import Drawer from './Drawer';
 import Header from './Header';
 import Breadcrumbs from 'components/Breadcrumbs';
 import ChangeDefaultPasswordDialog from 'components/auth/ChangeDefaultPasswordDialog';
+import VoiceAssistant from 'components/ai/VoiceAssistant';
 import { useAppPreferences } from 'contexts/AppPreferences';
 
 import { DRAWER_WIDTH } from 'config';
@@ -55,6 +56,7 @@ export default function MainLayout() {
         <Breadcrumbs />
         <Outlet />
         <ChangeDefaultPasswordDialog />
+        <VoiceAssistant />
       </Box>
     </Stack>
   );
