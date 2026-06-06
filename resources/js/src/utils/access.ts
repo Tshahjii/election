@@ -2,10 +2,7 @@ export const ROLE_LABELS = {
   1: 'Super Admin',
   2: 'System Admin',
   3: 'Admin',
-  4: 'Data Entry',
-  5: 'Verifier',
-  6: 'Booth Officer',
-  7: 'Report Viewer'
+  4: 'Data Entry'
 };
 
 export function hasPermission(user, permission) {

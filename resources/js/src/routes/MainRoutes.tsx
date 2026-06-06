@@ -9,10 +9,14 @@ import RouteError from 'components/RouteError';
 
 // pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/default')));
-const VoterListPage = Loadable(lazy(() => import('views/voters/VoterList')));
 const UserAccessListPage = Loadable(lazy(() => import('views/users/UserAccessList')));
 const MasterDataPage = Loadable(lazy(() => import('views/masters/MasterData')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
+
+// new modules
+const ElectionDashboardPage = Loadable(lazy(() => import('views/election/ElectionDashboard')));
+const AllocationReportPage = Loadable(lazy(() => import('views/reports/AllocationReport')));
+const DutyAnalyticsPage = Loadable(lazy(() => import('views/reports/DutyAnalytics')));
 
 // utils
 const UtilsTypography = Loadable(lazy(() => import('views/components/Typography')));
@@ -33,9 +37,22 @@ const MainRoutes = {
       element: <DashboardDefault />
     },
     {
-      path: 'voters/list',
-      element: <VoterListPage />
+      path: 'election/nagar-panchayat',
+      element: <ElectionDashboardPage type="Nagar Panchayat" />
     },
+    {
+      path: 'election/nagari-nikay',
+      element: <ElectionDashboardPage type="Nagari Nikay" />
+    },
+    {
+      path: 'reports/allocation',
+      element: <AllocationReportPage />
+    },
+    {
+      path: 'reports/analytics',
+      element: <DutyAnalyticsPage />
+    },
+
     {
       path: 'users/access-management',
       element: <UserAccessListPage />

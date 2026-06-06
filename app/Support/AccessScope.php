@@ -8,9 +8,9 @@ class AccessScope
 {
     public const MODULES = [
         'dashboard.overview' => 'Dashboard Overview',
-        'voters.list' => 'Voter List',
-        'voters.verification' => 'Verification Queue',
-        'voters.claims' => 'Claims & Objections',
+        'election.nagar_panchayat' => 'Nagar Panchayat',
+        'election.nagari_nikay' => 'Nagari Nikay',
+
         'masters.countries' => 'Master Country',
         'masters.states' => 'Master State',
         'masters.districts' => 'Master District',
@@ -23,12 +23,10 @@ class AccessScope
         'hrms.departments' => 'HRMS Department',
         'hrms.pay_levels' => 'HRMS Pay Level',
         'hrms.employees' => 'HRMS Employee',
+        'reports.allocation' => 'Allocation Report',
+        'reports.analytics' => 'Duty Analytics',
         'users.access' => 'Access Management',
-        'polling.booth_map' => 'Booth Mapping',
-        'polling.stations' => 'Polling Stations',
-        'polling.turnout' => 'Turnout Monitor',
-        'reports.election' => 'Election Reports',
-        'reports.audit' => 'Audit Log',
+
         'calendar.reminders' => 'Calendar Reminders',
     ];
 

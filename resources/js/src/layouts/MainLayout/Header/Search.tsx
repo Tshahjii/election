@@ -28,7 +28,7 @@ import SearchIcon from '@mui/icons-material/Search';
 
 const fallbackDescriptions = {
   'dashboard-overview': 'Election dashboard, turnout summary, monitoring and priority work overview.',
-  'voter-list': 'Search and manage voter records in the voter management module.',
+
   'master-country': 'Manage country master data used by districts, states and offices.',
   'master-state': 'Manage state names, codes and uploaded state logo images.',
   'master-district': 'Manage district master records and district level setup.',
@@ -206,7 +206,7 @@ export default function Search({ forceField = false, inverse = true }) {
           <Box sx={{ px: 2, py: 1.5 }}>
             <Typography variant="subtitle2">No result found</Typography>
             <Typography variant="body2" color="text.secondary">
-              Try searching dashboard, voters, state, district, office or users.
+              Try searching dashboard, state, district, office or users.
             </Typography>
           </Box>
         )}

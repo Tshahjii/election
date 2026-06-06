@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -36,6 +36,7 @@ interface Message {
 export default function VoiceAssistant() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useSelector((state: any) => state.auth?.user);
   const { setThemeMode, setAccentColor, setLanguage } = useAppPreferences();
 
@@ -323,7 +324,13 @@ export default function VoiceAssistant() {
   // Process inputs & commands instantly
   const processCommand = (query: string) => {
     const cleanQuery = query.toLowerCase().trim();
-
+    // Specific guidance for employee insertion
+    if (cleanQuery.includes('employee insert') || cleanQuery.includes('insert employee') || cleanQuery.includes('employee add') || cleanQuery.includes('कर्मचारी जोड़ें')) {
+      // Navigate to Master Employee page and explain the UI steps
+      navigate('/admin/hrms/master-employee');
+      addAssistantMessage('मास्टर एम्प्लोयी पेज खुल गया है। यहाँ ऊपर‑दाएँ “Create Employee” या “नया कर्मचारी” बटन पर क्लिक करके फ़ॉर्म खोलें, फिर आवश्यक फ़ील्ड (नाम, मोबाइल‑नंबर, जन्म तिथि आदि) भरें और “सेव” बटन दबाएँ।');
+      return;
+    }
     // 1. Navigation Command Mapping
     const navigations = [
       { keys: ['country', 'countries', 'desh', 'rashtra', 'कंट्री', 'देश'], path: '/admin/masters/countries', name: 'कंट्री मास्टर' },
@@ -339,8 +346,53 @@ export default function VoiceAssistant() {
       { keys: ['pay scale', 'pay level', 'salary', 'vetan', 'vetanman', 'सैलरी', 'वेतन'], path: '/admin/masters/pay-levels', name: 'पे स्केल' },
       { keys: ['employee', 'emploee', 'employe', 'karmachari', 'karmchari', 'कर्मचारी', 'एम्पलाई', 'एम्प्लोयी'], path: '/admin/hrms/master-employee', name: 'मास्टर एम्प्लोयी' },
       { keys: ['access', 'permission', 'role', 'roles', 'adikar', 'adhikar', 'अधिकार', 'रोल', 'परमिशन'], path: '/admin/users/access-management', name: 'एक्सेस मैनेजमेंट' },
-      { keys: ['dashboard', 'home', 'overview', 'main', 'डैशबोर्ड', 'होम'], path: '/admin/dashboard', name: 'डैशबोर्ड ओवरव्यू' }
+      { keys: ['dashboard', 'home', 'overview', 'main', 'डैशबोर्ड', 'होम'], path: '/admin/dashboard', name: 'डैशबोर्ड ओवरव्यू' },
+      { keys: ['duty allocation', 'allocate duty', 'assign duty', 'duty lagana', 'duty lagaye', 'ड्यूटी लगाना', 'ड्यूटी आवंटन'], path: '/admin/duties/allocation', name: 'ड्यूटी आवंटन' },
+      { keys: ['approvals', 'duty approval', 'reject duty', 'duty reject', 'exemption request', 'ड्यूटी अप्रूवल', 'मंज़ूर'], path: '/admin/duties/approvals', name: 'ड्यूटी अप्रूवल और रिक्वेस्ट' },
+      { keys: ['allocation report', 'duty report', 'roster', 'ड्यूटी रिपोर्ट', 'रॉस्टर'], path: '/admin/reports/allocation', name: 'ड्यूटी आवंटन रिपोर्ट' },
+      { keys: ['analytics', 'duty analytics', 'charts', 'एनालिटिक्स'], path: '/admin/reports/analytics', name: 'ड्यूटी एनालिटिक्स' }
     ];
+
+    // Screen metadata for field and button analysis per route
+    interface ScreenField {
+      id: string;
+      label: string;
+      type: 'text' | 'number' | 'date' | 'select';
+      mandatory: boolean;
+      length?: number; // e.g., mobile number digits
+      options?: string[];
+    }
+    interface ScreenButton {
+      id: string;
+      label: string;
+      position: string;
+    }
+    interface ScreenMeta {
+      fields: ScreenField[];
+      buttons: ScreenButton[];
+    }
+    const screenElements: Record<string, ScreenMeta> = {
+      '/admin/hrms/master-employee': {
+        fields: [
+          { id: 'empName', label: 'कर्मचारी नाम', type: 'text', mandatory: true },
+          { id: 'mobile', label: 'मोबाइल नंबर', type: 'number', mandatory: true, length: 10 },
+          { id: 'dob', label: 'जन्म तिथि', type: 'date', mandatory: false },
+        ],
+        buttons: [
+          { id: 'saveBtn', label: 'सेव', position: 'bottom' },
+          { id: 'resetBtn', label: 'रीसेट', position: 'bottom' }
+        ]
+      },
+      '/admin/duties/allocation': {
+        fields: [
+          { id: 'dutyDate', label: 'ड्यूटी तिथि', type: 'date', mandatory: true },
+          { id: 'employeeSelect', label: 'कर्मचारी चयन', type: 'select', mandatory: true, options: ['सभी', 'किसी एक'] }
+        ],
+        buttons: [
+          { id: 'allocateBtn', label: 'अलॉट', position: 'right' }
+        ]
+      }
+    };
 
     // 1.5. Translation / Explanation Questions Check
     const isTranslationQuery = 
@@ -392,7 +444,6 @@ export default function VoiceAssistant() {
     }
 
     // Check if query is navigation request
-    // It's a navigation if they use navigation verbs OR if they just name the page without asking a question.
     const isQuestion = cleanQuery.includes('what') || 
                        cleanQuery.includes('kya') || 
                        cleanQuery.includes('kon') || 
@@ -456,6 +507,14 @@ export default function VoiceAssistant() {
       {
         keys: ['users', 'user', 'यूज़र', 'यूज़र्स'],
         reply: "यूज़र्स (Users) मेनू में 'एक्सेस मैनेजमेंट' (Access Management) पेज है। क्या आप उसे खोलना चाहते हैं? आप बोल सकते हैं 'एक्सेस मैनेजमेंट खोलें'।"
+      },
+      {
+        keys: ['duty management', 'duty', 'duties', 'ड्यूटी', 'ड्यूटी मैनेजमेंट', 'ड्यूटी प्रबंधन'],
+        reply: "ड्यूटी प्रबंधन (Duty Management) में 'ड्यूटी आवंटन' (Duty Allocation) और 'ड्यूटी मंज़ूर/रद्द करें' (Duty Approvals) पेज हैं। मैं इनमें से कौन सा खोलूँ?"
+      },
+      {
+        keys: ['reports', 'report', 'रिपोर्ट'],
+        reply: "रिपोर्ट (Reports) मेनू में 'आवंटन रिपोर्ट' (Allocation Report) और 'ड्यूटी एनालिटिक्स' (Duty Analytics) पेज हैं। मैं इनमें से कौन सा खोलूँ?"
       }
     ];
 
@@ -463,6 +522,30 @@ export default function VoiceAssistant() {
       const match = group.keys.some(key => cleanQuery === key || (cleanQuery.includes(key) && isNav));
       if (match) {
         addAssistantMessage(group.reply);
+        return;
+      }
+    }
+
+    // Screen understanding queries
+    if (cleanQuery.includes('yahan') && ((cleanQuery.includes('kya') && cleanQuery.includes('bharna')) || cleanQuery.includes('field') || cleanQuery.includes('kaunse'))) {
+      const meta = screenElements[location.pathname];
+      if (meta) {
+        const fieldList = meta.fields.map(f => {
+          const mand = f.mandatory ? 'mandatory' : 'optional';
+          const len = f.length ? `(${f.length} digits)` : '';
+          return `• ${f.label}${len} – ${mand}`;
+        }).join('\n');
+        const buttonList = meta.buttons.map(b => `• ${b.label} (position: ${b.position})`).join('\n');
+        addAssistantMessage(`इस पेज पर निम्नलिखित फ़ील्ड हैं:\n${fieldList}\n\nबटन: \n${buttonList}\n\nअगला कदम: फ़ील्ड भरें और फिर संबंधित बटन पर क्लिक करें।`);
+        return;
+      }
+    }
+
+    if (cleanQuery.includes('button') && cleanQuery.includes('kahan')) {
+      const meta = screenElements[location.pathname];
+      if (meta && meta.buttons.length) {
+        const btnInfo = meta.buttons.map(b => `• ${b.label} – पेज के ${b.position} भाग में स्थित`).join('\n');
+        addAssistantMessage(`यहाँ बटन हैं:\n${btnInfo}`);
         return;
       }
     }

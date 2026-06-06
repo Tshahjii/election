@@ -195,7 +195,7 @@ class UserAccessController extends Controller
             'state_id' => ['required', 'integer', 'exists:master_states,id'],
             'district_id' => ['required', 'integer', 'exists:master_districts,id'],
             'address' => ['nullable', 'string'],
-            'role' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6, 7])],
+            'role' => ['required', 'integer', Rule::in([1, 2, 3, 4])],
             'is_active' => ['required', 'integer', Rule::in([0, 1])],
         ]);
 

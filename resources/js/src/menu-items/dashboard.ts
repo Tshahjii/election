@@ -45,61 +45,14 @@ const dashboard = {
       breadcrumbs: false
     },
     {
-      id: 'voter-management',
-      title: 'Voter Management',
-      titleKey: 'menu.voterManagement',
+      id: 'election-management',
+      title: 'Election Management',
+      titleKey: 'menu.electionManagement',
       type: 'collapse',
-      icon: PeopleAltOutlinedIcon,
+      icon: HowToVoteOutlinedIcon,
       children: [
-        { id: 'voter-list', title: 'Voter List', titleKey: 'menu.voterList', type: 'item', icon: GroupsOutlinedIcon, url: '/admin/voters/list', permission: 'voters.list.read' },
-        { id: 'voter-verification', title: 'Verification Queue', titleKey: 'menu.verificationQueue', type: 'item', icon: VerifiedUserOutlinedIcon, permission: 'voters.verification.read' },
-        { id: 'voter-claims', title: 'Claims & Objections', titleKey: 'menu.claimsObjections', type: 'item', icon: FactCheckOutlinedIcon, permission: 'voters.claims.read' }
-      ]
-    },
-    {
-      id: 'masters',
-      title: 'Master',
-      titleKey: 'menu.master',
-      type: 'collapse',
-      icon: StorageOutlinedIcon,
-      children: [
-        { id: 'master-country', title: 'Country Master', titleKey: 'menu.masterCountry', type: 'item', icon: PublicOutlinedIcon, url: '/admin/masters/countries', permission: 'masters.countries.read' },
-        { id: 'master-state', title: 'State Master', titleKey: 'menu.masterState', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' },
-        { id: 'master-district', title: 'District Master', titleKey: 'menu.masterDistrict', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/masters/districts', permission: 'masters.districts.read' },
-        { id: 'master-office', title: 'Office Master', titleKey: 'menu.masterOffice', type: 'item', icon: AccountBalanceOutlinedIcon, url: '/admin/masters/offices', permission: 'masters.offices.read' },
-        { id: 'master-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/cities', permission: 'masters.cities.read' },
-        { id: 'master-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/wards', permission: 'masters.wards.read' },
-        {
-          id: 'master-polling-station',
-          title: 'Polling Station Master',
-          titleKey: 'menu.masterPollingStation',
-          type: 'item',
-          icon: BallotOutlinedIcon,
-          url: '/admin/masters/polling-stations',
-          permission: 'masters.polling_stations.read'
-        },
-        { id: 'master-employee-type', title: 'Employee Type', titleKey: 'menu.employeeType', type: 'item', icon: BadgeOutlinedIcon, url: '/admin/masters/emp-types', permission: 'hrms.emp_types.read' },
-        { id: 'master-designation', title: 'Designation', titleKey: 'menu.designation', type: 'item', icon: PersonOutlineOutlinedIcon, url: '/admin/masters/designations', permission: 'hrms.designations.read' },
-        { id: 'master-department', title: 'Department', titleKey: 'menu.department', type: 'item', icon: CorporateFareOutlinedIcon, url: '/admin/masters/departments', permission: 'hrms.departments.read' },
-        { id: 'master-pay-level', title: 'Pay Scale / Pay Level', titleKey: 'menu.payLevel', type: 'item', icon: PaymentsOutlinedIcon, url: '/admin/masters/pay-levels', permission: 'hrms.pay_levels.read' }
-      ]
-    },
-    {
-      id: 'users',
-      title: 'Users',
-      titleKey: 'menu.users',
-      type: 'collapse',
-      icon: ManageAccountsOutlinedIcon,
-      children: [
-        {
-          id: 'access-management',
-          title: 'Access Management',
-          titleKey: 'menu.accessManagement',
-          type: 'item',
-          icon: SecurityOutlinedIcon,
-          url: '/admin/users/access-management',
-          permission: 'users.access.read'
-        }
+        { id: 'nagar-panchayat', title: 'Nagar Panchayat', titleKey: 'menu.nagarPanchayat', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/election/nagar-panchayat', permission: 'election.nagar_panchayat.read' },
+        { id: 'nagari-nikay', title: 'Nagari Nikay', titleKey: 'menu.nagariNikay', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/election/nagari-nikay', permission: 'election.nagari_nikay.read' }
       ]
     },
     {
@@ -121,26 +74,60 @@ const dashboard = {
       ]
     },
     {
-      id: 'polling-operations',
-      title: 'Polling Operations',
-      titleKey: 'menu.pollingOperations',
+      id: 'masters',
+      title: 'Master',
+      titleKey: 'menu.master',
       type: 'collapse',
-      icon: BallotOutlinedIcon,
+      icon: StorageOutlinedIcon,
       children: [
-        { id: 'booth-map', title: 'Booth Mapping', titleKey: 'menu.boothMapping', type: 'item', icon: MapOutlinedIcon, permission: 'polling.booth_map.read' },
-        { id: 'polling-stations', title: 'Polling Stations', titleKey: 'menu.pollingStations', type: 'item', icon: LocationOnOutlinedIcon, permission: 'polling.stations.read' },
-        { id: 'turnout-monitor', title: 'Turnout Monitor', titleKey: 'menu.turnoutMonitor', type: 'item', icon: PollOutlinedIcon, permission: 'polling.turnout.read' }
+        { id: 'master-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/cities', permission: 'masters.cities.read' },
+        { id: 'master-country', title: 'Country Master', titleKey: 'menu.masterCountry', type: 'item', icon: PublicOutlinedIcon, url: '/admin/masters/countries', permission: 'masters.countries.read' },
+        { id: 'master-department', title: 'Department', titleKey: 'menu.department', type: 'item', icon: CorporateFareOutlinedIcon, url: '/admin/masters/departments', permission: 'hrms.departments.read' },
+        { id: 'master-designation', title: 'Designation', titleKey: 'menu.designation', type: 'item', icon: PersonOutlineOutlinedIcon, url: '/admin/masters/designations', permission: 'hrms.designations.read' },
+        { id: 'master-district', title: 'District Master', titleKey: 'menu.masterDistrict', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/masters/districts', permission: 'masters.districts.read' },
+        { id: 'master-employee-type', title: 'Employee Type', titleKey: 'menu.employeeType', type: 'item', icon: BadgeOutlinedIcon, url: '/admin/masters/emp-types', permission: 'hrms.emp_types.read' },
+        { id: 'master-office', title: 'Office Master', titleKey: 'menu.masterOffice', type: 'item', icon: AccountBalanceOutlinedIcon, url: '/admin/masters/offices', permission: 'masters.offices.read' },
+        { id: 'master-pay-level', title: 'Pay Scale / Pay Level', titleKey: 'menu.payLevel', type: 'item', icon: PaymentsOutlinedIcon, url: '/admin/masters/pay-levels', permission: 'hrms.pay_levels.read' },
+        {
+          id: 'master-polling-station',
+          title: 'Polling Station Master',
+          titleKey: 'menu.masterPollingStation',
+          type: 'item',
+          icon: BallotOutlinedIcon,
+          url: '/admin/masters/polling-stations',
+          permission: 'masters.polling_stations.read'
+        },
+        { id: 'master-state', title: 'State Master', titleKey: 'menu.masterState', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' },
+        { id: 'master-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/wards', permission: 'masters.wards.read' }
       ]
     },
     {
-      id: 'reports-security',
-      title: 'Reports & Security',
-      titleKey: 'menu.reportsSecurity',
+      id: 'reports',
+      title: 'Reports',
+      titleKey: 'menu.reports',
       type: 'collapse',
-      icon: SecurityOutlinedIcon,
+      icon: AssessmentOutlinedIcon,
       children: [
-        { id: 'election-reports', title: 'Election Reports', titleKey: 'menu.electionReports', type: 'item', icon: AssessmentOutlinedIcon, permission: 'reports.election.read' },
-        { id: 'audit-log', title: 'Audit Log', titleKey: 'menu.auditLog', type: 'item', icon: SecurityOutlinedIcon, permission: 'reports.audit.read' }
+        { id: 'allocation-report', title: 'Allocation Report', titleKey: 'menu.allocationReport', type: 'item', icon: AssessmentOutlinedIcon, url: '/admin/reports/allocation', permission: 'reports.allocation.read' },
+        { id: 'duty-analytics', title: 'Duty Analytics', titleKey: 'menu.dutyAnalytics', type: 'item', icon: PollOutlinedIcon, url: '/admin/reports/analytics', permission: 'reports.analytics.read' }
+      ]
+    },
+    {
+      id: 'users',
+      title: 'Users',
+      titleKey: 'menu.users',
+      type: 'collapse',
+      icon: ManageAccountsOutlinedIcon,
+      children: [
+        {
+          id: 'access-management',
+          title: 'Access Management',
+          titleKey: 'menu.accessManagement',
+          type: 'item',
+          icon: SecurityOutlinedIcon,
+          url: '/admin/users/access-management',
+          permission: 'users.access.read'
+        }
       ]
     }
   ]
