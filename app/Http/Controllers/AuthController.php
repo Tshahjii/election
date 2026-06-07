@@ -80,11 +80,10 @@ class AuthController extends Controller
             'otp' => $otp,
         ]);
 
-        Log::info('Login OTP generated.', ['mobile' => $user->mobile, 'otp' => $otp]);
+        Log::info('Login OTP generated.', ['mobile' => $user->mobile]);
 
         return response()->json([
             'message' => 'OTP sent successfully.',
-            'otp' => app()->isLocal() ? $otp : null,
             'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
         ]);
     }
@@ -286,11 +285,11 @@ class AuthController extends Controller
             $path = substr($path, strpos($path, '/storage/') + strlen('/storage/'));
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
         $normalizedPath = ltrim(str_replace(['/storage/', 'storage/'], '', $path), '/');
+
+        if (str_starts_with($normalizedPath, 'http://') || str_starts_with($normalizedPath, 'https://')) {
+            return null;
+        }
 
         return Storage::disk('uploads')->url($normalizedPath);
     }

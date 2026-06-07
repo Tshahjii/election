@@ -371,7 +371,7 @@ export default function UserAccessList() {
     const handleResetPassword = async () => {
         if (!resetPassword) return;
         try {
-            await apiClient.get(`/users/reset/${resetPassword.id}`);
+            await apiClient.post(`/users/reset/${resetPassword.id}`);
             dispatch(showNotification({ message: 'Password reset successfully.' }));
             setResetPassword(null);
             await fetchRows();

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 
 // material-ui
-import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
@@ -17,8 +16,6 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
-
 // project imports
 import MainCard from 'components/cards/MainCard';
 
@@ -48,8 +45,6 @@ const mockCandidates = {
 };
 
 export default function ElectionDashboard({ type }: ElectionDashboardProps) {
-  const theme = useTheme();
-
   // State hooks for Team Schedule form
   const [showForm, setShowForm] = useState(false);
   const totalEmployees = type === 'Nagar Panchayat' ? 4 : 5;
@@ -94,7 +89,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
       {/* KPI Cards Grid */}
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ p: 2.25, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
@@ -108,7 +103,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ p: 2.25, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
@@ -122,7 +117,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ p: 2.25, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
@@ -136,7 +131,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ p: 2.25, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
@@ -152,7 +147,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
       </Grid>
 
       {/* Create Team Schedule Card */}
-      <Grid item xs={12} md={6} lg={4}>
+      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
         <Card sx={{ p: 2.5, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" component="div" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Team Scheduling</Typography>
@@ -162,8 +157,8 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           </Stack>
           <Collapse in={showForm} timeout="auto" unmountOnExit>
             <Stack spacing={2} sx={{ mt: 1 }} component="div">
-              <TextField variant="outlined" label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} />
-              <TextField variant="outlined" label="Number of Employees" type="number" value={totalEmployees} InputProps={{ readOnly: true }} />
+              <TextField variant="outlined" label="Date of Birth" type="date" slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField variant="outlined" label="Number of Employees" type="number" value={totalEmployees} slotProps={{ input: { readOnly: true } }} />
               <Stack direction="row" spacing={2} component="div" sx={{ alignItems: 'center' }}>
                 <TextField
                   variant="outlined"
@@ -174,7 +169,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                     const val = parseInt(e.target.value, 10) || 0;
                     if (val >= 0 && val <= totalEmployees) setMaleCount(val);
                   }}
-                  InputProps={{ inputProps: { min: 0, max: totalEmployees } }}
+                  slotProps={{ htmlInput: { min: 0, max: totalEmployees } }}
                 />
                 <Typography variant="body1">Female: {totalEmployees - maleCount}</Typography>
               </Stack>
@@ -185,7 +180,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
       {/* Candidates & Zones Grid */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <MainCard title="Candidate Nomination Log" sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }}>
             <TableContainer>
               <Table>
@@ -216,7 +211,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           </MainCard>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <MainCard title="Election Overview & Details" sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
             <Stack spacing={2}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>

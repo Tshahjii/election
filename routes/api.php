@@ -7,8 +7,8 @@ use App\Http\Controllers\UserAccessController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
-    Route::post('send-otp', [AuthController::class, 'sendOtp']);
-    Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:5,1');
+    Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
 
     Route::middleware('jwt')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
@@ -29,7 +29,7 @@ Route::middleware('jwt')->prefix('masters')->group(function () {
 
 Route::middleware('jwt')->prefix('users')->group(function () {
     Route::get('access-options', [UserAccessController::class, 'accessOptions']);
-    Route::get('reset/{id}', [UserAccessController::class, 'resetPassword']);
+    Route::post('reset/{id}', [UserAccessController::class, 'resetPassword']);
     Route::get('/', [UserAccessController::class, 'index']);
     Route::post('/', [UserAccessController::class, 'store']);
     Route::put('{user}', [UserAccessController::class, 'update']);
