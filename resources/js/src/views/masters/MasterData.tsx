@@ -125,7 +125,7 @@ const MASTER_TYPES = [
       { key: 'office_name', label: 'Office Name', required: true },
       { key: 'company_name', label: 'Department' },
       { key: 'office_type', label: 'Office Type', type: 'office_type' },
-      { key: 'ofc_parent_id', label: 'Parent Office ID', type: 'number' },
+      { key: 'ofc_parent_id', label: 'Parent Office ID', type: 'office_parent' },
       { key: 'country_id', label: 'Country', type: 'country', required: true },
       { key: 'state_id', label: 'State', type: 'state', required: true },
       { key: 'district_id', label: 'District', type: 'district', required: true }
@@ -141,13 +141,15 @@ const MASTER_TYPES = [
     primaryKey: 'id',
     columns: [
       { key: 'city_name', label: 'City Name' },
+      { key: 'city_type_label', label: 'City Type' },
       { key: 'district_name', label: 'District' },
       { key: 'state_name', label: 'State' }
     ],
     fields: [
       { key: 'state_id', label: 'State', type: 'state', required: true },
       { key: 'district_id', label: 'District', type: 'district', required: true },
-      { key: 'city_name', label: 'City Name', required: true }
+      { key: 'city_name', label: 'City Name', required: true },
+      { key: 'city_type', label: 'City Type', type: 'select', required: true, options: [{ value: 'urban', label: 'Urban' }, { value: 'rural', label: 'Rural' }] }
     ]
   },
   {
@@ -403,6 +405,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         ...row,
         country_name: row.country_name || countriesById.get(Number(row.country_id)) || '-',
         state_name: row.state_name || statesById.get(Number(row.state_id)) || '-',
+        city_type_label: row.city_type ? row.city_type.charAt(0).toUpperCase() + row.city_type.slice(1) : '-',
         office_type_label: Number(row.office_type) === 2 ? t('data.branchOffice') : t('data.headOffice')
       })),
     [countriesById, rows, statesById]
@@ -410,7 +413,8 @@ export default function MasterData({ masterKey = 'countries' }) {
 
   const fetchOptions = async () => {
     const response = await apiClient.get('/masters/options');
-    setOptions(response.data);
+    const sortedCountries = (response.data.countries || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    setOptions({ ...response.data, countries: sortedCountries });
   };
 
   const fetchRows = async () => {
@@ -430,7 +434,15 @@ export default function MasterData({ masterKey = 'countries' }) {
           per_page: rowsPerPage
         }
       });
-      setRows(response.data.data || []);
+      let rowsData = response.data.data || [];
+
+      if (master.key === 'departments' || master.key === 'designations' || master.key === 'emp-types') {
+        rowsData = rowsData.slice().sort((a, b) => Number(b.id) - Number(a.id));
+      }
+      if (master.key === 'countries') {
+        rowsData = rowsData.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      }
+      setRows(rowsData);
       setTotalRows(response.data.total || 0);
     } catch (error) {
       dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
@@ -547,7 +559,7 @@ export default function MasterData({ masterKey = 'countries' }) {
       await fetchRows();
       // If states were updated, refresh authenticated user so headers reflect new state logo immediately
       if (master.key === 'states' && modal.mode === 'edit') {
-        dispatch(fetchAuthUser()).catch(() => {});
+        dispatch(fetchAuthUser()).catch(() => { });
       }
     } catch (error) {
       dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
@@ -675,6 +687,23 @@ export default function MasterData({ masterKey = 'countries' }) {
       );
     }
 
+    if (field.type === 'office_parent') {
+      // Determine accessible offices based on user role
+      const isSuperAdmin = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
+      const accessibleOffices = isSuperAdmin ? options.offices : options.offices.filter((office) => Number(office.ofc_id) === Number(user?.ofc_id));
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={accessibleOffices.map((office) => ({ value: office.ofc_id, label: office.office_name }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
     if (field.type === 'office') {
       return (
         <FormControl fullWidth required={field.required}>
@@ -780,6 +809,21 @@ export default function MasterData({ masterKey = 'countries' }) {
               { value: 'urban', label: 'Urban' },
               { value: 'rural', label: 'Rural' }
             ]}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'select') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={field.options || []}
             onChange={handleFormChange(field.key)}
           />
         </FormControl>

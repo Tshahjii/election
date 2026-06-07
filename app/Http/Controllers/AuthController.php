@@ -61,9 +61,9 @@ class AuthController extends Controller
             ->where('created_at', '>=', now()->subDay())
             ->count();
 
-        if ($otpCount >= 3) {
+        if ($otpCount >= 50) {
             throw ValidationException::withMessages([
-                'mobile' => 'OTP limit reached. You can request only 3 OTPs in 24 hours.'
+                'mobile' => 'OTP limit reached. You can request only 50 OTPs in 24 hours.'
             ]);
         }
 

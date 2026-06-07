@@ -10,6 +10,7 @@ class MasterCity extends Model
         'state_id',
         'district_id',
         'city_name',
+        'city_type',
         'status',
         'created_by',
         'updated_by',

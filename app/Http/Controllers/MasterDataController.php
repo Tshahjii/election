@@ -451,6 +451,7 @@ class MasterDataController extends Controller
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
                 'city_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_cities', 'city_name', $row)],
+                'city_type' => ['required', 'string', Rule::in(['urban', 'rural'])],
                 'status' => $statusRule,
             ],
             'wards' => [
