@@ -6,19 +6,19 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class UrbanElectionController extends Controller
+class RuralElectionController extends Controller
 {
     public function createTeamsScheduled(Request $request): JsonResponse
     {
         $request->validate([
-            'city_id' => 'required|integer|exists:master_np_cities,id',
+            'city_id' => 'required|integer|exists:master_rp_cities,id',
         ]);
 
         $cityId = $request->input('city_id');
         $user = $request->user();
 
         // 1. Get all polling stations for this city
-        $pollingStations = DB::table('master_np_polling_stations')
+        $pollingStations = DB::table('master_rp_polling_stations')
             ->where('city_id', $cityId)
             ->where('status', 1)
             ->get();
@@ -31,23 +31,23 @@ class UrbanElectionController extends Controller
 
         DB::transaction(function () use ($pollingStations, $cityId, $user) {
             // 2. Delete existing team mapping rows for this city to prevent duplication
-            $existingTeamIds = DB::table('master_n_p_team_mappings')
+            $existingTeamIds = DB::table('master_r_p_team_mappings')
                 ->where('city_id', $cityId)
                 ->pluck('id');
 
-            DB::table('master_n_p_mappings')->whereIn('team_id', $existingTeamIds)->delete();
-            DB::table('master_n_p_team_mappings')->where('city_id', $cityId)->delete();
+            DB::table('master_r_p_mappings')->whereIn('team_id', $existingTeamIds)->delete();
+            DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->delete();
 
             // 3. Find the maximum sequential team_id across the whole database
-            $maxTeamId = DB::table('master_n_p_team_mappings')->max('team_id') ?? 0;
+            $maxTeamId = DB::table('master_r_p_team_mappings')->max('team_id') ?? 0;
 
             // 4. Generate teams
             foreach ($pollingStations as $index => $ps) {
                 $seqTeamId = $maxTeamId + $index + 1;
-                $posts = ['P0', 'P1', 'P2', 'P3'];
+                $posts = ['P0', 'P1', 'P2', 'P3', 'P4'];
 
                 foreach ($posts as $post) {
-                    $teamMappingId = DB::table('master_n_p_team_mappings')->insertGetId([
+                    $teamMappingId = DB::table('master_r_p_team_mappings')->insertGetId([
                         'team_id' => $seqTeamId,
                         'state_id' => $ps->state_id,
                         'district_id' => $ps->district_id,
@@ -60,7 +60,7 @@ class UrbanElectionController extends Controller
                         'updated_at' => now(),
                     ]);
 
-                    DB::table('master_n_p_mappings')->insert([
+                    DB::table('master_r_p_mappings')->insert([
                         'team_id' => $teamMappingId,
                         'post_name' => $post,
                         'emp_id' => null,
@@ -81,53 +81,53 @@ class UrbanElectionController extends Controller
     public function dashboardData(Request $request): JsonResponse
     {
         $request->validate([
-            'city_id' => 'required|integer|exists:master_np_cities,id',
+            'city_id' => 'required|integer|exists:master_rp_cities,id',
         ]);
 
         $cityId = $request->input('city_id');
 
         // Get city name and details
-        $city = DB::table('master_np_cities')->where('id', $cityId)->first();
+        $city = DB::table('master_rp_cities')->where('id', $cityId)->first();
 
         // Count stats
-        $totalWards = DB::table('master_np_wards')->where('city_id', $cityId)->where('status', 1)->count();
-        $mappedWards = DB::table('master_n_p_team_mappings')->where('city_id', $cityId)->distinct()->count('ward_id');
+        $totalWards = DB::table('master_rp_wards')->where('city_id', $cityId)->where('status', 1)->count();
+        $mappedWards = DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->distinct()->count('ward_id');
 
-        $totalBooths = DB::table('master_np_polling_stations')->where('city_id', $cityId)->where('status', 1)->count();
-        $mappedBooths = DB::table('master_n_p_team_mappings')->where('city_id', $cityId)->distinct()->count('ps_id');
-        
-        $teamsCount = DB::table('master_n_p_team_mappings')->where('city_id', $cityId)->distinct()->count('team_id');
+        $totalBooths = DB::table('master_rp_polling_stations')->where('city_id', $cityId)->where('status', 1)->count();
+        $mappedBooths = DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->distinct()->count('ps_id');
+
+        $teamsCount = DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->distinct()->count('team_id');
 
         // Deployed count
-        $deployedCount = DB::table('master_n_p_mappings')
-            ->join('master_n_p_team_mappings', 'master_n_p_team_mappings.id', '=', 'master_n_p_mappings.team_id')
-            ->where('master_n_p_team_mappings.city_id', $cityId)
-            ->whereNotNull('master_n_p_mappings.emp_id')
+        $deployedCount = DB::table('master_r_p_mappings')
+            ->join('master_r_p_team_mappings', 'master_r_p_team_mappings.id', '=', 'master_r_p_mappings.team_id')
+            ->where('master_r_p_team_mappings.city_id', $cityId)
+            ->whereNotNull('master_r_p_mappings.emp_id')
             ->count();
 
         // Get teams
-        $teamMappings = DB::table('master_n_p_team_mappings')
-            ->join('master_np_polling_stations', 'master_np_polling_stations.id', '=', 'master_n_p_team_mappings.ps_id')
-            ->join('master_np_wards', 'master_np_wards.id', '=', 'master_n_p_team_mappings.ward_id')
-            ->where('master_n_p_team_mappings.city_id', $cityId)
+        $teamMappings = DB::table('master_r_p_team_mappings')
+            ->join('master_rp_polling_stations', 'master_rp_polling_stations.id', '=', 'master_r_p_team_mappings.ps_id')
+            ->join('master_rp_wards', 'master_rp_wards.id', '=', 'master_r_p_team_mappings.ward_id')
+            ->where('master_r_p_team_mappings.city_id', $cityId)
             ->select([
-                'master_n_p_team_mappings.id as mapping_id',
-                'master_n_p_team_mappings.team_id',
-                'master_np_polling_stations.polling_station_name',
-                'master_np_wards.ward_no',
-                'master_np_wards.ward_name',
+                'master_r_p_team_mappings.id as mapping_id',
+                'master_r_p_team_mappings.team_id',
+                'master_rp_polling_stations.polling_station_name',
+                'master_rp_wards.ward_no',
+                'master_rp_wards.ward_name',
             ])
             ->get();
 
-        // Load the P0-P3 posts for these team mappings
-        $postsData = DB::table('master_n_p_mappings')
-            ->leftJoin('master_employees', 'master_employees.id', '=', 'master_n_p_mappings.emp_id')
-            ->whereIn('master_n_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
+        // Load the P0-P4 posts for these team mappings
+        $postsData = DB::table('master_r_p_mappings')
+            ->leftJoin('master_employees', 'master_employees.id', '=', 'master_r_p_mappings.emp_id')
+            ->whereIn('master_r_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
             ->select([
-                'master_n_p_mappings.id as post_mapping_id',
-                'master_n_p_mappings.team_id as team_mapping_id',
-                'master_n_p_mappings.post_name',
-                'master_n_p_mappings.emp_id',
+                'master_r_p_mappings.id as post_mapping_id',
+                'master_r_p_mappings.team_id as team_mapping_id',
+                'master_r_p_mappings.post_name',
+                'master_r_p_mappings.emp_id',
                 'master_employees.name as employee_name',
                 'master_employees.emp_code as employee_code',
             ])
@@ -187,7 +187,7 @@ class UrbanElectionController extends Controller
     {
         $request->validate([
             'assignments' => 'required|array',
-            'assignments.*.post_mapping_id' => 'required|integer|exists:master_n_p_mappings,id',
+            'assignments.*.post_mapping_id' => 'required|integer|exists:master_r_p_mappings,id',
             'assignments.*.emp_id' => 'nullable|integer|exists:master_employees,id',
         ]);
 
@@ -196,7 +196,7 @@ class UrbanElectionController extends Controller
 
         DB::transaction(function () use ($assignments, $user) {
             foreach ($assignments as $item) {
-                DB::table('master_n_p_mappings')
+                DB::table('master_r_p_mappings')
                     ->where('id', $item['post_mapping_id'])
                     ->update([
                         'emp_id' => $item['emp_id'],

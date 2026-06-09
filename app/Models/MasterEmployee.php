@@ -90,6 +90,8 @@ class MasterEmployee extends Model
 
     public function city(): BelongsTo
     {
-        return $this->belongsTo(MasterCity::class, 'city_id');
+        return $this->city_type === 'urban'
+            ? $this->belongsTo(MasterNPCity::class, 'city_id')
+            : $this->belongsTo(MasterRPCity::class, 'city_id');
     }
 }

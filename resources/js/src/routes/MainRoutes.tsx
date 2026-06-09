@@ -78,16 +78,28 @@ const MainRoutes = {
       element: <MasterDataPage masterKey="offices" />
     },
     {
-      path: 'masters/cities',
-      element: <MasterDataPage masterKey="cities" />
+      path: 'masters/np-cities',
+      element: <MasterDataPage masterKey="np-cities" />
     },
     {
-      path: 'masters/wards',
-      element: <MasterDataPage masterKey="wards" />
+      path: 'masters/np-wards',
+      element: <MasterDataPage masterKey="np-wards" />
     },
     {
-      path: 'masters/polling-stations',
-      element: <MasterDataPage masterKey="polling-stations" />
+      path: 'masters/np-polling-stations',
+      element: <MasterDataPage masterKey="np-polling-stations" />
+    },
+    {
+      path: 'masters/rp-cities',
+      element: <MasterDataPage masterKey="rp-cities" />
+    },
+    {
+      path: 'masters/rp-wards',
+      element: <MasterDataPage masterKey="rp-wards" />
+    },
+    {
+      path: 'masters/rp-polling-stations',
+      element: <MasterDataPage masterKey="rp-polling-stations" />
     },
     {
       path: 'masters/emp-types',

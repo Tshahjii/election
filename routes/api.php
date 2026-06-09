@@ -4,6 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\UserAccessController;
+use App\Http\Controllers\UrbanElectionController;
+use App\Http\Controllers\RuralElectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -21,10 +23,23 @@ Route::prefix('auth')->group(function () {
 Route::middleware('jwt')->prefix('masters')->group(function () {
     Route::get('options', [MasterDataController::class, 'options']);
     Route::get('search', [MasterDataController::class, 'search']);
+    Route::get('employees/search', [MasterDataController::class, 'searchEmployees']);
     Route::get('{type}', [MasterDataController::class, 'index']);
     Route::post('{type}', [MasterDataController::class, 'store']);
     Route::post('{type}/{id}', [MasterDataController::class, 'update']);
     Route::delete('{type}/{id}', [MasterDataController::class, 'destroy']);
+});
+
+Route::middleware('jwt')->prefix('urban-election')->group(function () {
+    Route::get('dashboard-data', [UrbanElectionController::class, 'dashboardData']);
+    Route::post('create-teams-scheduled', [UrbanElectionController::class, 'createTeamsScheduled']);
+    Route::post('save-assignments', [UrbanElectionController::class, 'saveAssignments']);
+});
+
+Route::middleware('jwt')->prefix('rural-election')->group(function () {
+    Route::get('dashboard-data', [RuralElectionController::class, 'dashboardData']);
+    Route::post('create-teams-scheduled', [RuralElectionController::class, 'createTeamsScheduled']);
+    Route::post('save-assignments', [RuralElectionController::class, 'saveAssignments']);
 });
 
 Route::middleware('jwt')->prefix('users')->group(function () {

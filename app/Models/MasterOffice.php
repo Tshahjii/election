@@ -12,6 +12,7 @@ class MasterOffice extends Model
         'office_code',
         'office_name',
         'company_name',
+        'department_id',
         'office_type',
         'ofc_parent_id',
         'status',
@@ -30,5 +31,6 @@ class MasterOffice extends Model
         'ofc_parent_id' => 'integer',
         'office_type' => 'integer',
         'status' => 'integer',
+        'department_id' => 'integer',
     ];
 }

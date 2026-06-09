@@ -115,7 +115,7 @@ const MASTER_TYPES = [
     columns: [
       { key: 'office_code', label: 'Code' },
       { key: 'office_name', label: 'Name' },
-      { key: 'company_name', label: 'Department' },
+      { key: 'department_name', label: 'Department' },
       { key: 'office_type_label', label: 'Type' },
       { key: 'district_name', label: 'District' },
       { key: 'state_name', label: 'State' }
@@ -123,7 +123,7 @@ const MASTER_TYPES = [
     fields: [
       { key: 'office_code', label: 'Office Code' },
       { key: 'office_name', label: 'Office Name', required: true },
-      { key: 'company_name', label: 'Department', type: 'department_name' },
+      { key: 'department_id', label: 'Department', type: 'department', required: true },
       { key: 'office_type', label: 'Office Type', type: 'office_type' },
       { key: 'ofc_parent_id', label: 'Parent Office', type: 'office_parent' },
       { key: 'country_id', label: 'Country', type: 'country', required: true },
@@ -132,16 +132,14 @@ const MASTER_TYPES = [
     ]
   },
   {
-    key: 'cities',
+    key: 'np-cities',
     module: 'masters.cities',
-    label: 'Cities',
-    labelKey: 'masters.cities',
-    title: 'City',
-    titleKey: 'masters.city',
+    label: 'Nagar Panchayat Cities',
+    title: 'Nagar Panchayat City',
     primaryKey: 'id',
     columns: [
       { key: 'city_name', label: 'City Name' },
-      { key: 'city_type_label', label: 'City Type' },
+      { key: 'karyalay_name', label: 'Karyalay Name' },
       { key: 'district_name', label: 'District' },
       { key: 'state_name', label: 'State' }
     ],
@@ -149,16 +147,14 @@ const MASTER_TYPES = [
       { key: 'state_id', label: 'State', type: 'state', required: true },
       { key: 'district_id', label: 'District', type: 'district', required: true },
       { key: 'city_name', label: 'City Name', required: true },
-      { key: 'city_type', label: 'City Type', type: 'select', required: true, options: [{ value: 'urban', label: 'Urban' }, { value: 'rural', label: 'Rural' }] }
+      { key: 'karyalay_name', label: 'Karyalay Name', required: true }
     ]
   },
   {
-    key: 'wards',
+    key: 'np-wards',
     module: 'masters.wards',
-    label: 'Wards',
-    labelKey: 'masters.wards',
-    title: 'Ward',
-    titleKey: 'masters.ward',
+    label: 'Nagar Panchayat Wards',
+    title: 'Nagar Panchayat Ward',
     primaryKey: 'id',
     columns: [
       { key: 'ward_no', label: 'Ward No' },
@@ -176,12 +172,71 @@ const MASTER_TYPES = [
     ]
   },
   {
-    key: 'polling-stations',
+    key: 'np-polling-stations',
     module: 'masters.polling_stations',
-    label: 'Polling Stations',
-    labelKey: 'masters.pollingStations',
-    title: 'Polling Station',
-    titleKey: 'masters.pollingStation',
+    label: 'Nagar Panchayat Polling Stations',
+    title: 'Nagar Panchayat Polling Station',
+    primaryKey: 'id',
+    columns: [
+      { key: 'polling_station_name', label: 'Polling Station Name' },
+      { key: 'ward_name_label', label: 'Ward' },
+      { key: 'city_name_label', label: 'City' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_id', label: 'City', type: 'city', required: true },
+      { key: 'ward_id', label: 'Ward', type: 'ward', required: true },
+      { key: 'polling_station_name', label: 'Polling Station Name', required: true }
+    ]
+  },
+  {
+    key: 'rp-cities',
+    module: 'masters.cities',
+    label: 'Nagri Nikay Cities',
+    title: 'Nagri Nikay City',
+    primaryKey: 'id',
+    columns: [
+      { key: 'city_name', label: 'City Name' },
+      { key: 'karyalay_name', label: 'Karyalay Name' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_name', label: 'City Name', required: true },
+      { key: 'karyalay_name', label: 'Karyalay Name', required: true }
+    ]
+  },
+  {
+    key: 'rp-wards',
+    module: 'masters.wards',
+    label: 'Nagri Nikay Wards',
+    title: 'Nagri Nikay Ward',
+    primaryKey: 'id',
+    columns: [
+      { key: 'ward_no', label: 'Ward No' },
+      { key: 'ward_name', label: 'Ward Name' },
+      { key: 'city_name_label', label: 'City' },
+      { key: 'district_name', label: 'District' },
+      { key: 'state_name', label: 'State' }
+    ],
+    fields: [
+      { key: 'state_id', label: 'State', type: 'state', required: true },
+      { key: 'district_id', label: 'District', type: 'district', required: true },
+      { key: 'city_id', label: 'City', type: 'city', required: true },
+      { key: 'ward_no', label: 'Ward No', type: 'number', required: true },
+      { key: 'ward_name', label: 'Ward Name', required: true }
+    ]
+  },
+  {
+    key: 'rp-polling-stations',
+    module: 'masters.polling_stations',
+    label: 'Nagri Nikay Polling Stations',
+    title: 'Nagri Nikay Polling Station',
     primaryKey: 'id',
     columns: [
       { key: 'polling_station_name', label: 'Polling Station Name' },
@@ -241,12 +296,14 @@ const MASTER_TYPES = [
     primaryKey: 'id',
     columns: [
       { key: 'level', label: 'Level' },
-      { key: 'amount_pay', label: 'Amount Pay' },
+      { key: 'min_amount_pay', label: 'Min Amount Pay' },
+      { key: 'max_amount_pay', label: 'Max Amount Pay' },
       { key: 'grade_pay', label: 'Grade Pay' }
     ],
     fields: [
       { key: 'level', label: 'Level', required: true },
-      { key: 'amount_pay', label: 'Amount Pay', required: true },
+      { key: 'min_amount_pay', label: 'Min Amount Pay', type: 'number', required: true },
+      { key: 'max_amount_pay', label: 'Max Amount Pay', type: 'number', required: true },
       { key: 'grade_pay', label: 'Grade Pay', required: true }
     ]
   },
@@ -270,7 +327,14 @@ const MASTER_TYPES = [
     ],
     fields: [
       { key: 'emp_code', label: 'Employee Code' },
-      { key: 'title', label: 'Title', required: true },
+      { key: 'title', label: 'Title', type: 'select', required: true, options: [
+        { value: 'श्री', label: 'श्री' },
+        { value: 'श्रीमान', label: 'श्रीमान' },
+        { value: 'श्रीमती', label: 'श्रीमती' },
+        { value: 'सुश्री', label: 'सुश्री' },
+        { value: 'कुमारी', label: 'कुमारी' },
+        { value: 'डॉ', label: 'डॉ' }
+      ] },
       { key: 'name', label: 'Name', required: true },
       { key: 'gender', label: 'Gender', type: 'gender', required: true },
       { key: 'dob', label: 'Date of Birth', type: 'date', required: true },
@@ -330,13 +394,9 @@ function getCreateFormDefaults(masterKey, user, options) {
 
   const userDepartment = firstValue(user?.department, user?.office_info?.company_name);
   if (userDepartment) {
-    if (masterKey === 'employees') {
+    if (masterKey === 'employees' || masterKey === 'offices') {
       const department = options.departments.find((item) => String(item.department).toLowerCase() === String(userDepartment).toLowerCase());
       if (department) next.department_id = department.id;
-    }
-
-    if (masterKey === 'offices') {
-      next.company_name = userDepartment;
     }
   }
 
@@ -365,6 +425,10 @@ export default function MasterData({ masterKey = 'countries' }) {
     districts: any[];
     cities: any[];
     wards: any[];
+    np_cities: any[];
+    rp_cities: any[];
+    np_wards: any[];
+    rp_wards: any[];
     offices: any[];
     emp_types: any[];
     designations: any[];
@@ -376,6 +440,10 @@ export default function MasterData({ masterKey = 'countries' }) {
     districts: [],
     cities: [],
     wards: [],
+    np_cities: [],
+    rp_cities: [],
+    np_wards: [],
+    rp_wards: [],
     offices: [],
     emp_types: [],
     designations: [],
@@ -391,6 +459,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [deleteRow, setDeleteRow] = useState(null);
   const [form, setForm] = useState<Record<string, any>>(defaultForm);
   const [attachment, setAttachment] = useState(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const master = MASTER_TYPES.find((item) => item.key === masterKey) || MASTER_TYPES[0];
   const tableColumnCount = master.columns.length + (master.supportsAttachment ? 4 : 3);
@@ -409,14 +478,35 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!form.state_id) return [];
     return options.districts.filter((district) => Number(district.state_id) === Number(form.state_id));
   }, [form.state_id, options.districts]);
+
   const filteredCityOptions = useMemo(() => {
     if (!form.district_id) return [];
-    return options.cities.filter((city) => Number(city.district_id) === Number(form.district_id));
-  }, [form.district_id, options.cities]);
+    
+    let citiesList = options.cities || [];
+    if (master.key === 'np-wards' || master.key === 'np-polling-stations') {
+      citiesList = options.np_cities || [];
+    } else if (master.key === 'rp-wards' || master.key === 'rp-polling-stations') {
+      citiesList = options.rp_cities || [];
+    } else if (master.key === 'employees') {
+      citiesList = form.city_type === 'urban' ? options.np_cities : options.rp_cities;
+    }
+    
+    return (citiesList || []).filter((city) => Number(city.district_id) === Number(form.district_id));
+  }, [form.district_id, form.city_type, options.cities, options.np_cities, options.rp_cities, master.key]);
+
   const filteredWardOptions = useMemo(() => {
     if (!form.city_id) return [];
-    return options.wards.filter((ward) => Number(ward.city_id) === Number(form.city_id));
-  }, [form.city_id, options.wards]);
+    
+    let wardsList = options.wards || [];
+    if (master.key === 'np-polling-stations') {
+      wardsList = options.np_wards || [];
+    } else if (master.key === 'rp-polling-stations') {
+      wardsList = options.rp_wards || [];
+    }
+    
+    return (wardsList || []).filter((ward) => Number(ward.city_id) === Number(form.city_id));
+  }, [form.city_id, options.wards, options.np_wards, options.rp_wards, master.key]);
+
   const filteredOfficeOptions = useMemo(() => {
     if (!form.district_id) return options.offices;
     return options.offices.filter((office) => Number(office.district_id) === Number(form.district_id));
@@ -430,14 +520,28 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!filters.country_id) return options.states;
     return options.states.filter((state) => Number(state.country_id) === Number(filters.country_id));
   }, [filters.country_id, options.states]);
+  
   const filterCityOptions = useMemo(() => {
-    if (!filters.district_id) return options.cities;
-    return options.cities.filter((city) => Number(city.district_id) === Number(filters.district_id));
-  }, [filters.district_id, options.cities]);
+    let citiesList = options.cities || [];
+    if (master.key.startsWith('np-')) {
+      citiesList = options.np_cities || [];
+    } else if (master.key.startsWith('rp-')) {
+      citiesList = options.rp_cities || [];
+    }
+    if (!filters.district_id) return citiesList;
+    return (citiesList || []).filter((city) => Number(city.district_id) === Number(filters.district_id));
+  }, [filters.district_id, options.cities, options.np_cities, options.rp_cities, master.key]);
+  
   const filterWardOptions = useMemo(() => {
-    if (!filters.city_id) return options.wards;
-    return options.wards.filter((ward) => Number(ward.city_id) === Number(filters.city_id));
-  }, [filters.city_id, options.wards]);
+    let wardsList = options.wards || [];
+    if (master.key.startsWith('np-')) {
+      wardsList = options.np_wards || [];
+    } else if (master.key.startsWith('rp-')) {
+      wardsList = options.rp_wards || [];
+    }
+    if (!filters.city_id) return wardsList;
+    return (wardsList || []).filter((ward) => Number(ward.city_id) === Number(filters.city_id));
+  }, [filters.city_id, options.wards, options.np_wards, options.rp_wards, master.key]);
 
   const decoratedRows = useMemo(
     () =>
@@ -528,6 +632,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const handleOpenCreate = () => {
     setForm(createFormDefaults);
     setAttachment(null);
+    setErrors({});
     setModal({ open: true, mode: 'create', row: null });
   };
 
@@ -538,18 +643,32 @@ export default function MasterData({ masterKey = 'countries' }) {
       status: Number(row.status)
     });
     setAttachment(null);
+    setErrors({});
     setModal({ open: true, mode: 'edit', row });
   };
 
   const handleCloseModal = () => {
     setModal({ open: false, mode: 'create', row: null });
     setAttachment(null);
+    setErrors({});
   };
 
   const handleFormChange = (field) => (event) => {
     const value = event.target.value;
+    setErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
     setForm((current) => {
       const next: Record<string, any> = { ...current, [field]: value };
+      if (field === 'title') {
+        if (value === 'श्री' || value === 'श्रीमान') {
+          next.gender = 1;
+        } else if (value === 'श्रीमती' || value === 'सुश्री' || value === 'कुमारी') {
+          next.gender = 2;
+        }
+      }
       if (field === 'country_id') {
         next.state_id = '';
         next.district_id = '';
@@ -577,6 +696,23 @@ export default function MasterData({ masterKey = 'countries' }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    // Client-side validation
+    const clientErrors: Record<string, string> = {};
+    master.fields.forEach((field) => {
+      if (field.required) {
+        const value = form[field.key];
+        if (value === undefined || value === null || String(value).trim() === '') {
+          clientErrors[field.key] = `${tl(field.label)} is required.`;
+        }
+      }
+    });
+
+    if (Object.keys(clientErrors).length > 0) {
+      setErrors(clientErrors);
+      dispatch(showNotification({ message: 'Please correct the validation errors in the form.', severity: 'error' }));
+      return;
+    }
+
     const formData = new FormData();
     master.fields.forEach((field) => {
       const value = form[field.key];
@@ -601,8 +737,18 @@ export default function MasterData({ masterKey = 'countries' }) {
       if (master.key === 'states' && modal.mode === 'edit') {
         dispatch(fetchAuthUser()).catch(() => { });
       }
-    } catch (error) {
-      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        const responseErrors = error.response.data.errors || {};
+        const formattedErrors: Record<string, string> = {};
+        Object.keys(responseErrors).forEach((key) => {
+          formattedErrors[key] = Array.isArray(responseErrors[key]) ? responseErrors[key][0] : String(responseErrors[key]);
+        });
+        setErrors(formattedErrors);
+        dispatch(showNotification({ message: 'Validation failed. Please check the marked fields.', severity: 'error' }));
+      } else {
+        dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+      }
     }
   };
 
@@ -635,10 +781,12 @@ export default function MasterData({ masterKey = 'countries' }) {
 
   const renderField = (field) => {
     const label = tl(field.label);
+    const hasError = !!errors[field.key];
+    const errText = errors[field.key];
 
     if (field.type === 'country') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -646,6 +794,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={t('field.country')}
             options={options.countries.map((country) => ({ value: country.id, label: country.name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -653,7 +803,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'state') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -661,6 +811,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={t('field.state')}
             options={filteredStateOptions.map((state) => ({ value: state.id, label: state.name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -668,7 +820,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'district') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -676,6 +828,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={t('field.district')}
             options={filteredDistrictOptions.map((district) => ({ value: district.id, label: district.name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -683,7 +837,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'city') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -691,6 +845,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={t('field.city')}
             options={filteredCityOptions.map((city) => ({ value: city.id, label: city.city_name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -698,7 +854,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'ward') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -706,6 +862,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={t('field.ward')}
             options={filteredWardOptions.map((ward) => ({ value: ward.id, label: `${ward.ward_no} - ${ward.ward_name}` }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -713,7 +871,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'office_type') {
       return (
-        <FormControl fullWidth>
+        <FormControl fullWidth error={hasError}>
           <ChosenSelect
             label={label}
             value={form[field.key] || 1}
@@ -722,6 +880,8 @@ export default function MasterData({ masterKey = 'countries' }) {
               { value: 2, label: t('data.branchOffice') }
             ]}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -732,7 +892,7 @@ export default function MasterData({ masterKey = 'countries' }) {
       const isSuperAdmin = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
       const accessibleOffices = isSuperAdmin ? options.offices : options.offices.filter((office) => Number(office.ofc_id) === Number(user?.ofc_id));
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -740,13 +900,15 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={accessibleOffices.map((office) => ({ value: office.ofc_id, label: office.office_name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
     }
     if (field.type === 'office') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -754,6 +916,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={filteredOfficeOptions.map((office) => ({ value: office.ofc_id, label: office.office_name }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -761,7 +925,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'emp_type') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -769,6 +933,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={options.emp_types.map((item) => ({ value: item.id, label: item.emp_type }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -776,7 +942,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'department') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -784,6 +950,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={options.departments.map((item) => ({ value: item.id, label: item.department }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -791,7 +959,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'department_name') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -799,6 +967,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={options.departments.map((item) => ({ value: item.department, label: item.department }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -806,7 +976,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'designation') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -814,6 +984,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={options.designations.map((item) => ({ value: item.id, label: item.designation }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -821,14 +993,16 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'pay_level') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
             value={form[field.key] || ''}
             placeholder={tl(field.label)}
-            options={options.pay_levels.map((item) => ({ value: item.id, label: `${item.level} - ${item.amount_pay}` }))}
+            options={options.pay_levels.map((item) => ({ value: item.id, label: `${item.level} - (${item.min_amount_pay} - ${item.max_amount_pay})` }))}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -836,7 +1010,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'gender') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -847,6 +1021,8 @@ export default function MasterData({ masterKey = 'countries' }) {
               { value: 2, label: 'Female' }
             ]}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -854,7 +1030,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'city_type') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -865,6 +1041,8 @@ export default function MasterData({ masterKey = 'countries' }) {
               { value: 'rural', label: 'Rural' }
             ]}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -872,7 +1050,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'select') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -880,6 +1058,8 @@ export default function MasterData({ masterKey = 'countries' }) {
             placeholder={tl(field.label)}
             options={field.options || []}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -887,7 +1067,7 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'boolean') {
       return (
-        <FormControl fullWidth required={field.required}>
+        <FormControl fullWidth required={field.required} error={hasError}>
           <ChosenSelect
             required={field.required}
             label={label}
@@ -898,6 +1078,8 @@ export default function MasterData({ masterKey = 'countries' }) {
               { value: 1, label: 'Yes' }
             ]}
             onChange={handleFormChange(field.key)}
+            error={hasError}
+            helperText={errText}
           />
         </FormControl>
       );
@@ -915,6 +1097,8 @@ export default function MasterData({ masterKey = 'countries' }) {
         onChange={handleFormChange(field.key)}
         onKeyDown={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
         onPaste={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
+        error={hasError}
+        helperText={errText}
         slotProps={{
           inputLabel: { shrink: field.type === 'date' ? true : undefined },
           input: {

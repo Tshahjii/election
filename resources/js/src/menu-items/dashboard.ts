@@ -45,14 +45,29 @@ const dashboard = {
       breadcrumbs: false
     },
     {
-      id: 'election-management',
-      title: 'Election Management',
-      titleKey: 'menu.electionManagement',
+      id: 'nagar-panchayat',
+      title: 'Nagar Panchayat',
+      titleKey: 'menu.nagarPanchayat',
       type: 'collapse',
-      icon: HowToVoteOutlinedIcon,
+      icon: LocationOnOutlinedIcon,
       children: [
-        { id: 'nagar-panchayat', title: 'Nagar Panchayat', titleKey: 'menu.nagarPanchayat', type: 'item', icon: LocationOnOutlinedIcon, url: '/admin/election/nagar-panchayat', permission: 'election.nagar_panchayat.read' },
-        { id: 'nagari-nikay', title: 'Nagari Nikay', titleKey: 'menu.nagariNikay', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/election/nagari-nikay', permission: 'election.nagari_nikay.read' }
+        { id: 'np-dashboard', title: 'Dashboard', titleKey: 'menu.dashboard', type: 'item', icon: SpaceDashboardOutlinedIcon, url: '/admin/election/nagar-panchayat', permission: 'election.nagar_panchayat.read' },
+        { id: 'np-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/np-wards', permission: 'masters.wards.read' },
+        { id: 'np-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/np-cities', permission: 'masters.cities.read' },
+        { id: 'np-pollingstation', title: 'Polling Station Master', titleKey: 'menu.masterPollingStation', type: 'item', icon: BallotOutlinedIcon, url: '/admin/masters/np-polling-stations', permission: 'masters.polling_stations.read' }
+      ]
+    },
+    {
+      id: 'nagari-nikay',
+      title: 'Nagri Nikay',
+      titleKey: 'menu.nagariNikay',
+      type: 'collapse',
+      icon: ApartmentOutlinedIcon,
+      children: [
+        { id: 'rp-dashboard', title: 'Dashboard', titleKey: 'menu.dashboard', type: 'item', icon: SpaceDashboardOutlinedIcon, url: '/admin/election/nagari-nikay', permission: 'election.nagari_nikay.read' },
+        { id: 'rp-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/rp-wards', permission: 'masters.wards.read' },
+        { id: 'rp-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/rp-cities', permission: 'masters.cities.read' },
+        { id: 'rp-pollingstation', title: 'Polling Station Master', titleKey: 'menu.masterPollingStation', type: 'item', icon: BallotOutlinedIcon, url: '/admin/masters/rp-polling-stations', permission: 'masters.polling_stations.read' }
       ]
     },
     {
@@ -80,7 +95,6 @@ const dashboard = {
       type: 'collapse',
       icon: StorageOutlinedIcon,
       children: [
-        { id: 'master-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/cities', permission: 'masters.cities.read' },
         { id: 'master-country', title: 'Country Master', titleKey: 'menu.masterCountry', type: 'item', icon: PublicOutlinedIcon, url: '/admin/masters/countries', permission: 'masters.countries.read' },
         { id: 'master-department', title: 'Department', titleKey: 'menu.department', type: 'item', icon: CorporateFareOutlinedIcon, url: '/admin/masters/departments', permission: 'hrms.departments.read' },
         { id: 'master-designation', title: 'Designation', titleKey: 'menu.designation', type: 'item', icon: PersonOutlineOutlinedIcon, url: '/admin/masters/designations', permission: 'hrms.designations.read' },
@@ -88,17 +102,7 @@ const dashboard = {
         { id: 'master-employee-type', title: 'Employee Type', titleKey: 'menu.employeeType', type: 'item', icon: BadgeOutlinedIcon, url: '/admin/masters/emp-types', permission: 'hrms.emp_types.read' },
         { id: 'master-office', title: 'Office Master', titleKey: 'menu.masterOffice', type: 'item', icon: AccountBalanceOutlinedIcon, url: '/admin/masters/offices', permission: 'masters.offices.read' },
         { id: 'master-pay-level', title: 'Pay Scale / Pay Level', titleKey: 'menu.payLevel', type: 'item', icon: PaymentsOutlinedIcon, url: '/admin/masters/pay-levels', permission: 'hrms.pay_levels.read' },
-        {
-          id: 'master-polling-station',
-          title: 'Polling Station Master',
-          titleKey: 'menu.masterPollingStation',
-          type: 'item',
-          icon: BallotOutlinedIcon,
-          url: '/admin/masters/polling-stations',
-          permission: 'masters.polling_stations.read'
-        },
-        { id: 'master-state', title: 'State Master', titleKey: 'menu.masterState', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' },
-        { id: 'master-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/wards', permission: 'masters.wards.read' }
+        { id: 'master-state', title: 'State Master', titleKey: 'menu.masterState', type: 'item', icon: MapOutlinedIcon, url: '/admin/masters/states', permission: 'masters.states.read' }
       ]
     },
     {

@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('master_n_p_team_mappings', function (Blueprint $table) {
+        Schema::create('master_r_p_team_mappings', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('team_id');
             $table->foreignId('state_id')->constrained('master_states')->cascadeOnDelete();
             $table->foreignId('district_id')->constrained('master_districts')->cascadeOnDelete();
-            $table->foreignId('ward_id')->constrained('master_np_wards')->cascadeOnDelete();
-            $table->foreignId('city_id')->constrained('master_np_cities')->cascadeOnDelete();
-            $table->foreignId('ps_id')->constrained('master_np_polling_stations')->cascadeOnDelete();
+            $table->foreignId('ward_id')->constrained('master_rp_wards')->cascadeOnDelete();
+            $table->foreignId('city_id')->constrained('master_rp_cities')->cascadeOnDelete();
+            $table->foreignId('ps_id')->constrained('master_rp_polling_stations')->cascadeOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
@@ -30,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_n_p_team_mappings');
+        Schema::dropIfExists('master_r_p_team_mappings');
     }
 };

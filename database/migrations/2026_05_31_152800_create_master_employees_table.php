@@ -32,7 +32,7 @@ return new class extends Migration
             $table->foreignId('state_id')->constrained('master_states')->restrictOnDelete();
             $table->foreignId('district_id')->constrained('master_districts')->restrictOnDelete();
             $table->enum('city_type', ['urban', 'rural'])->default('urban');
-            $table->foreignId('city_id')->constrained('master_cities')->restrictOnDelete();
+            $table->unsignedBigInteger('city_id');
             $table->tinyInteger('any_disability')->comment('1 = yes, 0 = no');
             $table->text('remark')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();

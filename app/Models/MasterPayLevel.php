@@ -8,7 +8,8 @@ class MasterPayLevel extends Model
 {
     protected $fillable = [
         'level',
-        'amount_pay',
+        'min_amount_pay',
+        'max_amount_pay',
         'grade_pay',
         'status',
         'created_by',

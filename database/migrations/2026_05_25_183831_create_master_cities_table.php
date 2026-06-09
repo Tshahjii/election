@@ -11,13 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('master_cities', function (Blueprint $table) {
+        Schema::create('master_np_cities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('state_id')->constrained('master_states')->onDelete('cascade');
             $table->foreignId('district_id')->constrained('master_districts')->onDelete('cascade');
             $table->string('city_name', 100);
             $table->string('karyalay_name', 100);
-            $table->enum('city_type', ['urban', 'rural'])->default('urban');
+            $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->timestamps();
+
+            $table->unique(['district_id', 'city_name']);
+        });
+
+        Schema::create('master_rp_cities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('state_id')->constrained('master_states')->onDelete('cascade');
+            $table->foreignId('district_id')->constrained('master_districts')->onDelete('cascade');
+            $table->string('city_name', 100);
+            $table->string('karyalay_name', 100);
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -32,6 +45,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_cities');
+        Schema::dropIfExists('master_np_cities');
+        Schema::dropIfExists('master_rp_cities');
     }
 };

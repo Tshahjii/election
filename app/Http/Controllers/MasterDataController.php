@@ -3,7 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\MasterCountry;
-use App\Models\MasterCity;
+use App\Models\MasterNPCity;
+use App\Models\MasterNPWard;
+use App\Models\MasterNPPollingStation;
+use App\Models\MasterRPCity;
+use App\Models\MasterRPWard;
+use App\Models\MasterRPPollingStation;
 use App\Models\MasterDepartment;
 use App\Models\MasterDistrict;
 use App\Models\MasterDesignation;
@@ -11,9 +16,7 @@ use App\Models\MasterEmployee;
 use App\Models\MasterEmpType;
 use App\Models\MasterOffice;
 use App\Models\MasterPayLevel;
-use App\Models\MasterPollingStation;
 use App\Models\MasterState;
-use App\Models\MasterWard;
 use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -53,26 +56,47 @@ class MasterDataController extends Controller
             'module' => 'masters.offices',
             'search' => ['office_code', 'office_name', 'company_name'],
         ],
-        'cities' => [
-            'model' => MasterCity::class,
+        'np-cities' => [
+            'model' => MasterNPCity::class,
             'primary_key' => 'id',
             'module' => 'masters.cities',
-            'search' => ['city_name'],
-            'file_dir' => 'masters/cities',
+            'search' => ['city_name', 'karyalay_name'],
+            'file_dir' => 'masters/np-cities',
         ],
-        'wards' => [
-            'model' => MasterWard::class,
+        'np-wards' => [
+            'model' => MasterNPWard::class,
             'primary_key' => 'id',
             'module' => 'masters.wards',
             'search' => ['ward_no', 'ward_name'],
-            'file_dir' => 'masters/wards',
+            'file_dir' => 'masters/np-wards',
         ],
-        'polling-stations' => [
-            'model' => MasterPollingStation::class,
+        'np-polling-stations' => [
+            'model' => MasterNPPollingStation::class,
             'primary_key' => 'id',
             'module' => 'masters.polling_stations',
             'search' => ['polling_station_name'],
-            'file_dir' => 'masters/polling-stations',
+            'file_dir' => 'masters/np-polling-stations',
+        ],
+        'rp-cities' => [
+            'model' => MasterRPCity::class,
+            'primary_key' => 'id',
+            'module' => 'masters.cities',
+            'search' => ['city_name', 'karyalay_name'],
+            'file_dir' => 'masters/rp-cities',
+        ],
+        'rp-wards' => [
+            'model' => MasterRPWard::class,
+            'primary_key' => 'id',
+            'module' => 'masters.wards',
+            'search' => ['ward_no', 'ward_name'],
+            'file_dir' => 'masters/rp-wards',
+        ],
+        'rp-polling-stations' => [
+            'model' => MasterRPPollingStation::class,
+            'primary_key' => 'id',
+            'module' => 'masters.polling_stations',
+            'search' => ['polling_station_name'],
+            'file_dir' => 'masters/rp-polling-stations',
         ],
         'emp-types' => [
             'model' => MasterEmpType::class,
@@ -99,7 +123,7 @@ class MasterDataController extends Controller
             'model' => MasterPayLevel::class,
             'primary_key' => 'id',
             'module' => 'hrms.pay_levels',
-            'search' => ['level', 'amount_pay', 'grade_pay'],
+            'search' => ['level', 'min_amount_pay', 'max_amount_pay', 'grade_pay'],
             'file_dir' => 'masters/pay-levels',
         ],
         'employees' => [
@@ -275,8 +299,10 @@ class MasterDataController extends Controller
         $countries = MasterCountry::query()->where('status', 1);
         $states = MasterState::query()->where('status', 1);
         $districts = MasterDistrict::query()->where('status', 1);
-        $cities = MasterCity::query()->where('status', 1);
-        $wards = MasterWard::query()->where('status', 1);
+        $npCities = MasterNPCity::query()->where('status', 1);
+        $rpCities = MasterRPCity::query()->where('status', 1);
+        $npWards = MasterNPWard::query()->where('status', 1);
+        $rpWards = MasterRPWard::query()->where('status', 1);
         $offices = MasterOffice::query()->where('status', 1);
         $empTypes = MasterEmpType::query()->where('status', 1);
         $designations = MasterDesignation::query()->where('status', 1);
@@ -289,6 +315,10 @@ class MasterDataController extends Controller
             if ((int) $user->role !== 2) {
                 $countries->where('created_by', $user->id);
                 $states->where('created_by', $user->id);
+                $npCities->where('created_by', $user->id);
+                $rpCities->where('created_by', $user->id);
+                $npWards->where('created_by', $user->id);
+                $rpWards->where('created_by', $user->id);
             } else {
                 $countryIds = collect($access['country_ids'])->map(fn ($id) => (int) $id);
                 $stateIds = collect($access['state_ids'])->map(fn ($id) => (int) $id);
@@ -310,24 +340,60 @@ class MasterDataController extends Controller
                 $countryIds->isNotEmpty() ? $countries->whereIn('id', $countryIds) : $countries->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $states->whereIn('id', $stateIds) : $states->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $districts->whereIn('state_id', $stateIds) : $districts->whereRaw('1 = 0');
-                $stateIds->isNotEmpty() ? $cities->whereIn('state_id', $stateIds) : $cities->whereRaw('1 = 0');
-                $stateIds->isNotEmpty() ? $wards->whereIn('state_id', $stateIds) : $wards->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $npCities->whereIn('state_id', $stateIds) : $npCities->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $rpCities->whereIn('state_id', $stateIds) : $rpCities->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $npWards->whereIn('state_id', $stateIds) : $npWards->whereRaw('1 = 0');
+                $stateIds->isNotEmpty() ? $rpWards->whereIn('state_id', $stateIds) : $rpWards->whereRaw('1 = 0');
                 $stateIds->isNotEmpty() ? $offices->whereIn('state_id', $stateIds) : $offices->whereRaw('1 = 0');
             }
         }
+
+        $npCitiesList = $npCities->orderBy('city_name')->get(['id', 'state_id', 'district_id', 'city_name', 'karyalay_name']);
+        $rpCitiesList = $rpCities->orderBy('city_name')->get(['id', 'state_id', 'district_id', 'city_name', 'karyalay_name']);
+        $npWardsList = $npWards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']);
+        $rpWardsList = $rpWards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']);
+
+        $citiesCombined = $npCitiesList->map(fn($c) => array_merge($c->toArray(), ['city_type' => 'urban']))
+            ->merge($rpCitiesList->map(fn($c) => array_merge($c->toArray(), ['city_type' => 'rural'])));
+
+        $wardsCombined = $npWardsList->merge($rpWardsList);
 
         return response()->json([
             'countries' => $countries->orderBy('name')->get(['id', 'name']),
             'states' => $states->orderBy('name')->get(['id', 'country_id', 'name']),
             'districts' => $districts->orderBy('name')->get(['id', 'country_id', 'state_id', 'name']),
-            'cities' => $cities->orderBy('city_name')->get(['id', 'state_id', 'district_id', 'city_name']),
-            'wards' => $wards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']),
+            'np_cities' => $npCitiesList,
+            'rp_cities' => $rpCitiesList,
+            'np_wards' => $npWardsList,
+            'rp_wards' => $rpWardsList,
+            'cities' => $citiesCombined,
+            'wards' => $wardsCombined,
             'offices' => $offices->orderBy('office_name')->get(['ofc_id', 'state_id', 'district_id', 'office_name']),
             'emp_types' => $empTypes->orderBy('emp_type')->get(['id', 'emp_type']),
             'designations' => $designations->orderBy('designation')->get(['id', 'designation']),
             'departments' => $departments->orderBy('department')->get(['id', 'department']),
-            'pay_levels' => $payLevels->orderBy('level')->get(['id', 'level', 'amount_pay', 'grade_pay']),
+            'pay_levels' => $payLevels->orderBy('level')->get(['id', 'level', 'min_amount_pay', 'max_amount_pay', 'grade_pay']),
         ]);
+    }
+
+    public function searchEmployees(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->query('q', ''));
+
+        $query = \Illuminate\Support\Facades\DB::table('master_employees')->where('status', 1);
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                  ->orWhere('emp_code', 'like', "%{$term}%");
+            });
+        }
+
+        $employees = $query->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'emp_code']);
+
+        return response()->json($employees);
     }
 
     private function config(string $type): array
@@ -372,7 +438,7 @@ class MasterDataController extends Controller
             return;
         }
 
-        if (in_array($type, ['districts', 'cities', 'wards', 'polling-stations', 'employees'], true)) {
+        if (in_array($type, ['districts', 'np-cities', 'np-wards', 'np-polling-stations', 'rp-cities', 'rp-wards', 'rp-polling-stations', 'employees'], true)) {
             if ($access['district_ids']) {
                 $type === 'districts'
                     ? $query->whereIn('id', $access['district_ids'])
@@ -439,6 +505,7 @@ class MasterDataController extends Controller
                 'office_code' => ['nullable', 'string', 'max:20', $this->uniqueRule('master_offices', 'office_code', $row, 'ofc_id')],
                 'office_name' => ['required', 'string', 'max:100'],
                 'company_name' => ['nullable', 'string', 'max:100'],
+                'department_id' => ['required', 'integer', 'exists:master_departments,id'],
                 'office_type' => ['nullable', 'integer', Rule::in([1, 2])],
                 'ofc_parent_id' => ['nullable', 'integer'],
                 'country_id' => ['required', 'integer', 'exists:master_countries,id'],
@@ -447,27 +514,50 @@ class MasterDataController extends Controller
                 'status' => $statusRule,
                 'attachment' => $fileRule,
             ],
-            'cities' => [
+            'np-cities' => [
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
-                'city_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_cities', 'city_name', $row)],
-                'city_type' => ['required', 'string', Rule::in(['urban', 'rural'])],
+                'city_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_np_cities', 'city_name', $row)],
+                'karyalay_name' => ['required', 'string', 'max:100'],
                 'status' => $statusRule,
             ],
-            'wards' => [
+            'rp-cities' => [
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
-                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
+                'city_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_rp_cities', 'city_name', $row)],
+                'karyalay_name' => ['required', 'string', 'max:100'],
+                'status' => $statusRule,
+            ],
+            'np-wards' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_id' => ['required', 'integer', 'exists:master_np_cities,id'],
                 'ward_no' => ['required', 'integer', 'min:1'],
-                'ward_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_wards', 'ward_name', $row)],
+                'ward_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_np_wards', 'ward_name', $row)],
                 'status' => $statusRule,
             ],
-            'polling-stations' => [
+            'rp-wards' => [
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
-                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
-                'ward_id' => ['required', 'integer', 'exists:master_wards,id'],
-                'polling_station_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_polling_stations', 'polling_station_name', $row)],
+                'city_id' => ['required', 'integer', 'exists:master_rp_cities,id'],
+                'ward_no' => ['required', 'integer', 'min:1'],
+                'ward_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_rp_wards', 'ward_name', $row)],
+                'status' => $statusRule,
+            ],
+            'np-polling-stations' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_id' => ['required', 'integer', 'exists:master_np_cities,id'],
+                'ward_id' => ['required', 'integer', 'exists:master_np_wards,id'],
+                'polling_station_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_np_polling_stations', 'polling_station_name', $row)],
+                'status' => $statusRule,
+            ],
+            'rp-polling-stations' => [
+                'state_id' => ['required', 'integer', 'exists:master_states,id'],
+                'district_id' => ['required', 'integer', 'exists:master_districts,id'],
+                'city_id' => ['required', 'integer', 'exists:master_rp_cities,id'],
+                'ward_id' => ['required', 'integer', 'exists:master_rp_wards,id'],
+                'polling_station_name' => ['required', 'string', 'max:150', $this->uniqueRule('master_rp_polling_stations', 'polling_station_name', $row)],
                 'status' => $statusRule,
             ],
             'emp-types' => [
@@ -484,7 +574,8 @@ class MasterDataController extends Controller
             ],
             'pay-levels' => [
                 'level' => ['required', 'string', 'max:50', $this->uniqueRule('master_pay_levels', 'level', $row)],
-                'amount_pay' => ['required', 'string', 'max:100'],
+                'min_amount_pay' => ['required', 'numeric', 'min:0'],
+                'max_amount_pay' => ['required', 'numeric', 'min:0', 'gte:min_amount_pay'],
                 'grade_pay' => ['required', 'string', 'max:50'],
                 'status' => $statusRule,
             ],
@@ -506,7 +597,12 @@ class MasterDataController extends Controller
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],
                 'city_type' => ['required', 'string', Rule::in(['urban', 'rural'])],
-                'city_id' => ['required', 'integer', 'exists:master_cities,id'],
+                'city_id' => ['required', 'integer', function ($attribute, $value, $fail) use ($request) {
+                    $table = $request->input('city_type') === 'urban' ? 'master_np_cities' : 'master_rp_cities';
+                    if (!\Illuminate\Support\Facades\DB::table($table)->where('id', $value)->exists()) {
+                        $fail('The selected city_id is invalid.');
+                    }
+                }],
                 'any_disability' => ['required', 'integer', Rule::in([0, 1])],
                 'remark' => ['nullable', 'string', 'max:1000'],
                 'status' => $statusRule,
@@ -528,7 +624,7 @@ class MasterDataController extends Controller
             $this->validateOfficeLocation($data);
         }
 
-        if (in_array($type, ['cities', 'wards', 'polling-stations', 'employees'], true)) {
+        if (in_array($type, ['np-cities', 'np-wards', 'np-polling-stations', 'rp-cities', 'rp-wards', 'rp-polling-stations', 'employees'], true)) {
             $this->validateLocalBodyLocation($data, $type);
         }
 
@@ -548,8 +644,15 @@ class MasterDataController extends Controller
             ]);
         }
 
-        if (in_array($type, ['wards', 'polling-stations', 'employees'], true)) {
-            $cityValid = MasterCity::query()
+        if (in_array($type, ['np-wards', 'np-polling-stations', 'rp-wards', 'rp-polling-stations', 'employees'], true)) {
+            $cityModel = MasterNPCity::class;
+            if ($type === 'rp-wards' || $type === 'rp-polling-stations') {
+                $cityModel = MasterRPCity::class;
+            } elseif ($type === 'employees') {
+                $cityModel = $data['city_type'] === 'urban' ? MasterNPCity::class : MasterRPCity::class;
+            }
+
+            $cityValid = $cityModel::query()
                 ->whereKey($data['city_id'])
                 ->where('state_id', $data['state_id'])
                 ->where('district_id', $data['district_id'])
@@ -562,8 +665,9 @@ class MasterDataController extends Controller
             }
         }
 
-        if ($type === 'polling-stations') {
-            $wardValid = MasterWard::query()
+        if ($type === 'np-polling-stations' || $type === 'rp-polling-stations') {
+            $wardModel = $type === 'np-polling-stations' ? MasterNPWard::class : MasterRPWard::class;
+            $wardValid = $wardModel::query()
                 ->whereKey($data['ward_id'])
                 ->where('state_id', $data['state_id'])
                 ->where('district_id', $data['district_id'])
@@ -678,11 +782,21 @@ class MasterDataController extends Controller
         }
 
         if (array_key_exists('city_id', $data)) {
-            $data['city_name_label'] = MasterCity::query()->whereKey($data['city_id'])->value('city_name');
+            $cityTable = 'master_np_cities';
+            if ($row instanceof MasterRPCity || $row instanceof MasterRPWard || $row instanceof MasterRPPollingStation) {
+                $cityTable = 'master_rp_cities';
+            } elseif ($row instanceof MasterEmployee) {
+                $cityTable = $row->city_type === 'urban' ? 'master_np_cities' : 'master_rp_cities';
+            }
+            $data['city_name_label'] = \Illuminate\Support\Facades\DB::table($cityTable)->where('id', $data['city_id'])->value('city_name');
         }
 
         if (array_key_exists('ward_id', $data)) {
-            $ward = MasterWard::query()->whereKey($data['ward_id'])->first(['ward_no', 'ward_name']);
+            $wardTable = 'master_np_wards';
+            if ($row instanceof MasterRPWard || $row instanceof MasterRPPollingStation) {
+                $wardTable = 'master_rp_wards';
+            }
+            $ward = \Illuminate\Support\Facades\DB::table($wardTable)->where('id', $data['ward_id'])->first(['ward_no', 'ward_name']);
             $data['ward_name_label'] = $ward ? trim($ward->ward_no.' - '.$ward->ward_name) : null;
         }
 
@@ -699,8 +813,8 @@ class MasterDataController extends Controller
         }
 
         if (array_key_exists('pay_level_id', $data)) {
-            $payLevel = MasterPayLevel::query()->whereKey($data['pay_level_id'])->first(['level', 'amount_pay', 'grade_pay']);
-            $data['pay_level_name'] = $payLevel ? trim($payLevel->level.' - '.$payLevel->amount_pay) : null;
+            $payLevel = MasterPayLevel::query()->whereKey($data['pay_level_id'])->first(['id', 'level', 'min_amount_pay', 'max_amount_pay', 'grade_pay']);
+            $data['pay_level_name'] = $payLevel ? trim($payLevel->level.' - ('.$payLevel->min_amount_pay.' - '.$payLevel->max_amount_pay.')') : null;
             $data['grade_pay'] = $payLevel?->grade_pay;
         }
 
