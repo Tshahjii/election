@@ -123,9 +123,9 @@ const MASTER_TYPES = [
     fields: [
       { key: 'office_code', label: 'Office Code' },
       { key: 'office_name', label: 'Office Name', required: true },
-      { key: 'company_name', label: 'Department' },
+      { key: 'company_name', label: 'Department', type: 'department_name' },
       { key: 'office_type', label: 'Office Type', type: 'office_type' },
-      { key: 'ofc_parent_id', label: 'Parent Office ID', type: 'office_parent' },
+      { key: 'ofc_parent_id', label: 'Parent Office', type: 'office_parent' },
       { key: 'country_id', label: 'Country', type: 'country', required: true },
       { key: 'state_id', label: 'State', type: 'state', required: true },
       { key: 'district_id', label: 'District', type: 'district', required: true }
@@ -304,6 +304,45 @@ const defaultForm: Record<string, any> = {
   any_disability: 0
 };
 
+const USER_DEFAULT_SKIP_MASTERS = ['countries', 'states', 'districts', 'departments'];
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
+function getUserLocationDefaults(user) {
+  return {
+    country_id: firstValue(user?.country_id, user?.country_info?.id, user?.office_info?.country_id),
+    state_id: firstValue(user?.state_id, user?.state_info?.id, user?.office_info?.state_id),
+    district_id: firstValue(user?.district_id, user?.district_info?.id, user?.office_info?.district_id)
+  };
+}
+
+function getCreateFormDefaults(masterKey, user, options) {
+  const next: Record<string, any> = { ...defaultForm };
+
+  if (!USER_DEFAULT_SKIP_MASTERS.includes(masterKey)) {
+    const location = getUserLocationDefaults(user);
+    if (location.country_id) next.country_id = Number(location.country_id);
+    if (location.state_id) next.state_id = Number(location.state_id);
+    if (location.district_id) next.district_id = Number(location.district_id);
+  }
+
+  const userDepartment = firstValue(user?.department, user?.office_info?.company_name);
+  if (userDepartment) {
+    if (masterKey === 'employees') {
+      const department = options.departments.find((item) => String(item.department).toLowerCase() === String(userDepartment).toLowerCase());
+      if (department) next.department_id = department.id;
+    }
+
+    if (masterKey === 'offices') {
+      next.company_name = userDepartment;
+    }
+  }
+
+  return next;
+}
+
 function getApiError(error) {
   const errors = error.response?.data?.errors;
   if (errors) {
@@ -358,6 +397,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const canCreate = hasPermission(user, `${master.module}.create`);
   const canEdit = hasPermission(user, `${master.module}.edit`);
   const canDelete = hasPermission(user, `${master.module}.delete`);
+  const createFormDefaults = useMemo(() => getCreateFormDefaults(master.key, user, options), [master.key, options, user]);
 
   const countriesById = useMemo(() => new Map(options.countries.map((country) => [Number(country.id), country.name])), [options.countries]);
   const statesById = useMemo(() => new Map(options.states.map((state) => [Number(state.id), state.name])), [options.states]);
@@ -486,7 +526,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   };
 
   const handleOpenCreate = () => {
-    setForm(defaultForm);
+    setForm(createFormDefaults);
     setAttachment(null);
     setModal({ open: true, mode: 'create', row: null });
   };
@@ -743,6 +783,21 @@ export default function MasterData({ masterKey = 'countries' }) {
             value={form[field.key] || ''}
             placeholder={tl(field.label)}
             options={options.departments.map((item) => ({ value: item.id, label: item.department }))}
+            onChange={handleFormChange(field.key)}
+          />
+        </FormControl>
+      );
+    }
+
+    if (field.type === 'department_name') {
+      return (
+        <FormControl fullWidth required={field.required}>
+          <ChosenSelect
+            required={field.required}
+            label={label}
+            value={form[field.key] || ''}
+            placeholder={tl(field.label)}
+            options={options.departments.map((item) => ({ value: item.department, label: item.department }))}
             onChange={handleFormChange(field.key)}
           />
         </FormControl>

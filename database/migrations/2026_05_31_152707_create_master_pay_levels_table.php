@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('master_pay_levels', function (Blueprint $table) {
             $table->id();
             $table->string('level', 50)->unique();
-            $table->string('amount_pay', 100)->comment('e.g., 38000 - 45000');
+            $table->decimal('min_amount_pay', 12, 2);
+            $table->decimal('max_amount_pay', 12, 2);
             $table->string('grade_pay', 50);
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
             $table->unsignedBigInteger('created_by')->nullable();

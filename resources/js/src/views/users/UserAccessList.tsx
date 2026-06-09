@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
 import Avatar from '@mui/material/Avatar';
@@ -83,6 +83,20 @@ function statusLabel(value) {
     return Number(value) === 1 ? 'Active' : 'Inactive';
 }
 
+function firstValue(...values) {
+    return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
+function getUserFormDefaults(user) {
+    return {
+        ...baseForm,
+        department: firstValue(user?.department, user?.office_info?.company_name, baseForm.department),
+        country_id: firstValue(user?.country_id, user?.country_info?.id, user?.office_info?.country_id, ''),
+        state_id: firstValue(user?.state_id, user?.state_info?.id, user?.office_info?.state_id, ''),
+        district_id: firstValue(user?.district_id, user?.district_info?.id, user?.office_info?.district_id, '')
+    };
+}
+
 function AccessDropZone({ title, selected, items, onDropItem, onRemove }) {
     return (
         <Box
@@ -142,6 +156,7 @@ function DraggableList({ title, items, type }) {
 export default function UserAccessList() {
     const theme = useTheme();
     const dispatch = useDispatch();
+    const { user } = useSelector((state: any) => state.auth);
     const [filters, setFilters] = useState(initialFilters);
     const [rows, setRows] = useState<any[]>([]);
     const [options, setOptions] = useState({ countries: [], states: [], districts: [], offices: [], modules: [], actions: ['read', 'create', 'edit', 'delete'] });
@@ -230,7 +245,7 @@ export default function UserAccessList() {
     };
 
     const handleOpenCreate = () => {
-        setForm(baseForm);
+        setForm(getUserFormDefaults(user));
         setModal({ open: true, mode: 'create', row: null });
     };
 

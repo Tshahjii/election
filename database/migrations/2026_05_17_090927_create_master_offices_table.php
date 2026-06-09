@@ -19,6 +19,7 @@ return new class extends Migration
             $table->tinyInteger('office_type')->default(1)->comment('1 = Head Office, 2 = Branch Office');
             $table->unsignedBigInteger('ofc_parent_id')->default(0)->nullable();
             $table->tinyInteger('status')->default(1)->comment('1 = Active, 0 = Inactive');
+            $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('country_id')->nullable();
             $table->unsignedBigInteger('state_id')->nullable();
             $table->unsignedBigInteger('district_id')->nullable();

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('state_id')->constrained('master_states')->onDelete('cascade');
             $table->foreignId('district_id')->constrained('master_districts')->onDelete('cascade');
             $table->string('city_name', 100);
+            $table->string('karyalay_name', 100);
             $table->enum('city_type', ['urban', 'rural'])->default('urban');
             $table->tinyInteger('status')->default(1)->comment('1=Active,0=Inactive');
             $table->unsignedBigInteger('created_by')->nullable();

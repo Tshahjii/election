@@ -1044,7 +1044,17 @@ export default function VoiceAssistant() {
   const subtleBg = isDark ? 'rgba(255,255,255,0.08)' : 'grey.100';
 
   const renderTabs = () => (
-    <Stack direction="row" sx={{ gap: 0.5, px: 1, py: 0.75, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : theme.palette.divider}`, overflowX: 'auto' }}>
+    <Stack
+      direction="row"
+      sx={{
+        gap: 0.5,
+        px: 1,
+        py: 0.75,
+        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : theme.palette.divider}`,
+        overflowX: 'auto',
+        flexShrink: 0
+      }}
+    >
       {[
         { key: 'chat', label: 'Chat', icon: <AutoAwesomeTwoToneIcon fontSize="small" /> },
         { key: 'tasks', label: 'Tasks', icon: <ChecklistOutlinedIcon fontSize="small" /> },
@@ -1067,7 +1077,7 @@ export default function VoiceAssistant() {
   );
 
   const renderChat = () => (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
       <List sx={{ p: 0 }}>
         {messages.map((message, index) => {
           const isUser = message.sender === 'user';
@@ -1095,7 +1105,7 @@ export default function VoiceAssistant() {
   );
 
   const renderTasks = () => (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
       <Stack direction="row" sx={{ gap: 1, mb: 2 }}>
         <TextField size="small" fullWidth placeholder="New task" value={newTask} onChange={(event) => setNewTask(event.target.value)} />
         <Button variant="contained" onClick={addManualTask}>Add</Button>
@@ -1118,7 +1128,7 @@ export default function VoiceAssistant() {
   );
 
   const renderNotes = () => (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
       <Stack sx={{ gap: 1, mb: 2 }}>
         <TextField size="small" fullWidth multiline minRows={2} placeholder="New note" value={newNote} onChange={(event) => setNewNote(event.target.value)} />
         <Button variant="contained" onClick={addManualNote}>Save Note</Button>
@@ -1140,7 +1150,7 @@ export default function VoiceAssistant() {
   );
 
   const renderHistory = () => (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="subtitle2" sx={{ color: panelText }}>Command History</Typography>
         <Button size="small" onClick={() => setCommandHistory([])}>Clear</Button>
@@ -1163,7 +1173,7 @@ export default function VoiceAssistant() {
   );
 
   const renderSettings = () => (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
       <Stack sx={{ gap: 2 }}>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="body2" sx={{ color: panelText }}>Language</Typography>
@@ -1254,7 +1264,7 @@ export default function VoiceAssistant() {
             color: panelText
           }}
         >
-          <Box sx={{ p: 2, bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ p: 2, bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center', minWidth: 0 }}>
               <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 36, height: 36 }}>
                 <AutoAwesomeTwoToneIcon sx={{ color: '#fff', fontSize: '1.3rem' }} />
@@ -1288,7 +1298,7 @@ export default function VoiceAssistant() {
           {renderActiveTab()}
 
           {isListening && (
-            <Box sx={{ px: 2, py: 1, borderTop: `1px dashed ${isDark ? 'rgba(255,255,255,0.16)' : theme.palette.divider}`, color: 'primary.main' }}>
+            <Box sx={{ px: 2, py: 1, borderTop: `1px dashed ${isDark ? 'rgba(255,255,255,0.16)' : theme.palette.divider}`, color: 'primary.main', flexShrink: 0 }}>
               <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                 <Typography variant="caption" sx={{ fontWeight: 700 }}>
                   {listeningText}
@@ -1327,7 +1337,8 @@ export default function VoiceAssistant() {
               borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : theme.palette.divider}`,
               display: 'flex',
               alignItems: 'center',
-              gap: 1
+              gap: 1,
+              flexShrink: 0
             }}
           >
             <Tooltip title={isListening ? 'सुनना बंद करें' : 'बोलना शुरू करें'}>
