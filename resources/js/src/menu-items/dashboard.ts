@@ -52,6 +52,7 @@ const dashboard = {
       icon: LocationOnOutlinedIcon,
       children: [
         { id: 'np-dashboard', title: 'Dashboard', titleKey: 'menu.dashboard', type: 'item', icon: SpaceDashboardOutlinedIcon, url: '/admin/election/nagar-panchayat', permission: 'election.nagar_panchayat.read' },
+        { id: 'np-team-assignments', title: 'Team Assignments', titleKey: 'menu.teamAssignments', type: 'item', icon: GroupsOutlinedIcon, url: '/admin/election/nagar-panchayat/team-assignments', permission: 'election.nagar_panchayat.read' },
         { id: 'np-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/np-wards', permission: 'masters.wards.read' },
         { id: 'np-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/np-cities', permission: 'masters.cities.read' },
         { id: 'np-pollingstation', title: 'Polling Station Master', titleKey: 'menu.masterPollingStation', type: 'item', icon: BallotOutlinedIcon, url: '/admin/masters/np-polling-stations', permission: 'masters.polling_stations.read' }
@@ -65,6 +66,7 @@ const dashboard = {
       icon: ApartmentOutlinedIcon,
       children: [
         { id: 'rp-dashboard', title: 'Dashboard', titleKey: 'menu.dashboard', type: 'item', icon: SpaceDashboardOutlinedIcon, url: '/admin/election/nagari-nikay', permission: 'election.nagari_nikay.read' },
+        { id: 'rp-team-assignments', title: 'Team Assignments', titleKey: 'menu.teamAssignments', type: 'item', icon: GroupsOutlinedIcon, url: '/admin/election/nagari-nikay/team-assignments', permission: 'election.nagari_nikay.read' },
         { id: 'rp-ward', title: 'Ward Master', titleKey: 'menu.masterWard', type: 'item', icon: FormatListNumberedOutlinedIcon, url: '/admin/masters/rp-wards', permission: 'masters.wards.read' },
         { id: 'rp-city', title: 'City Master', titleKey: 'menu.masterCity', type: 'item', icon: ApartmentOutlinedIcon, url: '/admin/masters/rp-cities', permission: 'masters.cities.read' },
         { id: 'rp-pollingstation', title: 'Polling Station Master', titleKey: 'menu.masterPollingStation', type: 'item', icon: BallotOutlinedIcon, url: '/admin/masters/rp-polling-stations', permission: 'masters.polling_stations.read' }

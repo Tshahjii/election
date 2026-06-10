@@ -15,6 +15,7 @@ const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
 
 // new modules
 const ElectionDashboardPage = Loadable(lazy(() => import('views/election/ElectionDashboard')));
+const ElectionTeamAssignmentsPage = Loadable(lazy(() => import('views/election/ElectionTeamAssignments')));
 const AllocationReportPage = Loadable(lazy(() => import('views/reports/AllocationReport')));
 const DutyAnalyticsPage = Loadable(lazy(() => import('views/reports/DutyAnalytics')));
 
@@ -41,8 +42,16 @@ const MainRoutes = {
       element: <ElectionDashboardPage type="Nagar Panchayat" />
     },
     {
+      path: 'election/nagar-panchayat/team-assignments',
+      element: <ElectionTeamAssignmentsPage type="Nagar Panchayat" />
+    },
+    {
       path: 'election/nagari-nikay',
       element: <ElectionDashboardPage type="Nagari Nikay" />
+    },
+    {
+      path: 'election/nagari-nikay/team-assignments',
+      element: <ElectionTeamAssignmentsPage type="Nagari Nikay" />
     },
     {
       path: 'reports/allocation',
