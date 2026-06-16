@@ -51,15 +51,18 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   const [cities, setCities] = useState<any[]>([]);
   const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
-  const [teamIdSearch, setTeamIdSearch] = useState('');
+  const [teamSearch, setTeamSearch] = useState('');
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [dashboardData, setDashboardData] = useState<{ teams: any[] } | null>(null);
+  const [dashboardData, setDashboardData] = useState<{ city_id?: number | null; teams: any[] } | null>(null);
 
   const [activeTeam, setActiveTeam] = useState<any | null>(null);
   const [modalAssignments, setModalAssignments] = useState<Record<number, any | null>>({});
   const [searchOptions, setSearchOptions] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [exemptEmployeeId, setExemptEmployeeId] = useState<string>('');
+  const [exemptLoading, setExemptLoading] = useState(false);
 
   const filteredCities = useMemo(() => {
     if (type === 'Nagar Panchayat') {
@@ -69,15 +72,46 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   }, [cities, type]);
 
   const searchedTeams = useMemo(() => {
-    const term = teamIdSearch.trim().toLowerCase();
-    if (!term || !dashboardData) return [];
+    const teamTerms = teamSearch
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+    const employeeTerms = employeeSearch
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+    if (!dashboardData) return [];
 
     return dashboardData.teams.filter((team) => {
       const padded = String(team.padded_team_id || '').toLowerCase();
       const raw = String(team.team_id || '').toLowerCase();
-      return padded.includes(term) || raw.includes(term);
+      const postMatches = Array.isArray(team.posts)
+        ? team.posts.some((post: any) => {
+            const employeeCode = String(post.employee_code || '').toLowerCase();
+            const employeeName = String(post.employee_name || '').toLowerCase();
+            const employeeId = String(post.emp_id || '').toLowerCase();
+            return (
+              employeeTerms.some((term) => employeeCode.includes(term) || employeeName.includes(term) || employeeId.includes(term))
+            );
+          })
+        : false;
+
+      const teamHit = teamTerms.length > 0 && teamTerms.some((term) => padded.includes(term) || raw.includes(term));
+      const employeeHit = employeeTerms.length > 0 && postMatches;
+
+      if (teamTerms.length > 0 && employeeTerms.length > 0) {
+        return teamHit && employeeHit;
+      }
+      if (teamTerms.length > 0) {
+        return teamHit;
+      }
+      if (employeeTerms.length > 0) {
+        return employeeHit;
+      }
+
+      return false;
     });
-  }, [dashboardData, teamIdSearch]);
+  }, [dashboardData, teamSearch, employeeSearch]);
 
   const fetchCities = async () => {
     try {
@@ -88,12 +122,11 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     }
   };
 
-  const loadDashboardData = async (cityId: number) => {
+  const loadDashboardData = async (cityId?: number | null) => {
     setLoading(true);
     try {
-      const response = await apiClient.get(`${apiPrefix}/dashboard-data`, {
-        params: { city_id: cityId }
-      });
+      const params = cityId ? { city_id: cityId } : {};
+      const response = await apiClient.get(`${apiPrefix}/dashboard-data`, { params });
       setDashboardData(response.data);
     } catch (error) {
       dispatch(showNotification({ message: 'Failed to fetch team assignments.', severity: 'error' }));
@@ -113,6 +146,49 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       console.error('Failed to search employees', error);
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  const handleExemptEmployee = async () => {
+    const trimmed = String(exemptEmployeeId).trim();
+    if (!trimmed) {
+      dispatch(showNotification({ message: 'Please enter Employee ID or Code.', severity: 'error' }));
+      return;
+    }
+
+    setExemptLoading(true);
+    try {
+      const response = await apiClient.post(`${apiPrefix}/exempt-employee`, {
+        emp_code: trimmed
+      });
+
+      dispatch(showNotification({ message: response.data.message, severity: 'success' }));
+      setExemptEmployeeId('');
+
+      setDashboardData((prev) => {
+        if (!prev) return prev;
+        const normalized = trimmed.toLowerCase();
+        return {
+          ...prev,
+          teams: prev.teams.map((team: any) => ({
+            ...team,
+            posts: (team.posts || []).map((post: any) => {
+              const codeMatch = String(post.employee_code || '').toLowerCase() === normalized;
+              const idMatch = String(post.emp_id || '').toLowerCase() === normalized;
+              return codeMatch || idMatch
+                ? { ...post, emp_id: null, employee_code: '', employee_name: '' }
+                : post;
+            })
+          }))
+        };
+      });
+
+      await loadDashboardData(selectedCityId ? Number(selectedCityId) : undefined);
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || 'Failed to exempt employee.';
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
+    } finally {
+      setExemptLoading(false);
     }
   };
 
@@ -155,13 +231,15 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   useEffect(() => {
     setSelectedCityId('');
-    setTeamIdSearch('');
+    setTeamSearch('');
+    setEmployeeSearch('');
     setDashboardData(null);
     setActiveTeam(null);
   }, [type]);
 
   useEffect(() => {
-    setTeamIdSearch('');
+    setTeamSearch('');
+    setEmployeeSearch('');
     if (selectedCityId) {
       loadDashboardData(Number(selectedCityId));
     } else {
@@ -169,18 +247,22 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     }
   }, [selectedCityId]);
 
+  useEffect(() => {
+    const hasSearch = teamSearch.trim() || employeeSearch.trim();
+    if (!hasSearch) return;
+
+    if (!selectedCityId && !dashboardData) {
+      loadDashboardData();
+    }
+  }, [teamSearch, employeeSearch, selectedCityId, dashboardData]);
+
   return (
     <Stack sx={{ gap: 3 }}>
-      <Box>
-        <Typography variant="h2">{type} Team Assignments</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Search by Team ID and assign polling officers without loading every generated team on screen.
-        </Typography>
-      </Box>
+      {/* Heading removed to avoid duplicate titles when embedded in dashboard */}
 
       <Card sx={{ p: 2.5, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth>
               <ChosenSelect
                 label={`Select ${type} City`}
@@ -191,14 +273,24 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               />
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="Search Team ID"
-              placeholder="Example: 0001"
-              value={teamIdSearch}
-              onChange={(event) => setTeamIdSearch(event.target.value)}
-              disabled={!selectedCityId || loading}
+              placeholder="Example: 0001, 0002 or 1, 2"
+              value={teamSearch}
+              onChange={(event) => setTeamSearch(event.target.value)}
+              disabled={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Search Employee ID/Code"
+              placeholder="Example: EMP001 or 123"
+              value={employeeSearch}
+              onChange={(event) => setEmployeeSearch(event.target.value)}
+              disabled={loading}
             />
           </Grid>
         </Grid>
@@ -210,16 +302,16 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
         </Box>
       )}
 
-      {!loading && selectedCityId && !teamIdSearch.trim() && (
+      {!loading && !teamSearch.trim() && !employeeSearch.trim() && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 7, border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
           <PeopleAltOutlined style={{ fontSize: '44px', color: 'gray', marginBottom: '14px' }} />
           <Typography variant="h5" color="text.secondary">
-            Team ID enter karke assignment record search karein.
+            Search by Team ID or Employee ID/Code. City selection is optional.
           </Typography>
         </Box>
       )}
 
-      {!loading && selectedCityId && teamIdSearch.trim() && (
+      {!loading && (teamSearch.trim() || employeeSearch.trim()) && (
         <MainCard title={`${type} Polling Team Assignments`} sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
           {searchedTeams.length > 0 ? (
             <TableContainer>
@@ -235,9 +327,6 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                         {header}
                       </TableCell>
                     ))}
-                    <TableCell align="center" style={{ width: '100px', fontWeight: 700 }}>
-                      Actions
-                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -257,21 +346,17 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                       {team.posts.map((post: any) => (
                         <TableCell key={post.post_mapping_id}>
                           {post.emp_id ? (
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
                               {post.employee_name} ({post.employee_code})
                             </Typography>
                           ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main', fontStyle: 'italic' }}>
                               Not Assigned
                             </Typography>
                           )}
                         </TableCell>
                       ))}
-                      <TableCell align="center">
-                        <Button variant="outlined" size="small" onClick={() => handleOpenAssignModal(team)}>
-                          Assign
-                        </Button>
-                      </TableCell>
+                      {/* Actions removed as requested */}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -287,14 +372,6 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
         </MainCard>
       )}
 
-      {!loading && !selectedCityId && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 7, border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
-          <PeopleAltOutlined style={{ fontSize: '44px', color: 'gray', marginBottom: '14px' }} />
-          <Typography variant="h5" color="text.secondary">
-            Please select a city to search team assignments.
-          </Typography>
-        </Box>
-      )}
 
       <Dialog open={Boolean(activeTeam)} onClose={() => setActiveTeam(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ pb: 1.5, borderBottom: '1px solid', borderColor: 'divider', fontWeight: 700 }}>
@@ -378,6 +455,33 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Exempt Employee Card */}
+      <MainCard title="Exempt Employee from Assignments" sx={{ mt: 2, borderRadius: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Employee ID or Code"
+              placeholder="Enter employee id or code (e.g. EMP001)"
+              value={exemptEmployeeId}
+              onChange={(e) => setExemptEmployeeId(e.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                variant="contained"
+                color="secondary"
+                disabled={exemptLoading}
+                onClick={handleExemptEmployee}
+              >
+                {exemptLoading ? <CircularProgress size={18} color="inherit" /> : 'Exempt Employee'}
+              </Button>
+            </Stack>
+          </Grid>
+        </Grid>
+      </MainCard>
     </Stack>
   );
 }

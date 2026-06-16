@@ -30,6 +30,7 @@ import HowToVoteOutlined from '@mui/icons-material/HowToVoteOutlined';
 import PlaceOutlined from '@mui/icons-material/PlaceOutlined';
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined';
 import AssignmentTurnedInOutlined from '@mui/icons-material/AssignmentTurnedInOutlined';
+import ElectionTeamAssignments from './ElectionTeamAssignments';
 
 interface ElectionDashboardProps {
   type: 'Nagar Panchayat' | 'Nagari Nikay';
@@ -45,7 +46,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   // State
   const [cities, setCities] = useState<any[]>([]);
-  const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
+  const [selectedCityId, setSelectedCityId] = useState<number | 'all' | ''>('all');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [dutyCriteria, setDutyCriteria] = useState<Record<string, string>>({
@@ -77,6 +78,8 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     return cities.filter((city) => city.city_type === 'rural');
   }, [cities, type]);
 
+  const allCityOptionLabel = type === 'Nagar Panchayat' ? 'All Nagar Panchayat Cities' : 'All Nagari Nikay Cities';
+
   // Load cities list on mount
   const fetchCities = async () => {
     try {
@@ -93,17 +96,16 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   // Reset selected city and states when dashboard type changes
   useEffect(() => {
-    setSelectedCityId('');
+    setSelectedCityId('all');
     setDashboardData(null);
   }, [type]);
 
   // Fetch dashboard details when city is selected
-  const loadDashboardData = async (cityId: number) => {
+  const loadDashboardData = async (cityId: number | 'all') => {
     setLoading(true);
     try {
-      const response = await apiClient.get(`${apiPrefix}/dashboard-data`, {
-        params: { city_id: cityId }
-      });
+      const params = cityId === 'all' ? {} : { city_id: cityId };
+      const response = await apiClient.get(`${apiPrefix}/dashboard-data`, { params });
       setDashboardData(response.data);
     } catch (error: any) {
       dispatch(showNotification({ message: 'Failed to fetch dashboard data.', severity: 'error' }));
@@ -113,8 +115,8 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   };
 
   useEffect(() => {
-    if (selectedCityId) {
-      loadDashboardData(Number(selectedCityId));
+    if (selectedCityId !== '') {
+      loadDashboardData(selectedCityId);
     } else {
       setDashboardData(null);
     }
@@ -122,15 +124,17 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   // Handler for creating team schedule
   const handleCreateTeamSchedule = async () => {
-    if (!selectedCityId) return;
+    if (selectedCityId === '') return;
     setActionLoading(true);
     try {
-      const response = await apiClient.post(`${apiPrefix}/create-teams-scheduled`, {
-        city_id: selectedCityId
-      });
+      const payload: any = {};
+      if (selectedCityId !== 'all') {
+        payload.city_id = selectedCityId;
+      }
+      const response = await apiClient.post(`${apiPrefix}/create-teams-scheduled`, payload);
       dispatch(showNotification({ message: response.data.message, severity: 'success' }));
       // Reload details
-      await loadDashboardData(Number(selectedCityId));
+      await loadDashboardData(selectedCityId);
     } catch (error: any) {
       const errMsg = error.response?.data?.message || 'Failed to generate team schedule.';
       dispatch(showNotification({ message: errMsg, severity: 'error' }));
@@ -140,20 +144,23 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   };
 
   const handleApplyDuty = async () => {
-    if (!selectedCityId) return;
+    if (selectedCityId === '') return;
     setActionLoading(true);
     try {
-      const response = await apiClient.post(`${apiPrefix}/apply-duty`, {
-        city_id: selectedCityId,
+      const payload: any = {
         date_of_birth: dutyCriteria.date_of_birth || null,
         P0: dutyCriteria.P0,
         P1: dutyCriteria.P1,
         P2: dutyCriteria.P2,
         P3: dutyCriteria.P3,
         P4: dutyCriteria.P4
-      });
+      };
+      if (selectedCityId !== 'all') {
+        payload.city_id = selectedCityId;
+      }
+      const response = await apiClient.post(`${apiPrefix}/apply-duty`, payload);
       dispatch(showNotification({ message: response.data.message, severity: 'success' }));
-      await loadDashboardData(Number(selectedCityId));
+      await loadDashboardData(selectedCityId);
     } catch (error: any) {
       const errMsg = error.response?.data?.message || 'Failed to apply duty assignments.';
       dispatch(showNotification({ message: errMsg, severity: 'error' }));
@@ -196,12 +203,20 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                 label={`Select ${type} City`}
                 placeholder={`Choose a city...`}
                 value={selectedCityId}
-                options={filteredCities.map((city) => ({ value: city.id, label: city.karyalay_name || city.city_name }))}
-                onChange={(e) => setSelectedCityId(e.target.value)}
+                  options={[
+                    { value: 'all', label: allCityOptionLabel },
+                    ...filteredCities.map((city) => ({ value: city.id, label: city.karyalay_name || city.city_name }))
+                  ]}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedCityId(value === 'all' ? 'all' : value === '' ? '' : Number(value));
+                  }}
               />
             </FormControl>
           </Grid>
-          {selectedCityId && !hasGeneratedTeams && (
+
+
+          {selectedCityId !== '' && !hasGeneratedTeams && (
             <Grid size={{ xs: 12, md: 6 }}>
               <Stack direction="row" spacing={2} sx={{ justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
                 <Button
@@ -218,6 +233,30 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
           )}
         </Grid>
       </Card>
+
+      {/* Vacant-per-post KPI cards (placed under the city selector card) */}
+      {dashboardData?.vacant_by_post && (
+        <Grid container spacing={2} sx={{ mt: 1 }}>
+          {postOptions.map((post) => {
+            const cnt = dashboardData.vacant_by_post?.[post] ?? 0;
+            return (
+              <Grid key={post} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Card sx={{ p: 2.25, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{post} Not Assigned</Typography>
+                      <Typography variant="h3" sx={{ mt: 0.5, fontWeight: 700, color: cnt > 0 ? 'error.main' : 'success.main' }}>{cnt}</Typography>
+                    </Box>
+                    <Box sx={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', bgcolor: cnt > 0 ? 'error.lighter' : 'success.lighter', color: cnt > 0 ? 'error.main' : 'success.main' }}>
+                      <HowToVoteOutlined />
+                    </Box>
+                  </Stack>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -286,8 +325,9 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
             </Grid>
           </Grid>
 
-          {hasGeneratedTeams && (
-            <MainCard title="Apply Duty Criteria" sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
+          {dashboardData && selectedCityId !== '' && (
+            <>
+              <MainCard title="Apply Duty Criteria" sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <TextField
@@ -325,7 +365,13 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                   </Button>
                 </Grid>
               </Grid>
-            </MainCard>
+              </MainCard>
+
+              {/* Team Assignments module placed under Apply Duty Criteria */}
+              <Box sx={{ mt: 2 }}>
+                <ElectionTeamAssignments type={type} />
+              </Box>
+            </>
           )}
 
           {/* Overview Stages */}
