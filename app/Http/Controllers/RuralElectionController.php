@@ -9,74 +9,90 @@ use Illuminate\Support\Facades\DB;
 class RuralElectionController extends Controller
 {
     public function createTeamsScheduled(Request $request): JsonResponse
-    {
-        $request->validate([
-            'city_id' => 'required|integer|exists:master_rp_cities,id',
-        ]);
+{
+    $request->validate([
+        'city_id' => 'required|integer|exists:master_rp_cities,id',
+    ]);
 
-        $cityId = $request->input('city_id');
-        $user = $request->user();
+    $cityId = $request->input('city_id');
+    $user = $request->user();
 
-        // 1. Get all polling stations for this city
-        $pollingStations = DB::table('master_rp_polling_stations')
+    // 1. Get all polling stations for this city
+    $pollingStations = DB::table('master_rp_polling_stations')
+        ->where('city_id', $cityId)
+        ->where('status', 1)
+        ->get();
+
+    if ($pollingStations->isEmpty()) {
+        return response()->json([
+            'message' => 'No active polling stations found for this city. Please create polling stations first.',
+        ], 422);
+    }
+
+    DB::transaction(function () use ($pollingStations, $cityId, $user) {
+        // 2. Delete existing rows for this city to prevent duplication
+        // Actual team_id ke base par mapping pluck karenge taaki accurate deletion ho
+        $existingTeamIds = DB::table('master_r_p_team_mappings')
             ->where('city_id', $cityId)
-            ->where('status', 1)
-            ->get();
+            ->pluck('team_id'); 
 
-        if ($pollingStations->isEmpty()) {
-            return response()->json([
-                'message' => 'No active polling stations found for this city. Please create polling stations first.',
-            ], 422);
+        DB::table('master_r_p_mappings')->whereIn('team_id', $existingTeamIds)->delete();
+        DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->delete();
+
+        // 3. Find the maximum sequential team_id across the whole database
+        $maxTeamId = DB::table('master_r_p_team_mappings')->max('team_id') ?? 0;
+
+        $teamMappingsData = [];
+        $mappingsData = [];
+        $currentTime = now();
+
+        // 4. Generate data arrays
+        foreach ($pollingStations as $index => $ps) {
+            $seqTeamId = $maxTeamId + $index + 1;
+            $posts = ['P0', 'P1', 'P2', 'P3', 'P4'];
+
+            // Ek polling station ke liye pure team_mappings table mein sirf EK row banegi
+            $teamMappingsData[] = [
+                'team_id'      => $seqTeamId,
+                'state_id'     => $ps->state_id,
+                'district_id'  => $ps->district_id,
+                'ward_id'      => $ps->ward_id,
+                'city_id'      => $ps->city_id,
+                'ps_id'        => $ps->id,
+                'created_by'   => $user->id,
+                'updated_by'   => $user->id,
+                'created_at'   => $currentTime,
+                'updated_at'   => $currentTime,
+            ];
+
+            // Usi single team_id ($seqTeamId) ko lekar 5 posts create honge
+            foreach ($posts as $post) {
+                $mappingsData[] = [
+                    'team_id'    => $seqTeamId, // Yahan incremental primary ID nahi, direct team_id link ho raha hai
+                    'post_name'  => $post,
+                    'emp_id'     => null,
+                    'created_by' => $user->id,
+                    'updated_by' => $user->id,
+                    'created_at' => $currentTime,
+                    'updated_at' => $currentTime,
+                ];
+            }
         }
 
-        DB::transaction(function () use ($pollingStations, $cityId, $user) {
-            // 2. Delete existing team mapping rows for this city to prevent duplication
-            $existingTeamIds = DB::table('master_r_p_team_mappings')
-                ->where('city_id', $cityId)
-                ->pluck('id');
+        // 5. Bulk Insert (Single query se poora data ek baar mein insert hoga)
+        if (!empty($teamMappingsData)) {
+            DB::table('master_r_p_team_mappings')->insert($teamMappingsData);
+        }
 
-            DB::table('master_r_p_mappings')->whereIn('team_id', $existingTeamIds)->delete();
-            DB::table('master_r_p_team_mappings')->where('city_id', $cityId)->delete();
+        if (!empty($mappingsData)) {
+            DB::table('master_r_p_mappings')->insert($mappingsData);
+        }
+    });
 
-            // 3. Find the maximum sequential team_id across the whole database
-            $maxTeamId = DB::table('master_r_p_team_mappings')->max('team_id') ?? 0;
-
-            // 4. Generate teams
-            foreach ($pollingStations as $index => $ps) {
-                $seqTeamId = $maxTeamId + $index + 1;
-                $posts = ['P0', 'P1', 'P2', 'P3', 'P4'];
-
-                foreach ($posts as $post) {
-                    $teamMappingId = DB::table('master_r_p_team_mappings')->insertGetId([
-                        'team_id' => $seqTeamId,
-                        'state_id' => $ps->state_id,
-                        'district_id' => $ps->district_id,
-                        'ward_id' => $ps->ward_id,
-                        'city_id' => $ps->city_id,
-                        'ps_id' => $ps->id,
-                        'created_by' => $user->id,
-                        'updated_by' => $user->id,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-
-                    DB::table('master_r_p_mappings')->insert([
-                        'team_id' => $teamMappingId,
-                        'post_name' => $post,
-                        'emp_id' => null,
-                        'created_by' => $user->id,
-                        'updated_by' => $user->id,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-        });
-
-        return response()->json([
-            'message' => 'Teams generated successfully.',
-        ]);
-    }
+    return response()->json([
+        'message' => 'Teams generated successfully.',
+    ]);
+}
 
     public function dashboardData(Request $request): JsonResponse
     {
@@ -208,6 +224,143 @@ class RuralElectionController extends Controller
 
         return response()->json([
             'message' => 'Team assignments saved successfully.',
+        ]);
+    }
+
+    public function applyDuty(Request $request): JsonResponse
+    {
+        $request->validate([
+            'city_id' => 'required|integer|exists:master_rp_cities,id',
+            'date_of_birth' => 'nullable|date',
+            'P0' => 'nullable|string|in:male,female,any',
+            'P1' => 'nullable|string|in:male,female,any',
+            'P2' => 'nullable|string|in:male,female,any',
+            'P3' => 'nullable|string|in:male,female,any',
+            'P4' => 'nullable|string|in:male,female,any',
+        ]);
+
+        $cityId = $request->input('city_id');
+        $dob = $request->input('date_of_birth');
+        $user = $request->user();
+
+        // 1. Get all team mapping IDs for this city
+        $teamMappingIds = DB::table('master_r_p_team_mappings')
+            ->where('city_id', $cityId)
+            ->pluck('id');
+
+        if ($teamMappingIds->isEmpty()) {
+            return response()->json([
+                'message' => 'No teams generated for this city. Please generate teams first.',
+            ], 422);
+        }
+
+        // 2. Fetch all vacant mappings for this city
+        $vacantMappings = DB::table('master_r_p_mappings')
+            ->whereIn('team_id', $teamMappingIds)
+            ->whereNull('emp_id')
+            ->get();
+
+        if ($vacantMappings->isEmpty()) {
+            return response()->json([
+                'message' => 'All duties are already assigned for this city.',
+            ], 422);
+        }
+
+        // 3. Fetch all active employees for this city who are NOT already assigned anywhere
+        $assignedEmpIdsNP = DB::table('master_n_p_mappings')
+            ->whereNotNull('emp_id')
+            ->pluck('emp_id')
+            ->toArray();
+
+        $assignedEmpIdsRP = DB::table('master_r_p_mappings')
+            ->whereNotNull('emp_id')
+            ->pluck('emp_id')
+            ->toArray();
+
+        $assignedEmpIds = array_unique(array_merge($assignedEmpIdsNP, $assignedEmpIdsRP));
+
+        $employeesQuery = DB::table('master_employees')
+            ->where('status', 1)
+            ->where('city_type', 'rural')
+            ->where('city_id', $cityId);
+
+        if (!empty($assignedEmpIds)) {
+            $employeesQuery->whereNotIn('id', $assignedEmpIds);
+        }
+
+        if ($dob) {
+            $employeesQuery->where('dob', '>=', $dob);
+        }
+
+        $employees = $employeesQuery->get();
+
+        if ($employees->isEmpty()) {
+            return response()->json([
+                'message' => 'No available employees found matching the criteria.',
+            ], 422);
+        }
+
+        // Split employees into male and female pools
+        $malePool = $employees->where('gender', 1)->values()->all(); // 1 = Male
+        $femalePool = $employees->where('gender', 2)->values()->all(); // 2 = Female
+
+        $assignedCount = 0;
+        $mappingsByPost = $vacantMappings->groupBy('post_name');
+
+        DB::transaction(function () use ($mappingsByPost, $request, &$malePool, &$femalePool, $user, &$assignedCount) {
+            $posts = ['P0', 'P1', 'P2', 'P3', 'P4'];
+
+            foreach ($posts as $post) {
+                $genderCriteria = $request->input($post, 'any');
+                $postMappings = $mappingsByPost->get($post);
+
+                if (!$postMappings) {
+                    continue;
+                }
+
+                foreach ($postMappings as $mapping) {
+                    $emp = null;
+
+                    if ($genderCriteria === 'male') {
+                        if (!empty($malePool)) {
+                            $emp = array_shift($malePool);
+                        }
+                    } elseif ($genderCriteria === 'female') {
+                        if (!empty($femalePool)) {
+                            $emp = array_shift($femalePool);
+                        }
+                    } else { // any
+                        if (count($malePool) >= count($femalePool) && !empty($malePool)) {
+                            $emp = array_shift($malePool);
+                        } elseif (!empty($femalePool)) {
+                            $emp = array_shift($femalePool);
+                        } elseif (!empty($malePool)) {
+                            $emp = array_shift($malePool);
+                        }
+                    }
+
+                    if ($emp) {
+                        DB::table('master_r_p_mappings')
+                            ->where('id', $mapping->id)
+                            ->update([
+                                'emp_id' => $emp->id,
+                                'updated_by' => $user->id,
+                                'updated_at' => now(),
+                            ]);
+                        $assignedCount++;
+                    }
+                }
+            }
+        });
+
+        if ($assignedCount === 0) {
+            return response()->json([
+                'message' => 'Could not assign any duties. Please check if you have enough employees matching the gender and DOB criteria.',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => "Successfully assigned duties to {$assignedCount} employees.",
         ]);
     }
 }

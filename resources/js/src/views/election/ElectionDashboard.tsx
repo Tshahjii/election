@@ -139,6 +139,29 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     }
   };
 
+  const handleApplyDuty = async () => {
+    if (!selectedCityId) return;
+    setActionLoading(true);
+    try {
+      const response = await apiClient.post(`${apiPrefix}/apply-duty`, {
+        city_id: selectedCityId,
+        date_of_birth: dutyCriteria.date_of_birth || null,
+        P0: dutyCriteria.P0,
+        P1: dutyCriteria.P1,
+        P2: dutyCriteria.P2,
+        P3: dutyCriteria.P3,
+        P4: dutyCriteria.P4
+      });
+      dispatch(showNotification({ message: response.data.message, severity: 'success' }));
+      await loadDashboardData(Number(selectedCityId));
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || 'Failed to apply duty assignments.';
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getStatusChip = (status: string) => {
     if (status === 'Approved' || status === 'Verified') {
       return <Chip label="Verified" color="success" size="small" variant="filled" />;
@@ -282,6 +305,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                       label={`${post} Gender Condition`}
                       value={dutyCriteria[post] || 'any'}
                       options={[
+                        { value: 'any', label: 'Any' },
                         { value: 'male', label: 'Male' },
                         { value: 'female', label: 'Female' }
                       ]}
@@ -290,7 +314,13 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                   </Grid>
                 ))}
                 <Grid size={{ xs: 12 }}>
-                  <Button variant="contained" color="primary">
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleApplyDuty}
+                    disabled={actionLoading}
+                    startIcon={actionLoading ? <CircularProgress size={20} color="inherit" /> : null}
+                  >
                     Apply Duty
                   </Button>
                 </Grid>

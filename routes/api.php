@@ -34,12 +34,14 @@ Route::middleware('jwt')->prefix('urban-election')->group(function () {
     Route::get('dashboard-data', [UrbanElectionController::class, 'dashboardData']);
     Route::post('create-teams-scheduled', [UrbanElectionController::class, 'createTeamsScheduled']);
     Route::post('save-assignments', [UrbanElectionController::class, 'saveAssignments']);
+    Route::post('apply-duty', [UrbanElectionController::class, 'applyDuty']);
 });
 
 Route::middleware('jwt')->prefix('rural-election')->group(function () {
     Route::get('dashboard-data', [RuralElectionController::class, 'dashboardData']);
     Route::post('create-teams-scheduled', [RuralElectionController::class, 'createTeamsScheduled']);
     Route::post('save-assignments', [RuralElectionController::class, 'saveAssignments']);
+    Route::post('apply-duty', [RuralElectionController::class, 'applyDuty']);
 });
 
 Route::middleware('jwt')->prefix('users')->group(function () {
