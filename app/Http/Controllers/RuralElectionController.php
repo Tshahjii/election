@@ -70,6 +70,7 @@ class RuralElectionController extends Controller
             foreach ($posts as $post) {
                 $mappingsData[] = [
                     'team_id'    => $seqTeamId,
+                    'city_id'    => $ps->city_id,
                     'post_name'  => $post,
                     'emp_id'     => null,
                     'created_by' => $user->id,
@@ -260,7 +261,7 @@ class RuralElectionController extends Controller
 
     public function exemptEmployee(Request $request): JsonResponse
     {
-        // Accept either numeric employee_id or emp_code (like EMP001)
+        // Accept either numeric employee_id or emp_code (like NIC001)
         $employeeId = $request->input('employee_id');
         $empCode = $request->input('emp_code');
 

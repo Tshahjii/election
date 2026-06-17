@@ -20,6 +20,7 @@ type ChosenSelectProps = {
   className?: string;
   error?: boolean;
   helperText?: string;
+  id?: string;
 };
 
 export default function ChosenSelect({
@@ -29,10 +30,11 @@ export default function ChosenSelect({
   label,
   placeholder,
   required = false,
-  size = 'medium',
+  size = 'small',
   className = 'chosen-select',
   error,
-  helperText
+  helperText,
+  id
 }: ChosenSelectProps) {
   const normalizedValue = value ?? '';
   const selectedOption = options.find((option) => String(option.value) === String(normalizedValue)) || null;
@@ -50,7 +52,7 @@ export default function ChosenSelect({
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, selected) => String(option.value) === String(selected.value)}
       onChange={(_, option) => onChange({ target: { value: option?.value ?? '' } })}
-      renderInput={(params) => <TextField {...params} required={required} label={label} placeholder={placeholder} error={error} helperText={helperText} />}
+      renderInput={(params) => <TextField {...params} id={id} required={required} label={label} placeholder={placeholder} error={error} helperText={helperText} />}
     />
   );
 }

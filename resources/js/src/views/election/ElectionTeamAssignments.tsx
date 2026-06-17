@@ -287,7 +287,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             <TextField
               fullWidth
               label="Search Employee ID/Code"
-              placeholder="Example: EMP001 or 123"
+              placeholder="Example: NIC001 or 123"
               value={employeeSearch}
               onChange={(event) => setEmployeeSearch(event.target.value)}
               disabled={loading}
@@ -462,7 +462,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             <TextField
               fullWidth
               label="Employee ID or Code"
-              placeholder="Enter employee id or code (e.g. EMP001)"
+              placeholder="Enter employee id or code (e.g. NIC001)"
               value={exemptEmployeeId}
               onChange={(e) => setExemptEmployeeId(e.target.value)}
             />

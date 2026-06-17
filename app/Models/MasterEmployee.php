@@ -9,6 +9,7 @@ class MasterEmployee extends Model
 {
     protected $fillable = [
         'emp_code',
+        'gov_emp_code',
         'title',
         'name',
         'gender',

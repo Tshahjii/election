@@ -23,6 +23,11 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormLabel from '@mui/material/FormLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 
 // project imports
 import apiClient from 'api/client';
@@ -316,7 +321,8 @@ const MASTER_TYPES = [
     titleKey: 'masters.employee',
     primaryKey: 'id',
     columns: [
-      { key: 'emp_code', label: 'Employee Code' },
+      { key: 'emp_code', label: 'NIC Code' },
+      { key: 'gov_emp_code', label: 'Govt. Employee Code' },
       { key: 'name', label: 'Name' },
       { key: 'mobile', label: 'Mobile' },
       { key: 'emp_type_name', label: 'Employee Type' },
@@ -326,7 +332,7 @@ const MASTER_TYPES = [
       { key: 'office_name', label: 'Office' }
     ],
     fields: [
-      { key: 'emp_code', label: 'Employee Code' },
+      { key: 'gov_emp_code', label: 'Govt. Employee Code' },
       { key: 'title', label: 'Title', type: 'select', required: true, options: [
         { value: 'श्री', label: 'श्री' },
         { value: 'श्रीमान', label: 'श्रीमान' },
@@ -395,8 +401,19 @@ function getCreateFormDefaults(masterKey, user, options) {
   const userDepartment = firstValue(user?.department, user?.office_info?.company_name);
   if (userDepartment) {
     if (masterKey === 'employees' || masterKey === 'offices') {
-      const department = options.departments.find((item) => String(item.department).toLowerCase() === String(userDepartment).toLowerCase());
+      const department = options.departments.find(
+        (item) =>
+          Number(item.id) === Number(userDepartment) ||
+          String(item.department).toLowerCase() === String(userDepartment).toLowerCase()
+      );
       if (department) next.department_id = department.id;
+    }
+  }
+
+  if (masterKey === 'employees') {
+    const userOfcId = firstValue(user?.ofc_id, user?.office_info?.ofc_id);
+    if (userOfcId) {
+      next.ofc_id = Number(userOfcId);
     }
   }
 
@@ -710,6 +727,12 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
       dispatch(showNotification({ message: 'Please correct the validation errors in the form.', severity: 'error' }));
+      setTimeout(() => {
+        const firstErrorInput = document.querySelector('.Mui-error input, [aria-invalid="true"], .Mui-error input[type="radio"]') as HTMLElement;
+        if (firstErrorInput) {
+          firstErrorInput.focus();
+        }
+      }, 100);
       return;
     }
 
@@ -746,6 +769,12 @@ export default function MasterData({ masterKey = 'countries' }) {
         });
         setErrors(formattedErrors);
         dispatch(showNotification({ message: 'Validation failed. Please check the marked fields.', severity: 'error' }));
+        setTimeout(() => {
+          const firstErrorInput = document.querySelector('.Mui-error input, [aria-invalid="true"], .Mui-error input[type="radio"]') as HTMLElement;
+          if (firstErrorInput) {
+            firstErrorInput.focus();
+          }
+        }, 100);
       } else {
         dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
       }
@@ -1010,77 +1039,101 @@ export default function MasterData({ masterKey = 'countries' }) {
 
     if (field.type === 'gender') {
       return (
-        <FormControl fullWidth required={field.required} error={hasError}>
-          <ChosenSelect
-            required={field.required}
-            label={label}
-            value={form[field.key] || 1}
-            placeholder={tl(field.label)}
-            options={[
-              { value: 1, label: 'Male' },
-              { value: 2, label: 'Female' }
-            ]}
+        <FormControl component="fieldset" fullWidth error={hasError}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+            {label}
+          </FormLabel>
+          <RadioGroup
+            row
+            value={form[field.key] !== undefined && form[field.key] !== null ? String(form[field.key]) : '1'}
             onChange={handleFormChange(field.key)}
-            error={hasError}
-            helperText={errText}
-          />
+            sx={hasError ? { 
+              border: '1px solid #d32f2f', 
+              borderRadius: '8px', 
+              p: '4px 12px',
+              backgroundColor: 'rgba(211, 47, 47, 0.02)'
+            } : {}}
+          >
+            <FormControlLabel value="1" control={<Radio size="small" />} label="Male" />
+            <FormControlLabel value="2" control={<Radio size="small" />} label="Female" />
+          </RadioGroup>
+          {hasError && <FormHelperText>{errText}</FormHelperText>}
         </FormControl>
       );
     }
 
     if (field.type === 'city_type') {
       return (
-        <FormControl fullWidth required={field.required} error={hasError}>
-          <ChosenSelect
-            required={field.required}
-            label={label}
+        <FormControl component="fieldset" fullWidth error={hasError}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+            {label}
+          </FormLabel>
+          <RadioGroup
+            row
             value={form[field.key] || 'urban'}
-            placeholder={tl(field.label)}
-            options={[
-              { value: 'urban', label: 'Urban' },
-              { value: 'rural', label: 'Rural' }
-            ]}
             onChange={handleFormChange(field.key)}
-            error={hasError}
-            helperText={errText}
-          />
+            sx={hasError ? { 
+              border: '1px solid #d32f2f', 
+              borderRadius: '8px', 
+              p: '4px 12px',
+              backgroundColor: 'rgba(211, 47, 47, 0.02)'
+            } : {}}
+          >
+            <FormControlLabel value="urban" control={<Radio size="small" />} label="Urban" />
+            <FormControlLabel value="rural" control={<Radio size="small" />} label="Rural" />
+          </RadioGroup>
+          {hasError && <FormHelperText>{errText}</FormHelperText>}
         </FormControl>
       );
     }
 
     if (field.type === 'select') {
       return (
-        <FormControl fullWidth required={field.required} error={hasError}>
-          <ChosenSelect
-            required={field.required}
-            label={label}
+        <FormControl component="fieldset" fullWidth error={hasError}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+            {label}
+          </FormLabel>
+          <RadioGroup
+            row
             value={form[field.key] || ''}
-            placeholder={tl(field.label)}
-            options={field.options || []}
             onChange={handleFormChange(field.key)}
-            error={hasError}
-            helperText={errText}
-          />
+            sx={hasError ? { 
+              border: '1px solid #d32f2f', 
+              borderRadius: '8px', 
+              p: '4px 12px',
+              backgroundColor: 'rgba(211, 47, 47, 0.02)'
+            } : {}}
+          >
+            {(field.options || []).map((option) => (
+              <FormControlLabel key={option.value} value={option.value} control={<Radio size="small" />} label={option.label} />
+            ))}
+          </RadioGroup>
+          {hasError && <FormHelperText>{errText}</FormHelperText>}
         </FormControl>
       );
     }
 
     if (field.type === 'boolean') {
       return (
-        <FormControl fullWidth required={field.required} error={hasError}>
-          <ChosenSelect
-            required={field.required}
-            label={label}
-            value={form[field.key] ?? 0}
-            placeholder={tl(field.label)}
-            options={[
-              { value: 0, label: 'No' },
-              { value: 1, label: 'Yes' }
-            ]}
+        <FormControl component="fieldset" fullWidth error={hasError}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+            {label}
+          </FormLabel>
+          <RadioGroup
+            row
+            value={form[field.key] !== undefined && form[field.key] !== null ? String(form[field.key]) : '0'}
             onChange={handleFormChange(field.key)}
-            error={hasError}
-            helperText={errText}
-          />
+            sx={hasError ? { 
+              border: '1px solid #d32f2f', 
+              borderRadius: '8px', 
+              p: '4px 12px',
+              backgroundColor: 'rgba(211, 47, 47, 0.02)'
+            } : {}}
+          >
+            <FormControlLabel value="0" control={<Radio size="small" />} label="No" />
+            <FormControlLabel value="1" control={<Radio size="small" />} label="Yes" />
+          </RadioGroup>
+          {hasError && <FormHelperText>{errText}</FormHelperText>}
         </FormControl>
       );
     }
@@ -1099,6 +1152,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         onPaste={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
         error={hasError}
         helperText={errText}
+        size="small"
         slotProps={{
           inputLabel: { shrink: field.type === 'date' ? true : undefined },
           input: {
@@ -1110,6 +1164,11 @@ export default function MasterData({ masterKey = 'countries' }) {
         }}
       />
     );
+  };
+
+  const renderSafeField = (key: string) => {
+    const field = master.fields.find((f) => f.key === key);
+    return field ? renderField(field) : null;
   };
 
   return (
@@ -1327,8 +1386,8 @@ export default function MasterData({ masterKey = 'countries' }) {
         <PaginationFooter page={page} rowsPerPage={rowsPerPage} totalRows={totalRows} onPageChange={setPage} />
       </MainCard>
 
-      <Dialog open={modal.open} onClose={handleCloseModal} fullWidth maxWidth="md">
-        <Box component="form" onSubmit={handleSubmit}>
+      <Dialog open={modal.open} onClose={handleCloseModal} fullWidth maxWidth={masterKey === 'employees' ? 'lg' : 'md'}>
+        <Box component="form" onSubmit={handleSubmit} noValidate>
           <DialogTitle component="div" sx={{ pb: 1 }}>
             <Typography variant="h3" component="h2">
               {modal.mode === 'edit' ? t('common.update') : t('common.create')} {t(master.titleKey || '') || master.title}
@@ -1337,15 +1396,16 @@ export default function MasterData({ masterKey = 'countries' }) {
           <DialogContent dividers>
             <Grid container spacing={2} sx={{ pt: 0.5 }}>
               {master.fields.map((field) => (
-                <Grid key={field.key} size={{ xs: 12, sm: 6 }}>
+                <Grid key={field.key} size={{ xs: 12, sm: 4 }}>
                   {renderField(field)}
                 </Grid>
               ))}
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth>
                   <ChosenSelect
                     label={t('common.status')}
                     value={form.status ?? 1}
+                    size="small"
                     options={[
                       { value: 1, label: t('common.active') },
                       { value: 0, label: t('common.inactive') }
@@ -1354,8 +1414,8 @@ export default function MasterData({ masterKey = 'countries' }) {
                   />
                 </FormControl>
               </Grid>
-              {master.supportsAttachment && <Grid size={{ xs: 12, sm: 6 }}>
-                <Button component="label" fullWidth variant="outlined" startIcon={<FileUploadOutlined />} sx={{ minHeight: 48, justifyContent: 'flex-start' }}>
+              {master.supportsAttachment && <Grid size={{ xs: 12, sm: 4 }}>
+                <Button component="label" fullWidth variant="outlined" size="small" startIcon={<FileUploadOutlined />} sx={{ minHeight: 40, justifyContent: 'flex-start' }}>
                   {attachment?.name || t('common.uploadLogo')}
                   <input hidden type="file" accept={IMAGE_MIME_TYPES.join(',')} onChange={handleAttachmentChange} />
                 </Button>
@@ -1367,11 +1427,11 @@ export default function MasterData({ masterKey = 'countries' }) {
               </Grid>}
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ px: 3, py: 2 }}>
-            <Button variant="outlined" color="inherit" onClick={handleCloseModal}>
+          <DialogActions sx={{ px: 3, py: 1.5 }}>
+            <Button variant="outlined" color="inherit" size="small" onClick={handleCloseModal}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" variant="contained" color="primary" startIcon={<AddOutlined />}>
+            <Button type="submit" variant="contained" color="primary" size="small" startIcon={<AddOutlined />}>
               {t('common.save')}
             </Button>
           </DialogActions>

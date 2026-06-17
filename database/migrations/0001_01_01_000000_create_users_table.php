@@ -20,9 +20,9 @@ return new class extends Migration
             $table->timestamp('user_verified_at')->nullable();
             $table->string('password', 150);
             $table->timestamp('password_changed_at')->nullable();
-            $table->string('emp_type', 50);
-            $table->string('department', 100);
-            $table->string('designation', 100);
+            $table->unsignedBigInteger('emp_type',);
+            $table->unsignedBigInteger('department');
+            $table->unsignedBigInteger('designation');
             $table->unsignedBigInteger('ofc_id')->nullable();
             $table->string('ofc_code', 20)->nullable();
             $table->unsignedBigInteger('country_id');

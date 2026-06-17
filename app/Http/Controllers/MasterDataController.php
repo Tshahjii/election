@@ -477,6 +477,30 @@ class MasterDataController extends Controller
 
     private function validated(Request $request, string $type, ?Model $row = null): array
     {
+        if ($type === 'employees' && !$row) {
+            $mergeData = [];
+            
+            if (!$request->has('ofc_id') || $request->input('ofc_id') === '') {
+                $mergeData['ofc_id'] = $request->user()->ofc_id;
+            }
+            
+            if (!$request->has('department_id') || $request->input('department_id') === '') {
+                $userDept = $request->user()->department;
+                if (!empty($userDept)) {
+                    $deptId = \Illuminate\Support\Facades\DB::table('master_departments')
+                        ->where('department', $userDept)
+                        ->value('id');
+                    if ($deptId) {
+                        $mergeData['department_id'] = $deptId;
+                    }
+                }
+            }
+            
+            if (!empty($mergeData)) {
+                $request->merge($mergeData);
+            }
+        }
+
         $statusRule = ['nullable', 'integer', Rule::in([0, 1])];
         $fileRule = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
 
@@ -581,6 +605,7 @@ class MasterDataController extends Controller
             ],
             'employees' => [
                 'emp_code' => ['nullable', 'string', 'max:30', $this->uniqueRule('master_employees', 'emp_code', $row)],
+                'gov_emp_code' => ['nullable', 'string', 'max:50', $this->uniqueRule('master_employees', 'gov_emp_code', $row)],
                 'title' => ['required', 'string', 'max:100'],
                 'name' => ['required', 'string', 'max:100'],
                 'gender' => ['required', 'integer', Rule::in([1, 2])],
@@ -622,6 +647,22 @@ class MasterDataController extends Controller
 
         if ($type === 'employees') {
             $this->validateOfficeLocation($data);
+            
+            if (!empty($data['emp_code'])) {
+                $empCode = trim($data['emp_code']);
+                if (preg_match('/^emp/i', $empCode)) {
+                    $empCode = 'NIC' . substr($empCode, 3);
+                } elseif (!preg_match('/^nic/i', $empCode)) {
+                    $empCode = 'NIC' . $empCode;
+                } else {
+                    $empCode = 'NIC' . substr($empCode, 3);
+                }
+                $data['emp_code'] = $empCode;
+            } else {
+                $maxId = \Illuminate\Support\Facades\DB::table('master_employees')->max('id') ?? 0;
+                $nextId = $maxId + 1;
+                $data['emp_code'] = 'NIC' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            }
         }
 
         if (in_array($type, ['np-cities', 'np-wards', 'np-polling-stations', 'rp-cities', 'rp-wards', 'rp-polling-stations', 'employees'], true)) {

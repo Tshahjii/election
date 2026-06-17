@@ -2,389 +2,140 @@
 
 namespace Database\Seeders;
 
-use App\Support\AccessScope;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        $superAdminId = $this->saveUser([
-            'user_code' => 'USR-1001',
-            'name' => 'Super Admin',
-            'email' => 'tinkukumarshah48@gmail.com',
-            'mobile' => '9343326066',
-            'designation' => 'Super Admin',
-            'role' => 1,
-            'created_by' => null,
-            'updated_by' => null,
-        ]);
+        // 1. Ensure master tables have at least one record to map to
+        // Seed Master Employee Types
+        DB::table('master_emp_types')->updateOrInsert(
+            ['emp_type' => 'Permanent'],
+            [
+                'status' => 1,
+                'created_by' => 1,
+                'updated_by' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
+        $empTypeId = DB::table('master_emp_types')->where('emp_type', 'Permanent')->value('id') ?? 1;
 
-        $masterIds = $this->ensureMasterData($superAdminId);
-        $this->saveUser([
-            'user_code' => 'USR-1001',
-            'name' => 'Super Admin',
-            'email' => 'tinkukumarshah48@gmail.com',
-            'mobile' => '9343326066',
-            'designation' => 'Super Admin',
-            'role' => 1,
-            'ofc_id' => $masterIds['ceo_office_id'],
-            'created_by' => null,
-            'updated_by' => $superAdminId,
-        ]);
+        // Seed Master Departments
+        DB::table('master_departments')->updateOrInsert(
+            ['department' => 'Election Office'],
+            [
+                'status' => 1,
+                'created_by' => 1,
+                'updated_by' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
+        $deptId = DB::table('master_departments')->where('department', 'Election Office')->value('id') ?? 1;
 
-        // Seed a System Admin (state-scoped) user
-        $systemAdminId = $this->saveUser([
-            'user_code' => 'USR-1501',
-            'name' => 'System Admin',
-            'email' => 'system.admin@example.com',
-            'mobile' => '9343326000',
-            'designation' => 'System Admin',
-            'role' => 2,
-            'ofc_id' => $masterIds['ceo_office_id'],
-            'ofc_code' => 'CEO-CG',
-            'created_by' => $superAdminId,
-            'updated_by' => $superAdminId,
-        ]);
+        // Seed Master Designations
+        DB::table('master_designations')->updateOrInsert(
+            ['designation' => 'Staff'],
+            [
+                'status' => 1,
+                'created_by' => 1,
+                'updated_by' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
+        $desigId = DB::table('master_designations')->where('designation', 'Staff')->value('id') ?? 1;
 
-        // Give System Admin state-scoped access only
-        $this->saveAccess($systemAdminId, $this->adminPermissions(), [
-            'state_ids' => [$masterIds['state_id']],
-        ], $superAdminId);
-
-        $adminId = $this->saveUser([
-            'user_code' => 'USR-2001',
-            'name' => 'Raipur Admin',
-            'email' => 'admin.raipur@example.com',
-            'mobile' => '9343326001',
-            'designation' => 'District Admin',
-            'role' => 3,
-            'ofc_id' => $masterIds['raipur_office_id'],
-            'ofc_code' => 'DEO-RP',
-            'created_by' => $superAdminId,
-            'updated_by' => $superAdminId,
-        ]);
-
-        $dataEntryId = $this->saveUser([
-            'user_code' => 'USR-3001',
-            'name' => 'Data Entry User',
-            'email' => 'data.entry@example.com',
-            'mobile' => '9343326002',
-            'designation' => 'Data Entry Operator',
-            'role' => 4,
-            'ofc_id' => $masterIds['raipur_office_id'],
-            'ofc_code' => 'DEO-RP',
-            'created_by' => $adminId,
-            'updated_by' => $adminId,
-        ]);
-
-        $verifierId = $this->saveUser([
-            'user_code' => 'USR-4001',
-            'name' => 'Verifier User',
-            'email' => 'verifier@example.com',
-            'mobile' => '9343326003',
-            'designation' => 'Verifier',
-            'role' => 5,
-            'ofc_id' => $masterIds['raipur_office_id'],
-            'ofc_code' => 'DEO-RP',
-            'created_by' => $adminId,
-            'updated_by' => $adminId,
-        ]);
-
-        $reportViewerId = $this->saveUser([
-            'user_code' => 'USR-6001',
-            'name' => 'Report Viewer',
-            'email' => 'report.viewer@example.com',
-            'mobile' => '9343326004',
-            'designation' => 'Report Viewer',
-            'role' => 7,
-            'ofc_id' => $masterIds['durg_office_id'],
-            'ofc_code' => 'DEO-DG',
-            'district_id' => $masterIds['durg_district_id'],
-            'created_by' => $adminId,
-            'updated_by' => $adminId,
-        ]);
-
-        $this->saveAccess($superAdminId, AccessScope::fullPermissions(), [], $superAdminId);
-
-        $adminAccess = [
-            'country_ids' => [$masterIds['country_id']],
-            'state_ids' => [$masterIds['state_id']],
-            'district_ids' => [$masterIds['raipur_district_id'], $masterIds['durg_district_id']],
-            'office_ids' => [$masterIds['ceo_office_id'], $masterIds['raipur_office_id'], $masterIds['durg_office_id']],
+        // 2. Define the list of users to seed with various roles
+        // Roles: 1 = Super Admin, 2 = System Admin, 3 = Admin, 4 = Data Entry, 5 = Verifier, 6 = Booth Officer, 7 = Report Viewer
+        $users = [
+            [
+                'user_code' => 'NIC-SHW-0001',
+                'name' => 'Super Admin',
+                'email' => 'superadmin@election.com',
+                'mobile' => '9343326066',
+                'role' => 1,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0002',
+                'name' => 'System Admin',
+                'email' => 'sysadmin@election.com',
+                'mobile' => '9999999902',
+                'role' => 2,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0003',
+                'name' => 'Admin User',
+                'email' => 'admin@election.com',
+                'mobile' => '9999999903',
+                'role' => 3,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0004',
+                'name' => 'Data Entry User',
+                'email' => 'dataentry@election.com',
+                'mobile' => '9999999904',
+                'role' => 4,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0005',
+                'name' => 'Verifier User',
+                'email' => 'verifier@election.com',
+                'mobile' => '9999999905',
+                'role' => 5,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0006',
+                'name' => 'Booth Officer',
+                'email' => 'booth@election.com',
+                'mobile' => '9999999906',
+                'role' => 6,
+            ],
+            [
+                'user_code' => 'NIC-SHW-0007',
+                'name' => 'Report Viewer',
+                'email' => 'report@election.com',
+                'mobile' => '9999999907',
+                'role' => 7,
+            ],
         ];
 
-        $this->saveAccess($adminId, $this->adminPermissions(), $adminAccess, $superAdminId);
-        $this->saveAccess($dataEntryId, $this->dataEntryPermissions(), [
-            'country_ids' => [$masterIds['country_id']],
-            'state_ids' => [$masterIds['state_id']],
-            'district_ids' => [$masterIds['raipur_district_id']],
-            'office_ids' => [$masterIds['raipur_office_id']],
-        ], $adminId);
-        $this->saveAccess($verifierId, $this->verifierPermissions(), [
-            'country_ids' => [$masterIds['country_id']],
-            'state_ids' => [$masterIds['state_id']],
-            'district_ids' => [$masterIds['raipur_district_id']],
-            'office_ids' => [$masterIds['raipur_office_id']],
-        ], $adminId);
-        $this->saveAccess($reportViewerId, $this->reportViewerPermissions(), [
-            'country_ids' => [$masterIds['country_id']],
-            'state_ids' => [$masterIds['state_id']],
-            'district_ids' => [$masterIds['durg_district_id']],
-            'office_ids' => [$masterIds['durg_office_id']],
-        ], $adminId);
-    }
+        // 3. Insert users
+        $office = DB::table('master_offices')->first();
+        $ofcId = $office ? $office->ofc_id : 1;
+        $ofcCode = $office ? $office->office_code : 'CEO-CG';
 
-    private function ensureMasterData(int $actorId): array
-    {
-        DB::table('master_countries')->updateOrInsert(
-            ['name' => 'India'],
-            [
-                'status' => 1,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-        $countryId = (int) DB::table('master_countries')->where('name', 'India')->value('id');
-
-        DB::table('master_states')->updateOrInsert(
-            ['country_id' => $countryId, 'state_code' => 'CG'],
-            [
-                'name' => 'छत्तीसगढ़',
-                'status' => 1,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-        $stateId = (int) DB::table('master_states')->where('country_id', $countryId)->where('state_code', 'CG')->value('id');
-
-        DB::table('master_districts')->updateOrInsert(
-            ['country_id' => $countryId, 'state_id' => $stateId, 'district_code' => 'RP'],
-            [
-                'name' => 'Raipur',
-                'status' => 1,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-        DB::table('master_districts')->updateOrInsert(
-            ['country_id' => $countryId, 'state_id' => $stateId, 'district_code' => 'DG'],
-            [
-                'name' => 'Durg',
-                'status' => 1,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-
-        $raipurDistrictId = (int) DB::table('master_districts')->where('state_id', $stateId)->where('district_code', 'RP')->value('id');
-        $durgDistrictId = (int) DB::table('master_districts')->where('state_id', $stateId)->where('district_code', 'DG')->value('id');
-
-        DB::table('master_offices')->updateOrInsert(
-            ['office_code' => 'CEO-CG'],
-            [
-                'office_name' => 'Chief Electoral Office',
-                'company_name' => 'Election Department',
-                'office_type' => 1,
-                'ofc_parent_id' => 0,
-                'status' => 1,
-                'country_id' => $countryId,
-                'state_id' => $stateId,
-                'district_id' => $raipurDistrictId,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-
-        $ceoOfficeId = (int) DB::table('master_offices')->where('office_code', 'CEO-CG')->value('ofc_id');
-
-        DB::table('master_offices')->updateOrInsert(
-            ['office_code' => 'DEO-RP'],
-            [
-                'office_name' => 'District Election Office Raipur',
-                'company_name' => 'Election Department',
-                'office_type' => 2,
-                'ofc_parent_id' => $ceoOfficeId,
-                'status' => 1,
-                'country_id' => $countryId,
-                'state_id' => $stateId,
-                'district_id' => $raipurDistrictId,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-
-        DB::table('master_offices')->updateOrInsert(
-            ['office_code' => 'DEO-DG'],
-            [
-                'office_name' => 'District Election Office Durg',
-                'company_name' => 'Election Department',
-                'office_type' => 2,
-                'ofc_parent_id' => $ceoOfficeId,
-                'status' => 1,
-                'country_id' => $countryId,
-                'state_id' => $stateId,
-                'district_id' => $durgDistrictId,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-
-        return [
-            'country_id' => $countryId,
-            'state_id' => $stateId,
-            'raipur_district_id' => $raipurDistrictId,
-            'durg_district_id' => $durgDistrictId,
-            'ceo_office_id' => $ceoOfficeId,
-            'raipur_office_id' => (int) DB::table('master_offices')->where('office_code', 'DEO-RP')->value('ofc_id'),
-            'durg_office_id' => (int) DB::table('master_offices')->where('office_code', 'DEO-DG')->value('ofc_id'),
-        ];
-    }
-
-    private function saveUser(array $data): int
-    {
-        $payload = array_merge([
-            'user_code' => null,
-            'name' => null,
-            'mobile' => null,
-            'user_verified_at' => now(),
-            'password' => Hash::make('Admin@123'),
-            'password_changed_at' => null,
-            'emp_type' => 'Permanent',
-            'department' => 'Election Office',
-            'ofc_id' => 1,
-            'ofc_code' => 'CEO-CG',
-            'country_id' => 1,
-            'state_id' => 5,
-            'district_id' => 1,
-            'address' => 'Raipur, Chhattisgarh',
-            'is_active' => 1,
-            'last_active' => now(),
-            'last_active_ip' => '127.0.0.1',
-            'remember_token' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ], $data);
-
-        DB::table('users')->updateOrInsert(
-            ['email' => $payload['email']],
-            $payload
-        );
-
-        return (int) DB::table('users')->where('email', $payload['email'])->value('id');
-    }
-
-    private function saveAccess(int $userId, array $permissions, array $access, int $actorId): void
-    {
-        $user = DB::table('users')->where('id', $userId)->first();
-        $normalizedPermissions = AccessScope::normalizePermissions($permissions);
-
-        DB::table('access_managments')->updateOrInsert(
-            ['user_id' => $userId],
-            [
-                'emp_type' => $user->emp_type ?? 'Permanent',
-                'department' => $user->department ?? 'Election Office',
-                'designation' => $user->designation ?? null,
-                'ofc_id' => $user->ofc_id ?? null,
-                'ofc_code' => $user->ofc_code ?? null,
-                'country_id' => $user->country_id ?? null,
-                'state_id' => $user->state_id ?? null,
-                'district_id' => $user->district_id ?? null,
-                'country_ids' => $this->csv($access['country_ids'] ?? []),
-                'state_ids' => $this->csv($access['state_ids'] ?? []),
-                'district_ids' => $this->csv($access['district_ids'] ?? []),
-                'office_ids' => $this->csv($access['office_ids'] ?? []),
-                'permissions' => json_encode($normalizedPermissions),
-                'can_create' => $this->hasAnyPermission($normalizedPermissions, 'create') ? 1 : 0,
-                'can_edit' => $this->hasAnyPermission($normalizedPermissions, 'edit') ? 1 : 0,
-                'can_delete' => $this->hasAnyPermission($normalizedPermissions, 'delete') ? 1 : 0,
-                'created_by' => $actorId,
-                'updated_by' => $actorId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-    }
-
-    private function adminPermissions(): array
-    {
-        $permissions = $this->readOnlyPermissions();
-
-        foreach (['masters.states', 'masters.districts', 'masters.offices', 'users.access'] as $module) {
-            foreach (AccessScope::ACTIONS as $action) {
-                $permissions[$module][$action] = true;
-            }
+        foreach ($users as $user) {
+            DB::table('users')->updateOrInsert(
+                ['email' => $user['email']],
+                [
+                    'user_code' => $user['user_code'],
+                    'name' => $user['name'],
+                    'mobile' => $user['mobile'],
+                    'user_verified_at' => now(),
+                    'password' => Hash::make('Admin@123'),
+                    'emp_type' => $empTypeId,
+                    'department' => $deptId,
+                    'designation' => $desigId,
+                    'ofc_id' => $ofcId,
+                    'ofc_code' => $ofcCode,
+                    'country_id' => 1,   // India (as seeded in CountrySeeder)
+                    'state_id' => 5,     // Chhattisgarh (as seeded in StateSeeder)
+                    'district_id' => 1,  // Raipur (as seeded in DistrictSeeder)
+                    'address' => 'Election Karyalay, Raipur',
+                    'role' => $user['role'],
+                    'is_active' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
-
-        return $permissions;
-    }
-
-    private function dataEntryPermissions(): array
-    {
-        $permissions = $this->readOnlyPermissions(['dashboard.overview', 'masters.states', 'masters.districts']);
-        $permissions['masters.districts']['create'] = true;
-
-        return $permissions;
-    }
-
-    private function verifierPermissions(): array
-    {
-        return $this->readOnlyPermissions(['dashboard.overview', 'masters.states', 'masters.districts', 'voters.verification']);
-    }
-
-    private function reportViewerPermissions(): array
-    {
-        return $this->readOnlyPermissions(['dashboard.overview', 'reports.election', 'reports.audit']);
-    }
-
-    private function readOnlyPermissions(?array $modules = null): array
-    {
-        $permissions = AccessScope::normalizePermissions([]);
-        $modules ??= array_diff(array_keys(AccessScope::MODULES), ['calendar.reminders']);
-
-        foreach ($modules as $module) {
-            $permissions[$module]['read'] = true;
-        }
-
-        return $permissions;
-    }
-
-    private function csv(array $ids): ?string
-    {
-        $value = collect($ids)
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn (int $id) => $id > 0)
-            ->unique()
-            ->values()
-            ->implode(',');
-
-        return $value === '' ? null : $value;
-    }
-
-    private function hasAnyPermission(array $permissions, string $action): bool
-    {
-        foreach ($permissions as $modulePermissions) {
-            if (! empty($modulePermissions[$action])) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('master_employees', function (Blueprint $table) {
             $table->id();
             $table->string('emp_code', 30)->nullable()->unique();
+            $table->string('gov_emp_code', 50)->nullable();
             $table->string('title', 100);
             $table->string('name', 100);
             $table->tinyInteger('gender')->default(1)->comment('1 = Male, 2 = Female');
