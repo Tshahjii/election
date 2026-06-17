@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
 
 // material-ui
 import Box from '@mui/material/Box';
@@ -432,8 +431,6 @@ function getApiError(error) {
 export default function MasterData({ masterKey = 'countries' }) {
   const dispatch = useDispatch();
   const { t, tl } = useAppPreferences();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = searchParams.get('search') || '';
   const { user } = useSelector((state) => state.auth);
   const [rows, setRows] = useState<any[]>([]);
   const [options, setOptions] = useState<{
@@ -468,7 +465,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     pay_levels: []
   });
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ search: searchQuery, status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
+  const [filters, setFilters] = useState({ search: '', status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -621,29 +618,16 @@ export default function MasterData({ masterKey = 'countries' }) {
   }, [master.key, filters.search, filters.status, filters.country_id, filters.state_id, filters.district_id, filters.city_id, filters.ward_id, page, rowsPerPage]);
 
   useEffect(() => {
-    setFilters({ search: searchQuery, status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
+    setFilters({ search: '', status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
     setPage(1);
     setRows([]);
     setTotalRows(0);
   }, [master.key]);
 
-  useEffect(() => {
-    setFilters((current) => (current.search === searchQuery ? current : { ...current, search: searchQuery }));
-    setPage(1);
-  }, [searchQuery]);
-
   const handleSearchFilterChange = (event) => {
     const value = event.target.value;
     setFilters((current) => ({ ...current, search: value }));
     setPage(1);
-
-    const nextParams = new URLSearchParams(searchParams);
-    if (value) {
-      nextParams.set('search', value);
-    } else {
-      nextParams.delete('search');
-    }
-    setSearchParams(nextParams, { replace: true });
   };
 
   const handleOpenCreate = () => {
@@ -1040,7 +1024,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'gender') {
       return (
         <FormControl component="fieldset" fullWidth error={hasError}>
-          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.75rem', mb: 0.5 }}>
             {label}
           </FormLabel>
           <RadioGroup
@@ -1065,7 +1049,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'city_type') {
       return (
         <FormControl component="fieldset" fullWidth error={hasError}>
-          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.75rem', mb: 0.5 }}>
             {label}
           </FormLabel>
           <RadioGroup
@@ -1090,7 +1074,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'select') {
       return (
         <FormControl component="fieldset" fullWidth error={hasError}>
-          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.75rem', mb: 0.5 }}>
             {label}
           </FormLabel>
           <RadioGroup
@@ -1116,7 +1100,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (field.type === 'boolean') {
       return (
         <FormControl component="fieldset" fullWidth error={hasError}>
-          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.875rem', mb: 0.5 }}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.75rem', mb: 0.5 }}>
             {label}
           </FormLabel>
           <RadioGroup
@@ -1133,6 +1117,45 @@ export default function MasterData({ masterKey = 'countries' }) {
             <FormControlLabel value="0" control={<Radio size="small" />} label="No" />
             <FormControlLabel value="1" control={<Radio size="small" />} label="Yes" />
           </RadioGroup>
+          {hasError && <FormHelperText>{errText}</FormHelperText>}
+        </FormControl>
+      );
+    }
+
+    if (field.key === 'remark') {
+      return (
+        <FormControl fullWidth error={hasError}>
+          <FormLabel component="legend" required={field.required} sx={{ fontSize: '0.75rem', mb: 0.5, color: hasError ? 'error.main' : 'text.secondary' }}>
+            {label}
+          </FormLabel>
+          <textarea
+            required={field.required}
+            placeholder={tl(field.placeholder || field.label)}
+            value={form[field.key] ?? ''}
+            onChange={handleFormChange(field.key)}
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '8.5px 14px',
+              borderRadius: '8px',
+              border: hasError ? '1px solid #d32f2f' : '1px solid rgba(0, 0, 0, 0.23)',
+              fontFamily: 'inherit',
+              fontSize: '0.875rem',
+              outline: 'none',
+              resize: 'vertical',
+              backgroundColor: 'transparent'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = hasError ? '#d32f2f' : '#1976d2';
+              e.target.style.borderWidth = '2px';
+              e.target.style.padding = '7.5px 13px';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = hasError ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)';
+              e.target.style.borderWidth = '1px';
+              e.target.style.padding = '8.5px 14px';
+            }}
+          />
           {hasError && <FormHelperText>{errText}</FormHelperText>}
         </FormControl>
       );
@@ -1189,9 +1212,10 @@ export default function MasterData({ masterKey = 'countries' }) {
 
       <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
+              size="small"
               label={`${t('common.search')} ${t(master.labelKey || '') || master.label}`}
               value={filters.search}
               onChange={handleSearchFilterChange}

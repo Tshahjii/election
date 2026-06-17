@@ -276,6 +276,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
+              size="small"
               label="Search Team ID"
               placeholder="Example: 0001, 0002 or 1, 2"
               value={teamSearch}
@@ -286,6 +287,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
+              size="small"
               label="Search Employee ID/Code"
               placeholder="Example: NIC001 or 123"
               value={employeeSearch}
@@ -461,6 +463,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
+              size="small"
               label="Employee ID or Code"
               placeholder="Enter employee id or code (e.g. NIC001)"
               value={exemptEmployeeId}

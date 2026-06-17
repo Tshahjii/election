@@ -52,7 +52,7 @@ export default function ChosenSelect({
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, selected) => String(option.value) === String(selected.value)}
       onChange={(_, option) => onChange({ target: { value: option?.value ?? '' } })}
-      renderInput={(params) => <TextField {...params} id={id} required={required} label={label} placeholder={placeholder} error={error} helperText={helperText} />}
+      renderInput={(params) => <TextField {...params} size={size} id={id} required={required} label={label} placeholder={placeholder} error={error} helperText={helperText} />}
     />
   );
 }

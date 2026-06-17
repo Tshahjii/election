@@ -412,13 +412,13 @@ export default function UserAccessList() {
             <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth label="Name" value={filters.name} onChange={handleFilterChange('name')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label="Name" value={filters.name} onChange={handleFilterChange('name')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth label="Mobile Number" value={filters.mobile} onChange={handleFilterChange('mobile')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label="Mobile Number" value={filters.mobile} onChange={handleFilterChange('mobile')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth label="User ID" value={filters.user_code} onChange={handleFilterChange('user_code')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label="User ID" value={filters.user_code} onChange={handleFilterChange('user_code')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
                         <FormControl fullWidth>

@@ -332,6 +332,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                 <Grid size={{ xs: 12, md: 4 }}>
                   <TextField
                     fullWidth
+                    size="small"
                     type="date"
                     label="Date of Birth"
                     value={dutyCriteria.date_of_birth}

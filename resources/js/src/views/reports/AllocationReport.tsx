@@ -69,9 +69,10 @@ export default function AllocationReport() {
 
       <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               fullWidth
+              size="small"
               label="Search Booth / Officer"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -79,7 +80,7 @@ export default function AllocationReport() {
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth>
               <ChosenSelect
                 value={roleFilter}
