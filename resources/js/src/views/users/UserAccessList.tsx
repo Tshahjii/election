@@ -27,12 +27,21 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
 // project imports
-import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
 import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
 import { ROLE_LABELS } from 'utils/access';
+import { useAppPreferences } from 'contexts/AppPreferences';
+import {
+    useGetAccessOptionsQuery,
+    useGetUsersQuery,
+    useCreateUserMutation,
+    useUpdateUserMutation,
+    useUpdateAccessMutation,
+    useResetPasswordMutation,
+    useDeleteUserMutation
+} from 'store/apiSlice';
 
 // assets
 import AddOutlined from '@mui/icons-material/AddOutlined';
@@ -73,16 +82,6 @@ const baseAccessForm = {
     permissions: {}
 };
 
-function getApiError(error) {
-    const errors = error.response?.data?.errors;
-    if (errors) return Object.values(errors).flat().join(' ');
-    return error.response?.data?.message || 'Unable to complete request.';
-}
-
-function statusLabel(value) {
-    return Number(value) === 1 ? 'Active' : 'Inactive';
-}
-
 function firstValue(...values) {
     return values.find((value) => value !== undefined && value !== null && value !== '');
 }
@@ -97,7 +96,7 @@ function getUserFormDefaults(user) {
     };
 }
 
-function AccessDropZone({ title, selected, items, onDropItem, onRemove }) {
+function AccessDropZone({ title, selected, items, onDropItem, onRemove, t }) {
     return (
         <Box
             onDragOver={(event) => event.preventDefault()}
@@ -106,36 +105,36 @@ function AccessDropZone({ title, selected, items, onDropItem, onRemove }) {
                 const data = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
                 onDropItem(data);
             }}
-            sx={(theme) => ({ minHeight: 116, p: 1.25, border: '1px dashed', borderColor: 'primary.main', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.05) })}
+            sx={(theme) => ({ minHeight: 116, p: 1.25, border: '1px dashed', borderColor: 'primary.main', borderRadius: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.05) })}
         >
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 {title}
             </Typography>
             <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap' }}>
                 {selected.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                        Drag items here
+                        {t('access.dragHere')}
                     </Typography>
                 )}
                 {selected.map((id) => {
                     const item = items.find((option) => Number(option.id) === Number(id));
-                    return <Chip key={id} label={item?.name || id} onDelete={() => onRemove(id)} size="small" sx={{ bgcolor: 'success.light', color: 'success.contrastText' }} />;
+                    return <Chip key={id} label={item?.name || id} onDelete={() => onRemove(id)} size="small" sx={{ bgcolor: 'success.light', color: 'success.contrastText', borderRadius: 1.5 }} />;
                 })}
             </Stack>
         </Box>
     );
 }
 
-function DraggableList({ title, items, type }) {
+function DraggableList({ title, items, type, t }) {
     return (
-        <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 190, overflow: 'auto' }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, maxHeight: 190, overflow: 'auto' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 {title}
             </Typography>
             <Stack direction="row" sx={{ gap: 0.75, flexWrap: 'wrap' }}>
                 {items.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                        No available records.
+                        {t('access.noRecords')}
                     </Typography>
                 )}
                 {items.map((item) => (
@@ -145,7 +144,7 @@ function DraggableList({ title, items, type }) {
                         size="small"
                         draggable
                         onDragStart={(event) => event.dataTransfer.setData('application/json', JSON.stringify({ type, id: item.id }))}
-                        sx={{ cursor: 'grab', bgcolor: 'error.light', color: 'error.contrastText' }}
+                        sx={{ cursor: 'grab', bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1.5 }}
                     />
                 ))}
             </Stack>
@@ -156,19 +155,57 @@ function DraggableList({ title, items, type }) {
 export default function UserAccessList() {
     const theme = useTheme();
     const dispatch = useDispatch();
+    const { t } = useAppPreferences();
     const { user } = useSelector((state: any) => state.auth);
     const [filters, setFilters] = useState(initialFilters);
-    const [rows, setRows] = useState<any[]>([]);
-    const [options, setOptions] = useState({ countries: [], states: [], districts: [], offices: [], modules: [], actions: ['read', 'create', 'edit', 'delete'] });
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [page, setPage] = useState(1);
-    const [totalRows, setTotalRows] = useState(0);
     const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
     const [accessModal, setAccessModal] = useState({ open: false, row: null });
     const [deleteRow, setDeleteRow] = useState(null);
     const [form, setForm] = useState<any>(baseForm);
     const [accessForm, setAccessForm] = useState<any>(baseAccessForm);
-    const [resetPassword, setResetPassword] = useState(null);
+    const [resetPasswordState, setResetPasswordState] = useState(null);
+
+    // RTK Query hooks
+    const { data: accessOptionsData } = useGetAccessOptionsQuery();
+    const options = useMemo(() => {
+        const data = accessOptionsData || {};
+        return {
+            countries: data.countries || [],
+            states: data.states || [],
+            districts: data.districts || [],
+            offices: (data.offices || []).map((office: any) => ({
+                id: office.ofc_id,
+                name: `${office.office_name}${office.office_code ? ` (${office.office_code})` : ''}`,
+                office_code: office.office_code,
+                country_id: office.country_id,
+                state_id: office.state_id,
+                district_id: office.district_id
+            })),
+            modules: data.modules || [],
+            actions: data.actions || ['read', 'create', 'edit', 'delete']
+        };
+    }, [accessOptionsData]);
+
+    const { data: usersData, isFetching: loading } = useGetUsersQuery({
+        name: filters.name || undefined,
+        mobile: filters.mobile || undefined,
+        user_code: filters.user_code || undefined,
+        role: filters.role || undefined,
+        status: filters.status || undefined,
+        page,
+        per_page: rowsPerPage
+    });
+
+    const [createUser] = useCreateUserMutation();
+    const [updateUser] = useUpdateUserMutation();
+    const [updateAccess] = useUpdateAccessMutation();
+    const [resetPassword] = useResetPasswordMutation();
+    const [deleteUser] = useDeleteUserMutation();
+
+    const rows = usersData?.data || [];
+    const totalRows = usersData?.total || 0;
 
     const availableStates = useMemo(() => {
         const states = accessForm.country_ids.length ? options.states.filter((state) => accessForm.country_ids.includes(state.country_id)) : options.states;
@@ -194,51 +231,6 @@ export default function UserAccessList() {
         [form.district_id, options.offices]
     );
 
-    const fetchOptions = async () => {
-        const { data } = await apiClient.get('/users/access-options');
-        setOptions({
-            countries: data.countries || [],
-            states: data.states || [],
-            districts: data.districts || [],
-            offices: (data.offices || []).map((office) => ({
-                id: office.ofc_id,
-                name: `${office.office_name}${office.office_code ? ` (${office.office_code})` : ''}`,
-                office_code: office.office_code,
-                country_id: office.country_id,
-                state_id: office.state_id,
-                district_id: office.district_id
-            })),
-            modules: data.modules || [],
-            actions: data.actions || ['read', 'create', 'edit', 'delete']
-        });
-    };
-
-    const fetchRows = async () => {
-        try {
-            const { data } = await apiClient.get('/users', {
-                params: {
-                    ...filters,
-                    role: filters.role || undefined,
-                    status: filters.status || undefined,
-                    page,
-                    per_page: rowsPerPage
-                }
-            });
-            setRows(data.data || []);
-            setTotalRows(data.total || 0);
-        } catch (error) {
-            dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
-        }
-    };
-
-    useEffect(() => {
-        fetchOptions().catch((error) => dispatch(showNotification({ message: getApiError(error), severity: 'error' })));
-    }, [dispatch]);
-
-    useEffect(() => {
-        fetchRows();
-    }, [filters, page, rowsPerPage]);
-
     const handleFilterChange = (field) => (event) => {
         setFilters((current) => ({ ...current, [field]: event.target.value }));
         setPage(1);
@@ -250,7 +242,6 @@ export default function UserAccessList() {
     };
 
     const handleOpenEdit = (row) => {
-        const raw = row.access_raw || {};
         setForm({
             ...baseForm,
             ...row,
@@ -279,12 +270,12 @@ export default function UserAccessList() {
             const state = options.states.find((item) => Number(item.id) === Number(data.id));
 
             if (!accessForm.country_ids.length) {
-                dispatch(showNotification({ message: 'Please select the related Country first.', severity: 'error' }));
+                dispatch(showNotification({ message: t('access.errCountryFirst'), severity: 'error' }));
                 return;
             }
 
             if (!accessForm.country_ids.includes(Number(state?.country_id))) {
-                dispatch(showNotification({ message: 'Selected State does not belong to the chosen Country. Please select the correct hierarchy.', severity: 'error' }));
+                dispatch(showNotification({ message: t('access.errStateMismatch'), severity: 'error' }));
                 return;
             }
         }
@@ -293,12 +284,12 @@ export default function UserAccessList() {
             const district = options.districts.find((item) => Number(item.id) === Number(data.id));
 
             if (!accessForm.state_ids.length) {
-                dispatch(showNotification({ message: 'Please select the related State first.', severity: 'error' }));
+                dispatch(showNotification({ message: t('access.errStateFirst'), severity: 'error' }));
                 return;
             }
 
             if (!accessForm.state_ids.includes(Number(district?.state_id))) {
-                dispatch(showNotification({ message: 'Selected District does not belong to the chosen State. Please select the correct hierarchy.', severity: 'error' }));
+                dispatch(showNotification({ message: t('access.errDistrictMismatch'), severity: 'error' }));
                 return;
             }
         }
@@ -331,15 +322,15 @@ export default function UserAccessList() {
 
         try {
             if (modal.mode === 'edit') {
-                await apiClient.put(`/users/${modal.row.id}`, payload);
+                await updateUser({ id: modal.row.id, data: payload }).unwrap();
             } else {
-                await apiClient.post('/users', payload);
+                await createUser(payload).unwrap();
             }
-            dispatch(showNotification({ message: 'User access saved successfully.' }));
+            dispatch(showNotification({ message: t('translations.saveSuccess') || 'User saved successfully.' }));
             setModal({ open: false, mode: 'create', row: null });
-            await fetchRows();
-        } catch (error) {
-            dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+        } catch (error: any) {
+            const errMsg = error?.data?.message || error?.message || 'Unable to complete request.';
+            dispatch(showNotification({ message: errMsg, severity: 'error' }));
         }
     };
 
@@ -352,7 +343,7 @@ export default function UserAccessList() {
         if (roleNum === 2) {
             // System Admin must have at least one state assigned
             if (!accessForm.state_ids || accessForm.state_ids.length === 0) {
-                dispatch(showNotification({ message: 'Please assign at least one State for System Admin.', severity: 'error' }));
+                dispatch(showNotification({ message: t('access.errAdminState'), severity: 'error' }));
                 return;
             }
             // Ensure other scopes are cleared for state-scoped role
@@ -362,70 +353,78 @@ export default function UserAccessList() {
         }
 
         try {
-            await apiClient.put(`/users/${accessModal.row.id}/access`, accessForm);
-            dispatch(showNotification({ message: 'Access updated successfully.' }));
+            await updateAccess({ id: accessModal.row.id, data: accessForm }).unwrap();
+            dispatch(showNotification({ message: t('access.saveAccess') + ' ' + (t('translations.success') || 'success') }));
             setAccessModal({ open: false, row: null });
-            await fetchRows();
-        } catch (error) {
-            dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+        } catch (error: any) {
+            const errMsg = error?.data?.message || error?.message || 'Unable to complete request.';
+            dispatch(showNotification({ message: errMsg, severity: 'error' }));
         }
     };
 
     const handleDelete = async () => {
         if (!deleteRow) return;
         try {
-            await apiClient.delete(`/users/${deleteRow.id}`);
-            dispatch(showNotification({ message: 'User deleted successfully.' }));
+            await deleteUser({ id: deleteRow.id }).unwrap();
+            dispatch(showNotification({ message: t('translations.deleteSuccess') || 'Deleted successfully.' }));
             setDeleteRow(null);
-            await fetchRows();
-        } catch (error) {
-            dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+        } catch (error: any) {
+            const errMsg = error?.data?.message || error?.message || 'Unable to complete request.';
+            dispatch(showNotification({ message: errMsg, severity: 'error' }));
         }
     };
 
     const handleResetPassword = async () => {
-        if (!resetPassword) return;
+        if (!resetPasswordState) return;
         try {
-            await apiClient.post(`/users/reset/${resetPassword.id}`);
-            dispatch(showNotification({ message: 'Password reset successfully.' }));
-            setResetPassword(null);
-            await fetchRows();
-        } catch (error) {
-            dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+            await resetPassword({ id: resetPasswordState.id }).unwrap();
+            dispatch(showNotification({ message: t('access.resetPassword') + ' ' + (t('translations.success') || 'success') }));
+            setResetPasswordState(null);
+        } catch (error: any) {
+            const errMsg = error?.data?.message || error?.message || 'Unable to complete request.';
+            dispatch(showNotification({ message: errMsg, severity: 'error' }));
         }
     };
 
+    const translateRole = (roleVal) => {
+        const defaultLabel = ROLE_LABELS[roleVal] || roleVal;
+        if (roleVal === 1) return t('translations.superAdmin') || 'Super Admin';
+        if (roleVal === 2) return t('translations.systemAdmin') || 'System Admin';
+        if (roleVal === 3) return t('translations.operator') || 'Operator';
+        return defaultLabel;
+    };
+
     return (
-        <Stack sx={{ gap: 2 }}>
+        <Stack sx={{ gap: 2.5 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2 }}>
                 <Box>
-                    <Typography variant="h2">Access Management</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Create users and assign state, district and office access.
+                    <Typography variant="h2" sx={{ fontWeight: 700, color: 'primary.dark' }}>{t('access.title')}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {t('access.subtitle')}
                     </Typography>
                 </Box>
-                <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate}>
-                    Create User
+                <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', px: 2.5, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>
+                    {t('access.createUser')}
                 </Button>
             </Stack>
 
-            <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <MainCard sx={{ borderRadius: 2.5, border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)' }} contentSX={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth size="small" label="Name" value={filters.name} onChange={handleFilterChange('name')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label={t('field.name')} value={filters.name} onChange={handleFilterChange('name')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined fontSize="small" /></InputAdornment> } }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth size="small" label="Mobile Number" value={filters.mobile} onChange={handleFilterChange('mobile')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label={t('access.mobile')} value={filters.mobile} onChange={handleFilterChange('mobile')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIphoneOutlined fontSize="small" /></InputAdornment> } }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
-                        <TextField fullWidth size="small" label="User ID" value={filters.user_code} onChange={handleFilterChange('user_code')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }} />
+                        <TextField fullWidth size="small" label={t('access.userId')} value={filters.user_code} onChange={handleFilterChange('user_code')} slotProps={{ input: { startAdornment: <InputAdornment position="start"><BadgeOutlined fontSize="small" /></InputAdornment> } }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
                         <FormControl fullWidth>
                             <ChosenSelect
                                 value={filters.role}
-                                placeholder="All Roles"
-                                options={[{ value: '', label: 'All Roles' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label } as any))]}
+                                placeholder={t('access.role') + ' (सभी)'}
+                                options={[{ value: '', label: t('access.role') + ' (सभी)' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label: translateRole(Number(value)) } as any))]}
                                 onChange={handleFilterChange('role')}
                             />
                         </FormControl>
@@ -434,11 +433,11 @@ export default function UserAccessList() {
                         <FormControl fullWidth>
                             <ChosenSelect
                                 value={filters.status}
-                                placeholder="All Status"
+                                placeholder={t('common.status') + ' (सभी)'}
                                 options={[
-                                    { value: '', label: 'All Status' },
-                                    { value: 'Active', label: 'Active' },
-                                    { value: 'Inactive', label: 'Inactive' }
+                                    { value: '', label: t('common.status') + ' (सभी)' },
+                                    { value: 'Active', label: t('common.active') },
+                                    { value: 'Inactive', label: t('common.inactive') }
                                 ]}
                                 onChange={handleFilterChange('status')}
                             />
@@ -447,13 +446,13 @@ export default function UserAccessList() {
                 </Grid>
             </MainCard>
 
-            <MainCard title={`User Records (${totalRows})`} sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end', mb: 2 }}>
+            <MainCard title={`${t('access.userRecords')} (${totalRows})`} sx={{ borderRadius: 2.5, border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)' }} headerSX={{ p: 2.5 }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end', p: 2, gap: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 110 }}>
                         <ChosenSelect
                             size="small"
                             value={rowsPerPage}
-                            options={[10, 50, 100, 200, 500].map((value) => ({ value, label: String(value) }))}
+                            options={[10, 50, 100, 200, 500].map((value) => ({ value, label: `${value} ${t('common.rows')}` }))}
                             onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1); }}
                         />
                     </FormControl>
@@ -461,29 +460,29 @@ export default function UserAccessList() {
                 <TableContainer>
                     <Table sx={{ minWidth: 1060 }}>
                         <TableHead>
-                            <TableRow>
-                                <TableCell>S.No</TableCell>
-                                <TableCell>User</TableCell>
-                                <TableCell>User ID</TableCell>
-                                <TableCell>Mobile</TableCell>
-                                <TableCell>Role</TableCell>
-                                <TableCell>Permissions</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Reset</TableCell>
-                                <TableCell align="center">Action</TableCell>
+                            <TableRow sx={{ bgcolor: 'bg.100' }}>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('common.sno')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.user')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.userId')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.mobile')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.role')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.permissions')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('common.status')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{t('access.reset')}</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 700 }}>{t('common.action')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {rows.map((row, index) => (
-                                <TableRow key={row.id} hover>
+                                <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                     <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                                     <TableCell>
                                         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-                                            <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
+                                            <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main', borderRadius: 1.5 }}>
                                                 <AdminPanelSettingsOutlined fontSize="small" />
                                             </Avatar>
                                             <Box>
-                                                <Typography variant="subtitle2">{row.name}</Typography>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{row.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {row.email}
                                                 </Typography>
@@ -492,72 +491,88 @@ export default function UserAccessList() {
                                     </TableCell>
                                     <TableCell>{row.user_code || `USR-${row.id}`}</TableCell>
                                     <TableCell>{row.mobile}</TableCell>
-                                    <TableCell>{ROLE_LABELS[row.role] || row.role}</TableCell>
+                                    <TableCell>{translateRole(row.role)}</TableCell>
                                     <TableCell>
                                         <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
                                             {row.access?.is_super_admin ? (
-                                                <Chip label="Full Access" size="small" variant="outlined" color="success" />
+                                                <Chip label={t('translations.fullAccess') || 'Full Access'} size="small" variant="outlined" color="success" sx={{ borderRadius: 1.5 }} />
                                             ) : (
-                                                <Chip label={`${Object.values(row.access?.permissions || {}).filter((item: any) => item?.read).length} modules`} size="small" variant="outlined" />
+                                                <Chip label={`${Object.values(row.access?.permissions || {}).filter((item: any) => item?.read).length} modules`} size="small" variant="outlined" sx={{ borderRadius: 1.5 }} />
                                             )}
                                         </Stack>
                                     </TableCell>
                                     <TableCell>
-                                        <Chip label={statusLabel(row.is_active)} size="small" color={Number(row.is_active) === 1 ? 'success' : 'error'} variant="outlined" />
+                                        <Chip label={Number(row.is_active) === 1 ? t('common.active') : t('common.inactive')} size="small" color={Number(row.is_active) === 1 ? 'success' : 'error'} variant="outlined" sx={{ borderRadius: 1.5 }} />
                                     </TableCell>
                                     <TableCell>
-                                        <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => setResetPassword(row)} sx={{ mr: 0.75 }}>
-                                            Reset
+                                        <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => setResetPasswordState(row)} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
+                                            {t('access.reset')}
                                         </Button>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => handleOpenAccess(row)} sx={{ mr: 0.75 }}>
-                                            Access
-                                        </Button>
-                                        <IconButton size="small" color="success" aria-label="edit user" onClick={() => handleOpenEdit(row)}>
-                                            <EditOutlined fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" color="error" aria-label="delete user" onClick={() => setDeleteRow(row)}>
-                                            <DeleteOutlineOutlined fontSize="small" />
-                                        </IconButton>
+                                        <Stack direction="row" sx={{ gap: 0.5, justifyContent: 'flex-end' }}>
+                                            <Button size="small" variant="outlined" startIcon={<LockOpenOutlined fontSize="small" />} onClick={() => handleOpenAccess(row)} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
+                                                {t('access.title').includes('प्रबंधन') ? 'एक्सेस' : 'Access'}
+                                            </Button>
+                                            <IconButton size="small" color="success" aria-label="edit user" onClick={() => handleOpenEdit(row)}>
+                                                <EditOutlined fontSize="small" />
+                                            </IconButton>
+                                            <IconButton size="small" color="error" aria-label="delete user" onClick={() => setDeleteRow(row)}>
+                                                <DeleteOutlineOutlined fontSize="small" />
+                                            </IconButton>
+                                        </Stack>
                                     </TableCell>
                                 </TableRow>
                             ))}
+                            {loading && (
+                                <TableRow>
+                                    <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                                        {t('common.loading')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {!loading && rows.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                                        {t('common.noRecords')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>
                 <PaginationFooter page={page} rowsPerPage={rowsPerPage} totalRows={totalRows} onPageChange={setPage} />
             </MainCard>
 
-            <Dialog open={modal.open} onClose={() => setModal({ open: false, mode: 'create', row: null })} fullWidth maxWidth="lg">
+            <Dialog open={modal.open} onClose={() => setModal({ open: false, mode: 'create', row: null })} fullWidth maxWidth="lg" sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
                 <Box component="form" onSubmit={handleSubmit}>
-                    <DialogTitle component="div" sx={{ pb: 1 }}>
-                        <Typography variant="h3" component="h2">{modal.mode === 'edit' ? 'Update' : 'Create'} User</Typography>
+                    <DialogTitle component="div" sx={{ pb: 1, pt: 2.5 }}>
+                        <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>{modal.mode === 'edit' ? t('common.update') : t('common.create')} {t('access.user')}</Typography>
                     </DialogTitle>
                     <DialogContent dividers>
                         <Grid container spacing={2} sx={{ pt: 0.5 }}>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Full Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="User ID" value={form.user_code || ''} onChange={(event) => setForm({ ...form, user_code: event.target.value })} /></Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Email Address" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Mobile Number" value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label={t('access.fullName')} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label={t('access.userId')} value={form.user_code || ''} onChange={(event) => setForm({ ...form, user_code: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label={t('access.email')} type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label={t('access.mobile')} value={form.mobile} onChange={(event) => setForm({ ...form, mobile: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControl fullWidth>
                                     <ChosenSelect
                                         value={form.role}
-                                        options={Object.entries(ROLE_LABELS).map(([value, label]) => ({ value: Number(value), label } as any))}
+                                        options={Object.entries(ROLE_LABELS).map(([value, label]) => ({ value: Number(value), label: translateRole(Number(value)) } as any))}
                                         onChange={(event) => setForm({ ...form, role: Number(event.target.value) })}
                                     />
                                 </FormControl>
                             </Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Department" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })} /></Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Designation" value={form.designation} onChange={(event) => setForm({ ...form, designation: event.target.value })} /></Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Temporary Password" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label={t('reports.department')} value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label={t('masters.designation')} value={form.designation} onChange={(event) => setForm({ ...form, designation: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required={modal.mode !== 'edit'} label={t('access.tempPassword')} type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
                             <Grid size={{ xs: 12, sm: 4 }}>
                                 <FormControl fullWidth required>
                                     <ChosenSelect
                                         value={form.country_id || ''}
                                         required
-                                        placeholder="Select Country"
+                                        placeholder={t('access.selectCountry')}
                                         options={options.countries.map((country) => ({ value: country.id, label: country.name }))}
                                         onChange={(event) => setForm({ ...form, country_id: Number(event.target.value), state_id: '', district_id: '', ofc_id: '', ofc_code: '' })}
                                     />
@@ -568,7 +583,7 @@ export default function UserAccessList() {
                                     <ChosenSelect
                                         value={form.state_id || ''}
                                         required
-                                        placeholder="Select State"
+                                        placeholder={t('access.selectState')}
                                         options={formStates.map((state) => ({ value: state.id, label: state.name }))}
                                         onChange={(event) => setForm({ ...form, state_id: Number(event.target.value), district_id: '', ofc_id: '', ofc_code: '' })}
                                     />
@@ -579,7 +594,7 @@ export default function UserAccessList() {
                                     <ChosenSelect
                                         value={form.district_id || ''}
                                         required
-                                        placeholder="Select District"
+                                        placeholder={t('access.selectDistrict')}
                                         options={formDistricts.map((district) => ({ value: district.id, label: district.name }))}
                                         onChange={(event) => setForm({ ...form, district_id: Number(event.target.value), ofc_id: '', ofc_code: '' })}
                                     />
@@ -589,8 +604,8 @@ export default function UserAccessList() {
                                 <FormControl fullWidth>
                                     <ChosenSelect
                                         value={form.ofc_id || ''}
-                                        placeholder="No Office"
-                                        options={[{ value: '', label: 'No Office' }, ...formOffices.map((office) => ({ value: office.id, label: office.name }))]}
+                                        placeholder={t('access.noOffice')}
+                                        options={[{ value: '', label: t('access.noOffice') }, ...formOffices.map((office) => ({ value: office.id, label: office.name }))]}
                                         onChange={(event) => {
                                             const office = options.offices.find((item) => Number(item.id) === Number(event.target.value));
                                             setForm({ ...form, ofc_id: event.target.value ? Number(event.target.value) : '', ofc_code: office?.office_code || '' });
@@ -598,15 +613,15 @@ export default function UserAccessList() {
                                     />
                                 </FormControl>
                             </Grid>
-                            <Grid size={12}><TextField fullWidth multiline minRows={2} label="Address" value={form.address || ''} onChange={(event) => setForm({ ...form, address: event.target.value })} /></Grid>
+                            <Grid size={12}><TextField fullWidth multiline minRows={2} label={t('access.address')} value={form.address || ''} onChange={(event) => setForm({ ...form, address: event.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} /></Grid>
 
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControl fullWidth>
                                     <ChosenSelect
                                         value={form.is_active}
                                         options={[
-                                            { value: 1, label: 'Active' },
-                                            { value: 0, label: 'Inactive' }
+                                            { value: 1, label: t('common.active') },
+                                            { value: 0, label: t('common.inactive') }
                                         ]}
                                         onChange={(event) => setForm({ ...form, is_active: Number(event.target.value) })}
                                     />
@@ -615,17 +630,17 @@ export default function UserAccessList() {
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, py: 2 }}>
-                        <Button variant="outlined" color="inherit" onClick={() => setModal({ open: false, mode: 'create', row: null })}>Cancel</Button>
-                        <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />}>Save User</Button>
+                        <Button variant="outlined" color="inherit" onClick={() => setModal({ open: false, mode: 'create', row: null })} sx={{ borderRadius: 1.5, textTransform: 'none' }}>{t('common.cancel')}</Button>
+                        <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />} sx={{ borderRadius: 1.5, textTransform: 'none', boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>{t('access.saveUser')}</Button>
                     </DialogActions>
                 </Box>
             </Dialog>
 
-            <Dialog open={accessModal.open} onClose={() => setAccessModal({ open: false, row: null })} fullWidth maxWidth="lg">
+            <Dialog open={accessModal.open} onClose={() => setAccessModal({ open: false, row: null })} fullWidth maxWidth="lg" sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
                 <Box component="form" onSubmit={handleAccessSubmit}>
-                    <DialogTitle component="div" sx={{ pb: 1 }}>
-                        <Typography variant="h3" component="h2">
-                            Access: {accessModal.row?.name}
+                    <DialogTitle component="div" sx={{ pb: 1, pt: 2.5 }}>
+                        <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
+                            {t('access.title').includes('प्रबंधन') ? 'एक्सेस सीमाएं' : 'Access Scope'}: {accessModal.row?.name}
                         </Typography>
                     </DialogTitle>
                     <DialogContent dividers>
@@ -637,15 +652,15 @@ export default function UserAccessList() {
                                     return (
                                         <>
                                             <Grid size={{ xs: 12, md: 6 }}>
-                                                <AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} />
+                                                <AccessDropZone title={t('access.stateAccess')} selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} t={t} />
                                             </Grid>
                                             <Grid size={{ xs: 12, md: 6 }}>
-                                                <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
-                                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                                        Note
+                                                <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, minHeight: 92, bgcolor: 'bg.100' }}>
+                                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700, color: 'warning.dark' }}>
+                                                        {t('election.timeline').includes('विवरण') ? 'विशेष ध्यान दें' : 'Important Note'}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
-                                                        System Admin is state-scoped. Please assign one or more states only.
+                                                        {t('access.sysAdminNote')}
                                                     </Typography>
                                                 </Box>
                                             </Grid>
@@ -655,40 +670,37 @@ export default function UserAccessList() {
 
                                 return (
                                     <>
-                                        <Grid size={{ xs: 12, md: 4 }}><DraggableList title="Countries" type="country" items={availableCountries} /></Grid>
-                                        <Grid size={{ xs: 12, md: 4 }}><DraggableList title="States" type="state" items={availableStates} /></Grid>
+                                        <Grid size={{ xs: 12, md: 4 }}><DraggableList title={t('masters.countries')} type="country" items={availableCountries} t={t} /></Grid>
+                                        <Grid size={{ xs: 12, md: 4 }}><DraggableList title={t('masters.states')} type="state" items={availableStates} t={t} /></Grid>
                                         <Grid size={{ xs: 12, md: 4 }}>
                                             {accessForm.state_ids.length ? (
-                                                <DraggableList title="Districts" type="district" items={availableDistricts} />
+                                                <DraggableList title={t('masters.districts')} type="district" items={availableDistricts} t={t} />
                                             ) : (
-                                                <Box sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 92 }}>
-                                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                                        Districts
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Select State Access first.
+                                                <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, minHeight: 92, bgcolor: 'bg.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                                        {t('access.errStateFirst')}
                                                     </Typography>
                                                 </Box>
                                             )}
                                         </Grid>
-                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="Country Access" selected={accessForm.country_ids} items={options.countries} onDropItem={(data) => handleDropAccess('country', data)} onRemove={(id) => removeAccess('country_ids', id)} /></Grid>
-                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="State Access" selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} /></Grid>
-                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title="District Access" selected={accessForm.district_ids} items={options.districts} onDropItem={(data) => handleDropAccess('district', data)} onRemove={(id) => removeAccess('district_ids', id)} /></Grid>
-                                        <Grid size={12}><DraggableList title="Offices" type="office" items={availableOffices} /></Grid>
-                                        <Grid size={12}><AccessDropZone title="Office Access" selected={accessForm.office_ids} items={options.offices} onDropItem={(data) => handleDropAccess('office', data)} onRemove={(id) => removeAccess('office_ids', id)} /></Grid>
+                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title={t('access.countryAccess')} selected={accessForm.country_ids} items={options.countries} onDropItem={(data) => handleDropAccess('country', data)} onRemove={(id) => removeAccess('country_ids', id)} t={t} /></Grid>
+                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title={t('access.stateAccess')} selected={accessForm.state_ids} items={options.states} onDropItem={(data) => handleDropAccess('state', data)} onRemove={(id) => removeAccess('state_ids', id)} t={t} /></Grid>
+                                        <Grid size={{ xs: 12, md: 4 }}><AccessDropZone title={t('access.districtAccess')} selected={accessForm.district_ids} items={options.districts} onDropItem={(data) => handleDropAccess('district', data)} onRemove={(id) => removeAccess('district_ids', id)} t={t} /></Grid>
+                                        <Grid size={12}><DraggableList title={t('masters.offices')} type="office" items={availableOffices} t={t} /></Grid>
+                                        <Grid size={12}><AccessDropZone title={t('access.officeAccess')} selected={accessForm.office_ids} items={options.offices} onDropItem={(data) => handleDropAccess('office', data)} onRemove={(id) => removeAccess('office_ids', id)} t={t} /></Grid>
                                     </>
                                 );
                             })()}
 
                             <Grid size={12}>
-                                <MainCard title="Permissions" headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }}>
+                                <MainCard title={t('access.permissions')} headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem', fontWeight: 700 } }} contentSX={{ p: 0, '&:last-child': { pb: 0 } }} sx={{ borderRadius: 2 }}>
                                     <TableContainer>
                                         <Table sx={{ minWidth: 720 }}>
                                             <TableHead>
-                                                <TableRow>
-                                                    <TableCell>Module</TableCell>
+                                                <TableRow sx={{ bgcolor: 'bg.100' }}>
+                                                    <TableCell sx={{ fontWeight: 700 }}>Module</TableCell>
                                                     {options.actions.map((action) => (
-                                                        <TableCell key={action} align="center">
+                                                        <TableCell key={action} align="center" sx={{ fontWeight: 700 }}>
                                                             {action.charAt(0).toUpperCase() + action.slice(1)}
                                                         </TableCell>
                                                     ))}
@@ -697,7 +709,7 @@ export default function UserAccessList() {
                                             <TableBody>
                                                 {options.modules.map((module) => (
                                                     <TableRow key={module.key} hover>
-                                                        <TableCell>{module.label}</TableCell>
+                                                        <TableCell sx={{ fontWeight: 550 }}>{module.label}</TableCell>
                                                         {options.actions.map((action) => (
                                                             <TableCell key={`${module.key}-${action}`} align="center">
                                                                 <Checkbox checked={Boolean(accessForm.permissions?.[module.key]?.[action]) || Number(accessModal.row?.role) === 1} disabled={Number(accessModal.row?.role) === 1} onChange={handlePermissionChange(module.key, action)} />
@@ -713,33 +725,35 @@ export default function UserAccessList() {
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, py: 2 }}>
-                        <Button variant="outlined" color="inherit" onClick={() => setAccessModal({ open: false, row: null })}>Cancel</Button>
-                        <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />}>Save Access</Button>
+                        <Button variant="outlined" color="inherit" onClick={() => setAccessModal({ open: false, row: null })} sx={{ borderRadius: 1.5, textTransform: 'none' }}>{t('common.cancel')}</Button>
+                        <Button type="submit" variant="contained" color="primary" startIcon={<SaveOutlined />} sx={{ borderRadius: 1.5, textTransform: 'none', boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>{t('access.saveAccess')}</Button>
                     </DialogActions>
                 </Box>
             </Dialog>
 
-            <Dialog open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} fullWidth maxWidth="xs">
-                <DialogTitle>Delete User</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" color="text.secondary">This user and access permissions will be deleted.</Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button variant="outlined" color="inherit" onClick={() => setDeleteRow(null)}>Cancel</Button>
-                    <Button variant="contained" color="error" startIcon={<DeleteOutlineOutlined />} onClick={handleDelete}>Delete</Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={Boolean(resetPassword)} onClose={() => setResetPassword(null)} fullWidth maxWidth="xs">
-                <DialogTitle>Reset Password</DialogTitle>
+            <Dialog open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} fullWidth maxWidth="xs" sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
+                <DialogTitle sx={{ pt: 2.5, fontWeight: 700 }}>{t('access.deleteUser')}</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary">
-                        Are you sure you want to reset the password for {resetPassword?.name}?
+                        {t('access.confirmDelete')}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button variant="outlined" color="inherit" onClick={() => setResetPassword(null)}>Cancel</Button>
-                    <Button variant="contained" color="primary" startIcon={<LockOpenOutlined fontSize="small" />} onClick={handleResetPassword}>Reset</Button>
+                    <Button variant="outlined" color="inherit" onClick={() => setDeleteRow(null)} sx={{ borderRadius: 1.5, textTransform: 'none' }}>{t('common.cancel')}</Button>
+                    <Button variant="contained" color="error" startIcon={<DeleteOutlineOutlined />} onClick={handleDelete} sx={{ borderRadius: 1.5, textTransform: 'none' }}>{t('common.delete')}</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={Boolean(resetPasswordState)} onClose={() => setResetPasswordState(null)} fullWidth maxWidth="xs" sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
+                <DialogTitle sx={{ pt: 2.5, fontWeight: 700 }}>{t('access.resetPassword')}</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('access.confirmReset')} ({resetPasswordState?.name})?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button variant="outlined" color="inherit" onClick={() => setResetPasswordState(null)} sx={{ borderRadius: 1.5, textTransform: 'none' }}>{t('common.cancel')}</Button>
+                    <Button variant="contained" color="primary" startIcon={<LockOpenOutlined fontSize="small" />} onClick={handleResetPassword} sx={{ borderRadius: 1.5, textTransform: 'none', boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>{t('access.reset')}</Button>
                 </DialogActions>
             </Dialog>
         </Stack>

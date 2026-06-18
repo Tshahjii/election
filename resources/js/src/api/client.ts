@@ -43,7 +43,7 @@ apiClient.interceptors.response.use(
             }
           })
         );
-        window.location.assign('/error');
+        // Handled programmatically via routes/index.tsx listener to prevent full-page reload
       }
     }
 

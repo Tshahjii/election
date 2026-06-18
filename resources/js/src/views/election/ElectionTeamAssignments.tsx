@@ -27,8 +27,18 @@ import Autocomplete from '@mui/material/Autocomplete';
 // project imports
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
-import apiClient from 'api/client';
 import { showNotification } from 'store/slices/notificationSlice';
+import { useAppPreferences } from 'contexts/AppPreferences';
+import {
+  useGetOptionsQuery,
+  useGetUrbanDashboardQuery,
+  useGetRuralDashboardQuery,
+  useLazySearchEmployeesQuery,
+  useSaveUrbanAssignmentsMutation,
+  useSaveRuralAssignmentsMutation,
+  useExemptUrbanEmployeeMutation,
+  useExemptRuralEmployeeMutation
+} from 'store/apiSlice';
 
 // assets
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined';
@@ -40,35 +50,70 @@ interface ElectionTeamAssignmentsProps {
 
 export default function ElectionTeamAssignments({ type }: ElectionTeamAssignmentsProps) {
   const dispatch = useDispatch();
-  const apiPrefix = type === 'Nagar Panchayat' ? '/urban-election' : '/rural-election';
 
-  const postHeaders = useMemo(() => {
-    if (type === 'Nagar Panchayat') {
-      return ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)'];
-    }
-    return ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)', 'P4 (Officer 4)'];
-  }, [type]);
-
-  const [cities, setCities] = useState<any[]>([]);
   const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
   const [teamSearch, setTeamSearch] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [dashboardData, setDashboardData] = useState<{ city_id?: number | null; teams: any[] } | null>(null);
 
   const [activeTeam, setActiveTeam] = useState<any | null>(null);
   const [modalAssignments, setModalAssignments] = useState<Record<number, any | null>>({});
-  const [searchOptions, setSearchOptions] = useState<any[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [exemptEmployeeId, setExemptEmployeeId] = useState<string>('');
-  const [exemptLoading, setExemptLoading] = useState(false);
+
+  const { t, language } = useAppPreferences();
+  const isUrban = type === 'Nagar Panchayat';
+
+  // 1. Fetch cities options
+  const { data: optionsData } = useGetOptionsQuery();
+  const cities = optionsData?.cities || [];
+
+  // 2. Fetch dashboard data (urban vs rural)
+  const hasSearch = teamSearch.trim() || employeeSearch.trim();
+  const skipQuery = !selectedCityId && !hasSearch;
+  const queryParams = selectedCityId ? { city_id: Number(selectedCityId) } : {};
+
+  const urbanQuery = useGetUrbanDashboardQuery(queryParams, {
+    skip: !isUrban || skipQuery
+  });
+  const ruralQuery = useGetRuralDashboardQuery(queryParams, {
+    skip: isUrban || skipQuery
+  });
+
+  const queryResult = isUrban ? urbanQuery : ruralQuery;
+  const dashboardData = queryResult.data;
+  const loading = queryResult.isFetching;
+
+  // 3. Autocomplete search employees lazy query
+  const [triggerSearchEmployees, { data: searchOptionsData, isFetching: searchLoading }] = useLazySearchEmployeesQuery();
+  const searchOptions = searchOptionsData || [];
+
+  // 4. Mutations
+  const [saveUrbanAssignments, { isLoading: saveUrbanLoading }] = useSaveUrbanAssignmentsMutation();
+  const [saveRuralAssignments, { isLoading: saveRuralLoading }] = useSaveRuralAssignmentsMutation();
+  const saveAssignments = isUrban ? saveUrbanAssignments : saveRuralAssignments;
+  const saveLoading = isUrban ? saveUrbanLoading : saveRuralLoading;
+
+  const [exemptUrbanEmployee, { isLoading: exemptUrbanLoading }] = useExemptUrbanEmployeeMutation();
+  const [exemptRuralEmployee, { isLoading: exemptRuralLoading }] = useExemptRuralEmployeeMutation();
+  const exemptEmployee = isUrban ? exemptUrbanEmployee : exemptRuralEmployee;
+  const exemptLoading = isUrban ? exemptUrbanLoading : exemptRuralLoading;
+
+  const postHeaders = useMemo(() => {
+    const isHindi = language === 'hi';
+    if (type === 'Nagar Panchayat') {
+      return isHindi
+        ? ['P0 (पीठासीन अधिकारी)', 'P1 (मतदान अधिकारी 1)', 'P2 (मतदान अधिकारी 2)', 'P3 (मतदान अधिकारी 3)']
+        : ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)'];
+    }
+    return isHindi
+      ? ['P0 (पीठासीन अधिकारी)', 'P1 (मतदान अधिकारी 1)', 'P2 (मतदान अधिकारी 2)', 'P3 (मतदान अधिकारी 3)', 'P4 (मतदान अधिकारी 4)']
+      : ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)', 'P4 (Officer 4)'];
+  }, [type, language]);
 
   const filteredCities = useMemo(() => {
     if (type === 'Nagar Panchayat') {
-      return cities.filter((city) => city.city_type === 'urban');
+      return cities.filter((city: any) => city.city_type === 'urban');
     }
-    return cities.filter((city) => city.city_type === 'rural');
+    return cities.filter((city: any) => city.city_type === 'rural');
   }, [cities, type]);
 
   const searchedTeams = useMemo(() => {
@@ -82,7 +127,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       .filter(Boolean);
     if (!dashboardData) return [];
 
-    return dashboardData.teams.filter((team) => {
+    return dashboardData.teams.filter((team: any) => {
       const padded = String(team.padded_team_id || '').toLowerCase();
       const raw = String(team.team_id || '').toLowerCase();
       const postMatches = Array.isArray(team.posts)
@@ -113,82 +158,20 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     });
   }, [dashboardData, teamSearch, employeeSearch]);
 
-  const fetchCities = async () => {
-    try {
-      const response = await apiClient.get('/masters/options');
-      setCities(response.data.cities || []);
-    } catch (error) {
-      dispatch(showNotification({ message: 'Failed to load cities.', severity: 'error' }));
-    }
-  };
-
-  const loadDashboardData = async (cityId?: number | null) => {
-    setLoading(true);
-    try {
-      const params = cityId ? { city_id: cityId } : {};
-      const response = await apiClient.get(`${apiPrefix}/dashboard-data`, { params });
-      setDashboardData(response.data);
-    } catch (error) {
-      dispatch(showNotification({ message: 'Failed to fetch team assignments.', severity: 'error' }));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSearchEmployees = async (query: string) => {
-    setSearchLoading(true);
-    try {
-      const response = await apiClient.get('/masters/employees/search', {
-        params: { q: query }
-      });
-      setSearchOptions(response.data || []);
-    } catch (error) {
-      console.error('Failed to search employees', error);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
   const handleExemptEmployee = async () => {
     const trimmed = String(exemptEmployeeId).trim();
     if (!trimmed) {
-      dispatch(showNotification({ message: 'Please enter Employee ID or Code.', severity: 'error' }));
+      dispatch(showNotification({ message: t('election.enterEmpId'), severity: 'error' }));
       return;
     }
 
-    setExemptLoading(true);
     try {
-      const response = await apiClient.post(`${apiPrefix}/exempt-employee`, {
-        emp_code: trimmed
-      });
-
-      dispatch(showNotification({ message: response.data.message, severity: 'success' }));
+      const response = await exemptEmployee({ emp_code: trimmed }).unwrap();
+      dispatch(showNotification({ message: response.message || t('election.exemptSuccess'), severity: 'success' }));
       setExemptEmployeeId('');
-
-      setDashboardData((prev) => {
-        if (!prev) return prev;
-        const normalized = trimmed.toLowerCase();
-        return {
-          ...prev,
-          teams: prev.teams.map((team: any) => ({
-            ...team,
-            posts: (team.posts || []).map((post: any) => {
-              const codeMatch = String(post.employee_code || '').toLowerCase() === normalized;
-              const idMatch = String(post.emp_id || '').toLowerCase() === normalized;
-              return codeMatch || idMatch
-                ? { ...post, emp_id: null, employee_code: '', employee_name: '' }
-                : post;
-            })
-          }))
-        };
-      });
-
-      await loadDashboardData(selectedCityId ? Number(selectedCityId) : undefined);
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || 'Failed to exempt employee.';
+      const errMsg = err.data?.message || err.message || t('election.exemptFailed');
       dispatch(showNotification({ message: errMsg, severity: 'error' }));
-    } finally {
-      setExemptLoading(false);
     }
   };
 
@@ -199,12 +182,11 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       initial[post.post_mapping_id] = post.emp_id ? { id: post.emp_id, name: post.employee_name, emp_code: post.employee_code } : null;
     });
     setModalAssignments(initial);
-    fetchSearchEmployees('');
+    triggerSearchEmployees({ q: '' });
   };
 
   const handleSaveModalAssignments = async () => {
-    if (!selectedCityId || !activeTeam) return;
-    setSaveLoading(true);
+    if (!activeTeam) return;
 
     const payload = Object.keys(modalAssignments).map((key) => ({
       post_mapping_id: Number(key),
@@ -212,49 +194,26 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     }));
 
     try {
-      const response = await apiClient.post(`${apiPrefix}/save-assignments`, {
-        assignments: payload
-      });
-      dispatch(showNotification({ message: response.data.message, severity: 'success' }));
-      await loadDashboardData(Number(selectedCityId));
+      const response = await saveAssignments({ assignments: payload }).unwrap();
+      dispatch(showNotification({ message: response.message || t('election.saveSuccess'), severity: 'success' }));
       setActiveTeam(null);
-    } catch (error) {
-      dispatch(showNotification({ message: 'Failed to save assignments.', severity: 'error' }));
-    } finally {
-      setSaveLoading(false);
+    } catch (error: any) {
+      const errMsg = error.data?.message || error.message || t('election.saveFailed');
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
     }
   };
-
-  useEffect(() => {
-    fetchCities();
-  }, []);
 
   useEffect(() => {
     setSelectedCityId('');
     setTeamSearch('');
     setEmployeeSearch('');
-    setDashboardData(null);
     setActiveTeam(null);
   }, [type]);
 
   useEffect(() => {
     setTeamSearch('');
     setEmployeeSearch('');
-    if (selectedCityId) {
-      loadDashboardData(Number(selectedCityId));
-    } else {
-      setDashboardData(null);
-    }
   }, [selectedCityId]);
-
-  useEffect(() => {
-    const hasSearch = teamSearch.trim() || employeeSearch.trim();
-    if (!hasSearch) return;
-
-    if (!selectedCityId && !dashboardData) {
-      loadDashboardData();
-    }
-  }, [teamSearch, employeeSearch, selectedCityId, dashboardData]);
 
   return (
     <Stack sx={{ gap: 3 }}>
@@ -265,10 +224,10 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth>
               <ChosenSelect
-                label={`Select ${type} City`}
-                placeholder="Choose a city..."
+                label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
+                placeholder={t('election.chooseCity')}
                 value={selectedCityId}
-                options={filteredCities.map((city) => ({ value: city.id, label: city.karyalay_name || city.city_name }))}
+                options={filteredCities.map((city: any) => ({ value: city.id, label: city.karyalay_name || city.city_name }))}
                 onChange={(event) => setSelectedCityId(event.target.value)}
               />
             </FormControl>
@@ -277,8 +236,8 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             <TextField
               fullWidth
               size="small"
-              label="Search Team ID"
-              placeholder="Example: 0001, 0002 or 1, 2"
+              label={t('election.searchTeam')}
+              placeholder={t('election.searchTeamPlaceholder')}
               value={teamSearch}
               onChange={(event) => setTeamSearch(event.target.value)}
               disabled={loading}
@@ -288,8 +247,8 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             <TextField
               fullWidth
               size="small"
-              label="Search Employee ID/Code"
-              placeholder="Example: NIC001 or 123"
+              label={t('election.searchEmp')}
+              placeholder={t('election.searchEmpPlaceholder2')}
               value={employeeSearch}
               onChange={(event) => setEmployeeSearch(event.target.value)}
               disabled={loading}
@@ -305,25 +264,25 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       )}
 
       {!loading && !teamSearch.trim() && !employeeSearch.trim() && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 7, border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 7, border: '1px dashed', borderColor: 'divider', borderRadius: 2.5, bgcolor: 'background.paper' }}>
           <PeopleAltOutlined style={{ fontSize: '44px', color: 'gray', marginBottom: '14px' }} />
           <Typography variant="h5" color="text.secondary">
-            Search by Team ID or Employee ID/Code. City selection is optional.
+            {t('election.searchIntro')}
           </Typography>
         </Box>
       )}
 
       {!loading && (teamSearch.trim() || employeeSearch.trim()) && (
-        <MainCard title={`${type} Polling Team Assignments`} sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}>
+        <MainCard title={`${isUrban ? t('menu.nagarPanchayat') : t('menu.nagariNikay')} ${t('election.teamAssignments')}`} sx={{ borderRadius: 2.5, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.04)' }}>
           {searchedTeams.length > 0 ? (
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
                     <TableCell align="center" style={{ width: '80px', fontWeight: 700 }}>
-                      Team ID
+                      {t('election.teamId')}
                     </TableCell>
-                    <TableCell style={{ minWidth: '150px', fontWeight: 700 }}>Polling Station / Ward</TableCell>
+                    <TableCell style={{ minWidth: '150px', fontWeight: 700 }}>{t('election.stationWard')}</TableCell>
                     {postHeaders.map((header) => (
                       <TableCell key={header} style={{ fontWeight: 700 }}>
                         {header}
@@ -332,7 +291,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {searchedTeams.map((team) => (
+                  {searchedTeams.map((team: any) => (
                     <TableRow key={team.team_id} hover>
                       <TableCell align="center">
                         <Chip label={team.padded_team_id} color="primary" variant="outlined" size="small" style={{ fontWeight: 600 }} />
@@ -342,7 +301,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                           {team.polling_station_name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Ward {team.ward_no} - {team.ward_name}
+                          {t('masters.ward')} {team.ward_no} - {team.ward_name}
                         </Typography>
                       </TableCell>
                       {team.posts.map((post: any) => (
@@ -353,7 +312,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                             </Typography>
                           ) : (
                             <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main', fontStyle: 'italic' }}>
-                              Not Assigned
+                              {t('election.notAssigned')}
                             </Typography>
                           )}
                         </TableCell>
@@ -367,7 +326,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           ) : (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="h5" color="text.secondary">
-                Is Team ID ka record nahi mila.
+                {t('election.noTeamRecord')}
               </Typography>
             </Box>
           )}
@@ -375,19 +334,19 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       )}
 
 
-      <Dialog open={Boolean(activeTeam)} onClose={() => setActiveTeam(null)} maxWidth="sm" fullWidth>
+      <Dialog open={Boolean(activeTeam)} onClose={() => setActiveTeam(null)} maxWidth="sm" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2.5 } }}>
         <DialogTitle sx={{ pb: 1.5, borderBottom: '1px solid', borderColor: 'divider', fontWeight: 700 }}>
-          Assign Team Members - Team {activeTeam?.padded_team_id}
+          {t('election.assignMembers')} - {t('election.teamId')} {activeTeam?.padded_team_id}
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           {activeTeam && (
             <Stack spacing={3} sx={{ mt: 1 }}>
-              <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2.5, border: '1px solid', borderColor: 'divider' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Polling Station: {activeTeam.polling_station_name}
+                  {t('field.pollingStationName')}: {activeTeam.polling_station_name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Ward {activeTeam.ward_no} - {activeTeam.ward_name}
+                  {t('masters.ward')} {activeTeam.ward_no} - {activeTeam.ward_name}
                 </Typography>
               </Box>
 
@@ -413,14 +372,14 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                         }}
                         onInputChange={(event, newInputValue, reason) => {
                           if (reason === 'input') {
-                            fetchSearchEmployees(newInputValue);
+                            triggerSearchEmployees({ q: newInputValue });
                           }
                         }}
                         loading={searchLoading}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            placeholder="Type to search employee name or code..."
+                            placeholder={t('election.searchEmpPlaceholder')}
                             slotProps={{
                               input: {
                                 ...params.slotProps.input,
@@ -443,8 +402,8 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={() => setActiveTeam(null)} color="inherit" disabled={saveLoading}>
-            Cancel
+          <Button onClick={() => setActiveTeam(null)} color="inherit" disabled={saveLoading} sx={{ borderRadius: 1.5 }}>
+            {t('common.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -452,20 +411,21 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             onClick={handleSaveModalAssignments}
             disabled={saveLoading}
             startIcon={saveLoading ? <CircularProgress size={16} color="inherit" /> : <SaveOutlined />}
+            sx={{ borderRadius: 1.5 }}
           >
-            Save Assignments
+            {t('election.saveAssignments')}
           </Button>
         </DialogActions>
       </Dialog>
       {/* Exempt Employee Card */}
-      <MainCard title="Exempt Employee from Assignments" sx={{ mt: 2, borderRadius: 2 }}>
-        <Grid container spacing={2} alignItems="center">
+      <MainCard title={t('election.exemptTitle')} sx={{ mt: 2, borderRadius: 2.5, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.04)' }}>
+        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               size="small"
-              label="Employee ID or Code"
-              placeholder="Enter employee id or code (e.g. NIC001)"
+              label={t('election.searchEmp')}
+              placeholder={t('election.searchEmpPlaceholderExempt')}
               value={exemptEmployeeId}
               onChange={(e) => setExemptEmployeeId(e.target.value)}
             />
@@ -478,8 +438,9 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                 color="secondary"
                 disabled={exemptLoading}
                 onClick={handleExemptEmployee}
+                sx={{ borderRadius: 1.5 }}
               >
-                {exemptLoading ? <CircularProgress size={18} color="inherit" /> : 'Exempt Employee'}
+                {exemptLoading ? <CircularProgress size={18} color="inherit" /> : t('election.exemptBtn')}
               </Button>
             </Stack>
           </Grid>

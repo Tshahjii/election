@@ -1,4 +1,5 @@
 import { RouterProvider } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 // project imports
 import { AppPreferencesProvider } from 'contexts/AppPreferences';
@@ -15,6 +16,7 @@ function App() {
         <AppErrorBoundary>
           <RouterProvider router={router} />
           <GlobalSnackbar />
+          <Toaster position="top-right" reverseOrder={false} />
         </AppErrorBoundary>
       </ThemeCustomization>
     </AppPreferencesProvider>

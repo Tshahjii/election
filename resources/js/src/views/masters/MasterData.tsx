@@ -29,7 +29,6 @@ import FormLabel from '@mui/material/FormLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 
 // project imports
-import apiClient from 'api/client';
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
 import PaginationFooter from 'components/PaginationFooter';
@@ -37,6 +36,13 @@ import { useAppPreferences } from 'contexts/AppPreferences';
 import { showNotification } from 'store/slices/notificationSlice';
 import { fetchAuthUser } from 'store/slices/authSlice';
 import { hasPermission } from 'utils/access';
+import {
+  useGetOptionsQuery,
+  useGetMastersQuery,
+  useCreateMasterMutation,
+  useUpdateMasterMutation,
+  useDeleteMasterMutation
+} from 'store/apiSlice';
 
 // assets
 import AddOutlined from '@mui/icons-material/AddOutlined';
@@ -419,56 +425,14 @@ function getCreateFormDefaults(masterKey, user, options) {
   return next;
 }
 
-function getApiError(error) {
-  const errors = error.response?.data?.errors;
-  if (errors) {
-    return Object.values(errors).flat().join(' ');
-  }
-
-  return error.response?.data?.message || 'Unable to complete request.';
-}
-
 export default function MasterData({ masterKey = 'countries' }) {
   const dispatch = useDispatch();
   const { t, tl } = useAppPreferences();
-  const { user } = useSelector((state) => state.auth);
-  const [rows, setRows] = useState<any[]>([]);
-  const [options, setOptions] = useState<{
-    countries: any[];
-    states: any[];
-    districts: any[];
-    cities: any[];
-    wards: any[];
-    np_cities: any[];
-    rp_cities: any[];
-    np_wards: any[];
-    rp_wards: any[];
-    offices: any[];
-    emp_types: any[];
-    designations: any[];
-    departments: any[];
-    pay_levels: any[];
-  }>({
-    countries: [],
-    states: [],
-    districts: [],
-    cities: [],
-    wards: [],
-    np_cities: [],
-    rp_cities: [],
-    np_wards: [],
-    rp_wards: [],
-    offices: [],
-    emp_types: [],
-    designations: [],
-    departments: [],
-    pay_levels: []
-  });
-  const [loading, setLoading] = useState(false);
+  const { user } = useSelector((state: any) => state.auth);
+  
   const [filters, setFilters] = useState({ search: '', status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
   const [modal, setModal] = useState({ open: false, mode: 'create', row: null });
   const [deleteRow, setDeleteRow] = useState(null);
   const [form, setForm] = useState<Record<string, any>>(defaultForm);
@@ -480,6 +444,47 @@ export default function MasterData({ masterKey = 'countries' }) {
   const canCreate = hasPermission(user, `${master.module}.create`);
   const canEdit = hasPermission(user, `${master.module}.edit`);
   const canDelete = hasPermission(user, `${master.module}.delete`);
+
+  // RTK Query hooks
+  const { data: optionsData } = useGetOptionsQuery();
+  const options = useMemo(() => optionsData || {
+    countries: [], states: [], districts: [], cities: [], wards: [],
+    np_cities: [], rp_cities: [], np_wards: [], rp_wards: [],
+    offices: [], emp_types: [], designations: [], departments: [], pay_levels: []
+  }, [optionsData]);
+
+  const { data: listData, isFetching: loading } = useGetMastersQuery({
+    type: master.key,
+    params: {
+      search: filters.search || undefined,
+      status: filters.status === '' ? undefined : filters.status,
+      country_id: filters.country_id || undefined,
+      state_id: filters.state_id || undefined,
+      district_id: filters.district_id || undefined,
+      city_id: filters.city_id || undefined,
+      ward_id: filters.ward_id || undefined,
+      page,
+      per_page: rowsPerPage
+    }
+  });
+
+  const [createMaster] = useCreateMasterMutation();
+  const [updateMaster] = useUpdateMasterMutation();
+  const [deleteMaster] = useDeleteMasterMutation();
+
+  const rows = useMemo(() => {
+    let rowsData = listData?.data || [];
+    if (master.key === 'departments' || master.key === 'designations' || master.key === 'emp-types') {
+      rowsData = rowsData.slice().sort((a, b) => Number(b.id) - Number(a.id));
+    }
+    if (master.key === 'countries') {
+      rowsData = rowsData.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+    return rowsData;
+  }, [listData, master.key]);
+
+  const totalRows = listData?.total || 0;
+
   const createFormDefaults = useMemo(() => getCreateFormDefaults(master.key, user, options), [master.key, options, user]);
 
   const countriesById = useMemo(() => new Map(options.countries.map((country) => [Number(country.id), country.name])), [options.countries]);
@@ -569,59 +574,9 @@ export default function MasterData({ masterKey = 'countries' }) {
     [countriesById, rows, statesById]
   );
 
-  const fetchOptions = async () => {
-    const response = await apiClient.get('/masters/options');
-    const sortedCountries = (response.data.countries || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    setOptions({ ...response.data, countries: sortedCountries });
-  };
-
-  const fetchRows = async () => {
-    setLoading(true);
-    setRows([]);
-    try {
-      const response = await apiClient.get(`/masters/${master.key}`, {
-        params: {
-          search: filters.search || undefined,
-          status: filters.status === '' ? undefined : filters.status,
-          country_id: filters.country_id || undefined,
-          state_id: filters.state_id || undefined,
-          district_id: filters.district_id || undefined,
-          city_id: filters.city_id || undefined,
-          ward_id: filters.ward_id || undefined,
-          page,
-          per_page: rowsPerPage
-        }
-      });
-      let rowsData = response.data.data || [];
-
-      if (master.key === 'departments' || master.key === 'designations' || master.key === 'emp-types') {
-        rowsData = rowsData.slice().sort((a, b) => Number(b.id) - Number(a.id));
-      }
-      if (master.key === 'countries') {
-        rowsData = rowsData.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      }
-      setRows(rowsData);
-      setTotalRows(response.data.total || 0);
-    } catch (error) {
-      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOptions().catch((error) => dispatch(showNotification({ message: getApiError(error), severity: 'error' })));
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchRows();
-  }, [master.key, filters.search, filters.status, filters.country_id, filters.state_id, filters.district_id, filters.city_id, filters.ward_id, page, rowsPerPage]);
-
   useEffect(() => {
     setFilters({ search: '', status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
     setPage(1);
-    setRows([]);
-    setTotalRows(0);
   }, [master.key]);
 
   const handleSearchFilterChange = (event) => {
@@ -734,19 +689,20 @@ export default function MasterData({ masterKey = 'countries' }) {
     }
 
     try {
-      const url = modal.mode === 'edit' ? `/masters/${master.key}/${modal.row[master.primaryKey]}` : `/masters/${master.key}`;
-      await apiClient.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (modal.mode === 'edit') {
+        await updateMaster({ type: master.key, id: modal.row[master.primaryKey], data: formData }).unwrap();
+      } else {
+        await createMaster({ type: master.key, data: formData }).unwrap();
+      }
       dispatch(showNotification({ message: `${t(master.titleKey || '') || master.title} saved successfully.` }));
       handleCloseModal();
-      await fetchOptions();
-      await fetchRows();
-      // If states were updated, refresh authenticated user so headers reflect new state logo immediately
       if (master.key === 'states' && modal.mode === 'edit') {
         dispatch(fetchAuthUser()).catch(() => { });
       }
     } catch (error: any) {
-      if (error.response?.status === 422) {
-        const responseErrors = error.response.data.errors || {};
+      const errorData = error?.data;
+      if (error?.status === 422) {
+        const responseErrors = errorData?.errors || {};
         const formattedErrors: Record<string, string> = {};
         Object.keys(responseErrors).forEach((key) => {
           formattedErrors[key] = Array.isArray(responseErrors[key]) ? responseErrors[key][0] : String(responseErrors[key]);
@@ -760,7 +716,8 @@ export default function MasterData({ masterKey = 'countries' }) {
           }
         }, 100);
       } else {
-        dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+        const errMsg = errorData?.message || error?.message || 'Unable to complete request.';
+        dispatch(showNotification({ message: errMsg, severity: 'error' }));
       }
     }
   };
@@ -782,13 +739,12 @@ export default function MasterData({ masterKey = 'countries' }) {
     if (!deleteRow) return;
 
     try {
-      await apiClient.delete(`/masters/${master.key}/${deleteRow[master.primaryKey]}`);
+      await deleteMaster({ type: master.key, id: deleteRow[master.primaryKey] }).unwrap();
       dispatch(showNotification({ message: `${t(master.titleKey || '') || master.title} deleted successfully.` }));
       setDeleteRow(null);
-      await fetchOptions();
-      await fetchRows();
-    } catch (error) {
-      dispatch(showNotification({ message: getApiError(error), severity: 'error' }));
+    } catch (error: any) {
+      const errMsg = error?.data?.message || error?.message || 'Unable to complete request.';
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
     }
   };
 

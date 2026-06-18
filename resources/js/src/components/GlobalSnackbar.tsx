@@ -1,28 +1,43 @@
-import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 
 import { hideNotification } from 'store/slices/notificationSlice';
 
 export default function GlobalSnackbar() {
   const dispatch = useDispatch();
-  const { open, message, severity } = useSelector((state) => state.notification);
+  const { open, message, severity } = useSelector((state: any) => state.notification);
 
-  const handleClose = (_, reason) => {
-    if (reason === 'clickaway') return;
-    dispatch(hideNotification());
-  };
+  useEffect(() => {
+    if (open && message) {
+      if (severity === 'success') {
+        toast.success(message, {
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
+      } else if (severity === 'error') {
+        toast.error(message, {
+          style: {
+            borderRadius: '10px',
+            background: '#ef4444',
+            color: '#fff',
+          },
+        });
+      } else {
+        toast(message, {
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
+      }
+      dispatch(hideNotification());
+    }
+  }, [open, message, severity, dispatch]);
 
-  return (
-    <Snackbar open={open} autoHideDuration={3500} onClose={handleClose} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-      <Alert
-        onClose={() => handleClose(null, undefined)}
-        severity={severity}
-        variant="filled"
-        sx={{ width: '100%', color: 'common.white', '& .MuiAlert-icon, & .MuiAlert-action': { color: 'common.white' } }}
-      >
-        {message}
-      </Alert>
-    </Snackbar>
-  );
+  return null;
 }
