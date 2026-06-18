@@ -48,6 +48,22 @@ interface ElectionTeamAssignmentsProps {
   type: 'Nagar Panchayat' | 'Nagari Nikay';
 }
 
+const surfaceSx = {
+  border: '1px solid',
+  borderColor: 'rgba(148, 163, 184, 0.22)',
+  borderRadius: 3,
+  boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)',
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92))'
+};
+
+const buttonSx = {
+  borderRadius: 2,
+  minHeight: 42,
+  px: 2.75,
+  textTransform: 'none',
+  fontWeight: 700
+};
+
 export default function ElectionTeamAssignments({ type }: ElectionTeamAssignmentsProps) {
   const dispatch = useDispatch();
 
@@ -59,7 +75,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const [modalAssignments, setModalAssignments] = useState<Record<number, any | null>>({});
   const [exemptEmployeeId, setExemptEmployeeId] = useState<string>('');
 
-  const { t, language } = useAppPreferences();
+  const { t } = useAppPreferences();
   const isUrban = type === 'Nagar Panchayat';
 
   // 1. Fetch cities options
@@ -98,16 +114,22 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const exemptLoading = isUrban ? exemptUrbanLoading : exemptRuralLoading;
 
   const postHeaders = useMemo(() => {
-    const isHindi = language === 'hi';
     if (type === 'Nagar Panchayat') {
-      return isHindi
-        ? ['P0 (पीठासीन अधिकारी)', 'P1 (मतदान अधिकारी 1)', 'P2 (मतदान अधिकारी 2)', 'P3 (मतदान अधिकारी 3)']
-        : ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)'];
+      return [
+        `P0 (${t('election.presidingOfficer')})`,
+        `P1 (${t('election.pollingOfficer1')})`,
+        `P2 (${t('election.pollingOfficer2')})`,
+        `P3 (${t('election.pollingOfficer3')})`
+      ];
     }
-    return isHindi
-      ? ['P0 (पीठासीन अधिकारी)', 'P1 (मतदान अधिकारी 1)', 'P2 (मतदान अधिकारी 2)', 'P3 (मतदान अधिकारी 3)', 'P4 (मतदान अधिकारी 4)']
-      : ['P0 (Presiding Officer)', 'P1 (Officer 1)', 'P2 (Officer 2)', 'P3 (Officer 3)', 'P4 (Officer 4)'];
-  }, [type, language]);
+    return [
+      `P0 (${t('election.presidingOfficer')})`,
+      `P1 (${t('election.pollingOfficer1')})`,
+      `P2 (${t('election.pollingOfficer2')})`,
+      `P3 (${t('election.pollingOfficer3')})`,
+      `P4 (${t('election.pollingOfficer4')})`
+    ];
+  }, [type, t]);
 
   const filteredCities = useMemo(() => {
     if (type === 'Nagar Panchayat') {
@@ -219,7 +241,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     <Stack sx={{ gap: 3 }}>
       {/* Heading removed to avoid duplicate titles when embedded in dashboard */}
 
-      <Card sx={{ p: 2.5, borderRadius: 2.5, boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ ...surfaceSx, p: { xs: 2, sm: 2.5 } }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth>
@@ -241,6 +263,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               value={teamSearch}
               onChange={(event) => setTeamSearch(event.target.value)}
               disabled={loading}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -252,6 +275,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               value={employeeSearch}
               onChange={(event) => setEmployeeSearch(event.target.value)}
               disabled={loading}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
         </Grid>
@@ -264,27 +288,27 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       )}
 
       {!loading && !teamSearch.trim() && !employeeSearch.trim() && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 7, border: '1px dashed', borderColor: 'divider', borderRadius: 2.5, bgcolor: 'background.paper' }}>
-          <PeopleAltOutlined style={{ fontSize: '44px', color: 'gray', marginBottom: '14px' }} />
-          <Typography variant="h5" color="text.secondary">
+        <Box sx={{ ...surfaceSx, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: { xs: 4, sm: 7 }, borderStyle: 'dashed', textAlign: 'center' }}>
+          <PeopleAltOutlined style={{ fontSize: '44px', color: '#64748b', marginBottom: '14px' }} />
+          <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 600 }}>
             {t('election.searchIntro')}
           </Typography>
         </Box>
       )}
 
       {!loading && (teamSearch.trim() || employeeSearch.trim()) && (
-        <MainCard title={`${isUrban ? t('menu.nagarPanchayat') : t('menu.nagariNikay')} ${t('election.teamAssignments')}`} sx={{ borderRadius: 2.5, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.04)' }}>
+        <MainCard title={`${isUrban ? t('menu.nagarPanchayat') : t('menu.nagariNikay')} ${t('election.teamAssignments')}`} sx={surfaceSx} contentSX={{ p: 0 }}>
           {searchedTeams.length > 0 ? (
             <TableContainer>
-              <Table size="small">
+              <Table size="small" sx={{ minWidth: 900 }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
-                    <TableCell align="center" style={{ width: '80px', fontWeight: 700 }}>
+                    <TableCell align="center" sx={{ width: 90, fontWeight: 800, whiteSpace: 'nowrap' }}>
                       {t('election.teamId')}
                     </TableCell>
-                    <TableCell style={{ minWidth: '150px', fontWeight: 700 }}>{t('election.stationWard')}</TableCell>
+                    <TableCell sx={{ minWidth: 170, fontWeight: 800 }}>{t('election.stationWard')}</TableCell>
                     {postHeaders.map((header) => (
-                      <TableCell key={header} style={{ fontWeight: 700 }}>
+                      <TableCell key={header} sx={{ minWidth: 190, fontWeight: 800 }}>
                         {header}
                       </TableCell>
                     ))}
@@ -418,7 +442,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
         </DialogActions>
       </Dialog>
       {/* Exempt Employee Card */}
-      <MainCard title={t('election.exemptTitle')} sx={{ mt: 2, borderRadius: 2.5, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.04)' }}>
+      <MainCard title={t('election.exemptTitle')} sx={{ ...surfaceSx, mt: 2 }}>
         <Grid container spacing={2} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
@@ -428,17 +452,19 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               placeholder={t('election.searchEmpPlaceholderExempt')}
               value={exemptEmployeeId}
               onChange={(e) => setExemptEmployeeId(e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
+            <Stack direction="row" spacing={2} sx={{ justifyContent: { xs: 'stretch', md: 'flex-end' } }}>
               <Button
+                fullWidth
                 type="button"
                 variant="contained"
                 color="secondary"
                 disabled={exemptLoading}
                 onClick={handleExemptEmployee}
-                sx={{ borderRadius: 1.5 }}
+                sx={{ ...buttonSx, width: { xs: '100%', md: 'auto' } }}
               >
                 {exemptLoading ? <CircularProgress size={18} color="inherit" /> : t('election.exemptBtn')}
               </Button>

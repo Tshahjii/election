@@ -4,6 +4,22 @@ import toast from 'react-hot-toast';
 
 import { hideNotification } from 'store/slices/notificationSlice';
 
+const toastOptions = {
+  duration: 3600,
+  style: {
+    border: '1px solid rgba(15, 23, 42, 0.08)',
+    borderRadius: '14px',
+    background: '#ffffff',
+    boxShadow: '0 18px 45px rgba(15, 23, 42, 0.16)',
+    color: '#172033',
+    fontFamily: "'Poppins', 'Noto Sans Devanagari', 'Nirmala UI', sans-serif",
+    fontSize: '0.9rem',
+    lineHeight: 1.55,
+    maxWidth: '420px',
+    padding: '12px 14px'
+  }
+};
+
 export default function GlobalSnackbar() {
   const dispatch = useDispatch();
   const { open, message, severity } = useSelector((state: any) => state.notification);
@@ -11,29 +27,11 @@ export default function GlobalSnackbar() {
   useEffect(() => {
     if (open && message) {
       if (severity === 'success') {
-        toast.success(message, {
-          style: {
-            borderRadius: '10px',
-            background: '#333',
-            color: '#fff',
-          },
-        });
+        toast.success(message, toastOptions);
       } else if (severity === 'error') {
-        toast.error(message, {
-          style: {
-            borderRadius: '10px',
-            background: '#ef4444',
-            color: '#fff',
-          },
-        });
+        toast.error(message, toastOptions);
       } else {
-        toast(message, {
-          style: {
-            borderRadius: '10px',
-            background: '#333',
-            color: '#fff',
-          },
-        });
+        toast(message, toastOptions);
       }
       dispatch(hideNotification());
     }

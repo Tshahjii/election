@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import hiOverrides from './hiOverrides';
 
 const AppPreferencesContext = createContext(null);
 
@@ -720,7 +721,7 @@ export function AppPreferencesProvider({ children }) {
     setFontScale('normal');
   };
 
-  const t = (key) => translations[language]?.[key] || translations.en[key] || key;
+  const t = (key) => (language === 'hi' ? hiOverrides[key] : undefined) || translations[language]?.[key] || translations.en[key] || key;
   const tl = (value) => {
     const key = labelKey(value);
     const translated = t(key);

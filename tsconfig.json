@@ -34,6 +34,7 @@
       "routes/*": ["./resources/js/src/routes/*"],
       "sections/*": ["./resources/js/src/sections/*"],
       "states/*": ["./resources/js/src/states/*"],
+      "store": ["./resources/js/src/store/index"],
       "store/*": ["./resources/js/src/store/*"],
       "themes": ["./resources/js/src/themes"],
       "themes/*": ["./resources/js/src/themes/*"],

@@ -5,7 +5,7 @@ export default function typography(fontScale = 'normal') {
   const rem = (value) => `${value * scale}rem`;
 
   return {
-    fontFamily: `'Poppins', sans-serif`,
+    fontFamily: `'Poppins', 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', sans-serif`,
     h6: {
       fontWeight: 600,
       fontSize: rem(0.875)

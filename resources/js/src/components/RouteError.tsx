@@ -1,4 +1,4 @@
-import { Link, useRouteError, isRouteErrorResponse } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Avatar, Box, Button, Container, Stack, Typography } from '@mui/material';
 import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
@@ -9,6 +9,8 @@ import { useAppPreferences } from 'contexts/AppPreferences';
 export function ErrorView({ message }: { message?: string }) {
   const theme = useTheme();
   const { t } = useAppPreferences();
+  const location = useLocation();
+  const navigate = useNavigate();
   const displayMessage = message || t('error.message');
 
   return (
@@ -39,7 +41,13 @@ export function ErrorView({ message }: { message?: string }) {
             </Typography>
           </Box>
           <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.25, width: { xs: 1, sm: 'auto' } }}>
-            <Button fullWidth variant="outlined" color="inherit" startIcon={<RefreshOutlined />} onClick={() => window.location.reload()}>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="inherit"
+              startIcon={<RefreshOutlined />}
+              onClick={() => navigate(location.pathname, { replace: true })}
+            >
               {t('error.reload')}
             </Button>
             <Button fullWidth component={Link} to="/" variant="contained" color="primary" startIcon={<HomeOutlined />}>

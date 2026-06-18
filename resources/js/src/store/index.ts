@@ -1,12 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import authReducer from './slices/authSlice';
+import menuReducer from './slices/menuSlice';
 import notificationReducer from './slices/notificationSlice';
 import { apiSlice } from './apiSlice';
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
+    menu: menuReducer,
     notification: notificationReducer,
     [apiSlice.reducerPath]: apiSlice.reducer
   },

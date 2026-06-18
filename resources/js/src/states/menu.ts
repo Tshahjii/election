@@ -1,58 +1,31 @@
 import { useMemo } from 'react';
+import { shallowEqual, useSelector } from 'react-redux';
 
-// third party
-import useSWR, { mutate } from 'swr';
-
-const initialState = {
-  openedItem: '',
-  isDashboardDrawerOpened: false
-};
-
-export const endpoints = {
-  key: 'api/menu',
-  master: 'master'
-};
+import store, { RootState } from 'store';
+import { setActiveItem, setDrawerOpen } from 'store/slices/menuSlice';
 
 export function useGetMenuMaster() {
-  // to fetch initial state based on endpoints
-
-  const { data, isLoading } = useSWR(endpoints.key + endpoints.master, () => initialState, {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false
-  });
-
-  const memoizedValue = useMemo(
-    () => ({
-      menuMaster: data ?? initialState,
-      menuMasterLoading: isLoading
+  const menu = useSelector(
+    (state: RootState) => ({
+      openedItem: state.menu.openedItem,
+      isDashboardDrawerOpened: state.menu.isDashboardDrawerOpened
     }),
-    [data, isLoading]
+    shallowEqual
   );
 
-  return memoizedValue;
-}
-
-export function handlerDrawerOpen(isDashboardDrawerOpened) {
-  // to update `isDashboardDrawerOpened` local state based on key
-
-  mutate(
-    endpoints.key + endpoints.master,
-    (currentMenuMaster = initialState) => {
-      return { ...currentMenuMaster, isDashboardDrawerOpened };
-    },
-    false
+  return useMemo(
+    () => ({
+      menuMaster: menu,
+      menuMasterLoading: false
+    }),
+    [menu]
   );
 }
 
-export function handlerActiveItem(openedItem) {
-  // to update `openedItem` local state based on key
+export function handlerDrawerOpen(isDashboardDrawerOpened: boolean) {
+  store.dispatch(setDrawerOpen(isDashboardDrawerOpened));
+}
 
-  mutate(
-    endpoints.key + endpoints.master,
-    (currentMenuMaster = initialState) => {
-      return { ...currentMenuMaster, openedItem };
-    },
-    false
-  );
+export function handlerActiveItem(openedItem: string) {
+  store.dispatch(setActiveItem(openedItem));
 }

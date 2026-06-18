@@ -16,7 +16,12 @@ function App() {
         <AppErrorBoundary>
           <RouterProvider router={router} />
           <GlobalSnackbar />
-          <Toaster position="top-right" reverseOrder={false} />
+          <Toaster
+            position="top-right"
+            reverseOrder={false}
+            gutter={10}
+            containerStyle={{ top: 18, right: 18 }}
+          />
         </AppErrorBoundary>
       </ThemeCustomization>
     </AppPreferencesProvider>

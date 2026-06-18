@@ -1,7 +1,53 @@
-/* simpebar styles */
 @import 'simplebar-react/dist/simplebar.min.css';
 
-@import 'simplebar-react/dist/simplebar.min.css';
+:root {
+  font-family: 'Poppins', 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.MuiTableContainer-root {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* apex chart styles */
 .apexcharts-legend-marker {
