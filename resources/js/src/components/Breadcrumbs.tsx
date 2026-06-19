@@ -119,7 +119,7 @@ export default function Breadcrumbs({ data, divider = true, title, icons = false
   }
 
   return (
-    <Stack>
+    <Stack sx={sx}>
       <CoreBreadcrumb />
       {divider && <Divider sx={{ mb: 2, mt: 1.5 }} />}
     </Stack>

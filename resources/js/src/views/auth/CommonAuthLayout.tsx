@@ -41,7 +41,18 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
             : 'linear-gradient(135deg, rgba(255,153,51,0.16) 0%, rgba(255,255,255,0) 38%, rgba(19,136,8,0.14) 100%)'
       }}
     >
-      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1 }}>
+      <Box
+        sx={{
+          position: { xs: 'static', sm: 'fixed' },
+          top: { sm: 16 },
+          right: { sm: 16 },
+          zIndex: 1,
+          width: { xs: 1, sm: 'auto' },
+          display: 'flex',
+          justifyContent: 'flex-end',
+          mb: { xs: 2, sm: 0 }
+        }}
+      >
         <AppControls />
       </Box>
       <Grid size={{ xs: 12, lg: 10, xl: 9 }} sx={{ width: 1, maxWidth: 1180, mx: 'auto' }}>
@@ -128,7 +139,9 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
                 }}
               >
                 <HowToVoteOutlined />
-                <Typography variant="h4">{t('app.name')}</Typography>
+                  <Typography variant="h4" sx={{ minWidth: 0, textAlign: 'center' }}>
+                    {t('app.name')}
+                  </Typography>
               </Box>
 
         <MainCard
@@ -140,7 +153,7 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
             border: '1px solid',
             borderColor: 'divider',
             boxShadow: '0 18px 45px rgba(16, 60, 92, 0.14)',
-            '& .MuiCardContent-root': { flexGrow: 1, flexBasis: '50%', width: '50%' },
+            '& .MuiCardContent-root': { flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' } },
             maxWidth: 475,
             margin: '0 auto',
             '&:before': {
@@ -153,7 +166,7 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
               background: 'linear-gradient(90deg, #ff9933 0%, #ffffff 50%, #138808 100%)'
             }
           }}
-          contentSX={{ flexGrow: 1, flexBasis: '50%', width: '50%', px: 4, pt: 5 }}
+          contentSX={{ flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' }, px: { xs: 2.5, sm: 4 }, pt: { xs: 4, sm: 5 } }}
         >
           <Stack direction="column" sx={{ mb: 2, gap: 3.5, justifyContent: 'center' }}>
             <Stack

@@ -27,10 +27,10 @@ export function LanguageToggle({ inverse = false }) {
         startIcon={<LanguageOutlined />}
         onClick={() => setLanguage(isHindi ? 'en' : 'hi')}
         sx={{
-          minWidth: { xs: 58, sm: 86 },
+          minWidth: { xs: 54, sm: 86 },
           color: inverse ? 'common.white' : 'text.primary',
           borderColor: inverse ? 'rgba(255,255,255,0.55)' : 'divider',
-          px: { xs: 0.75, sm: 1.25 },
+          px: { xs: 0.6, sm: 1.25 },
           '& .MuiButton-startIcon': { mr: { xs: 0.5, sm: 0.5 } },
           '&:hover': { borderColor: inverse ? 'common.white' : 'primary.main' }
         }}
@@ -60,10 +60,10 @@ export function ThemeModeToggle({ inverse = false }) {
         startIcon={isDark ? <DarkModeOutlined /> : <LightModeOutlined />}
         onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
         sx={{
-          minWidth: { xs: 34, sm: 78 },
+          minWidth: { xs: 36, sm: 78 },
           color: inverse ? 'common.white' : 'text.primary',
           borderColor: inverse ? 'rgba(255,255,255,0.55)' : 'divider',
-          px: { xs: 0.75, sm: 1.25 },
+          px: { xs: 0.6, sm: 1.25 },
           '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.5 } },
           '&:hover': { borderColor: inverse ? 'common.white' : 'primary.main' }
         }}
@@ -80,7 +80,7 @@ ThemeModeToggle.propTypes = { inverse: PropTypes.bool };
 
 export default function AppControls({ showTheme = false, inverse = false }) {
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+    <Stack direction="row" sx={{ alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexWrap: 'nowrap' }}>
       <LanguageToggle inverse={inverse} />
       {showTheme && <ThemeModeToggle inverse={inverse} />}
       <AppCustomizer inverse={inverse} />

@@ -1232,11 +1232,11 @@ export default function VoiceAssistant() {
           onClick={() => setIsOpen((value) => !value)}
           sx={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
-            zIndex: 2000,
-            width: 58,
-            height: 58,
+            bottom: { xs: 18, sm: 24 },
+            right: { xs: 18, sm: 24 },
+            zIndex: (theme) => theme.zIndex.appBar + 20,
+            width: { xs: 56, sm: 58 },
+            height: { xs: 56, sm: 58 },
             boxShadow: theme.shadows[10]
           }}
         >
@@ -1249,13 +1249,15 @@ export default function VoiceAssistant() {
           elevation={12}
           sx={{
             position: 'fixed',
-            bottom: 94,
-            right: 24,
-            width: { xs: 'calc(100vw - 24px)', sm: 420 },
-            height: { xs: 'calc(100vh - 124px)', sm: 620 },
-            maxHeight: 680,
-            zIndex: 2000,
-            borderRadius: 2,
+            top: { xs: 76, sm: 'auto' },
+            bottom: { xs: 82, sm: 94 },
+            left: { xs: 12, sm: 'auto' },
+            right: { xs: 12, sm: 24 },
+            width: { xs: 'auto', sm: 420 },
+            height: { xs: 'auto', sm: 620 },
+            maxHeight: { xs: 'none', sm: 680 },
+            zIndex: (theme) => theme.zIndex.appBar + 20,
+            borderRadius: { xs: 1.5, sm: 2 },
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -1264,7 +1266,7 @@ export default function VoiceAssistant() {
             color: panelText
           }}
         >
-          <Box sx={{ p: 2, bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <Box sx={{ p: { xs: 1.25, sm: 2 }, bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 1 }}>
             <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center', minWidth: 0 }}>
               <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 36, height: 36 }}>
                 <AutoAwesomeTwoToneIcon sx={{ color: '#fff', fontSize: '1.3rem' }} />
@@ -1279,7 +1281,7 @@ export default function VoiceAssistant() {
               </Box>
             </Stack>
 
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', flexShrink: 0 }}>
               <Tooltip title={settings.continuous ? 'Continuous listening on' : 'Continuous listening off'}>
                 <IconButton size="small" onClick={() => updateSetting('continuous', !settings.continuous)} sx={{ color: '#fff' }}>
                   <MicIcon fontSize="small" color={settings.continuous ? 'success' : 'inherit'} />

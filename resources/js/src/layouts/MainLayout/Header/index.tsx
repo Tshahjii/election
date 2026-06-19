@@ -128,14 +128,14 @@ export default function Header() {
             flexShrink: 0,
             color: 'common.white',
             ml: { xs: 0.25, sm: 1 },
-            width: { xs: 34, sm: 40 },
-            height: { xs: 34, sm: 40 }
+            width: { xs: 40, sm: 42 },
+            height: { xs: 40, sm: 42 }
           }}
           aria-label="open drawer"
           onClick={() => handlerDrawerOpen(!drawerOpen)}
           size="large"
         >
-          <MenuTwoToneIcon sx={{ fontSize: '1.5rem' }} />
+          <MenuTwoToneIcon sx={{ fontSize: { xs: '1.65rem', sm: '1.5rem' } }} />
         </IconButton>
         <IconButton
           edge="end"
@@ -143,14 +143,14 @@ export default function Header() {
             display: { xs: 'inline-flex', lg: 'none' },
             flexShrink: 0,
             color: 'common.white',
-            width: { xs: 34, sm: 40 },
-            height: { xs: 34, sm: 40 }
+            width: { xs: 40, sm: 42 },
+            height: { xs: 40, sm: 42 }
           }}
           aria-label="open header actions"
           onClick={handleActionsClick}
           size="large"
         >
-          <MoreVertOutlined sx={{ fontSize: '1.45rem' }} />
+          <MoreVertOutlined sx={{ fontSize: { xs: '1.6rem', sm: '1.45rem' } }} />
         </IconButton>
       </Stack>
       <Box sx={{ flexGrow: { xs: 0, lg: 1 }, minWidth: { xs: 0, lg: 12 } }} />
@@ -170,7 +170,7 @@ export default function Header() {
         {!downLG && <Notification inverse />}
         {!downLG && <Profile inverse />}
       </Stack>
-      <Popper open={actionsOpen} anchorEl={actionsAnchor} placement="bottom-end" sx={{ zIndex: 1400 }}>
+      <Popper open={actionsOpen} anchorEl={actionsAnchor} placement="bottom-end" sx={{ zIndex: (theme) => theme.zIndex.appBar + 10 }}>
         <ClickAwayListener onClickAway={() => setActionsAnchor(null)}>
           <Paper
             elevation={8}

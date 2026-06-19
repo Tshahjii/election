@@ -53,7 +53,7 @@ export default function MainLayout() {
         }}
       >
         <Toolbar />
-        <Breadcrumbs />
+        <Breadcrumbs sx={{ mt: { xs: 1.25, sm: 1 }, mb: { xs: 0.5, sm: 0 } }} />
         <Outlet />
         <ChangeDefaultPasswordDialog />
         <VoiceAssistant />

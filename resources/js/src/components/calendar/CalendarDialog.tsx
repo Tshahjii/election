@@ -229,7 +229,16 @@ export default function CalendarDialog({ open, onClose }: CalendarDialogProps) {
         fullScreen={fullScreen}
         maxWidth="xl"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: fullScreen ? 0 : 2 } } }}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 20 }}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: fullScreen ? 0 : 2,
+              width: fullScreen ? '100%' : undefined,
+              maxWidth: fullScreen ? '100%' : undefined
+            }
+          }
+        }}
       >
         <DialogTitle sx={{ pb: 1.5 }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -252,11 +261,13 @@ export default function CalendarDialog({ open, onClose }: CalendarDialogProps) {
             {error && <Alert severity="error">{error}</Alert>}
             <Box
               sx={{
-                minHeight: { xs: 620, md: 720 },
+                minHeight: { xs: 520, sm: 620, md: 720 },
                 '& .fc': { fontFamily: 'inherit' },
                 '& .fc-toolbar': { gap: 1, flexWrap: 'wrap' },
                 '& .fc-toolbar-title': { fontSize: { xs: 18, md: 24 }, fontWeight: 700 },
                 '& .fc-button': { borderRadius: 1, textTransform: 'capitalize', boxShadow: 'none !important' },
+                '& .fc-header-toolbar': { alignItems: 'flex-start' },
+                '& .fc-toolbar-chunk': { display: 'flex', flexWrap: 'wrap', gap: 0.5 },
                 '& .fc-daygrid-day': { cursor: 'pointer' },
                 '& .fc-day-today': { background: `${alpha(theme.palette.primary.main, 0.08)} !important` },
                 '& .fc-event': { borderRadius: 1, border: 0, padding: '2px 4px', cursor: 'pointer' },

@@ -61,8 +61,19 @@ export default function AppCustomizer({ inverse = false }) {
           <TuneOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
-        <Box sx={{ width: { xs: 300, sm: 360 }, p: 2.5 }}>
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={() => setOpen(false)}
+        sx={{
+          zIndex: (theme) => theme.zIndex.modal + 30,
+          '& .MuiDrawer-paper': {
+            width: { xs: 'min(100vw, 360px)', sm: 360 },
+            maxWidth: '100vw'
+          }
+        }}
+      >
+        <Box sx={{ width: 1, p: { xs: 2, sm: 2.5 } }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
             <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
               <PaletteOutlined color="primary" />
