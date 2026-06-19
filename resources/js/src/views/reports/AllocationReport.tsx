@@ -20,12 +20,12 @@ import Typography from '@mui/material/Typography';
 // project imports
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
+import DownloadMenu from 'components/DownloadMenu';
 import PaginationFooter from 'components/PaginationFooter';
 import { useAppPreferences } from 'contexts/AppPreferences';
 
 // assets
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import LocalPrintshopOutlinedIcon from '@mui/icons-material/LocalPrintshopOutlined';
 
 const roster = [
@@ -50,6 +50,19 @@ export default function AllocationReport() {
       return matchSearch && matchRole;
     });
   }, [search, roleFilter]);
+  const paginatedRoster = useMemo(() => filteredRoster.slice((page - 1) * rowsPerPage, page * rowsPerPage), [filteredRoster, page, rowsPerPage]);
+  const exportColumns = useMemo(
+    () => [
+      { key: '__sno', label: t('common.sno') || 'S.No.' },
+      { key: 'name', label: t('reports.officerName') },
+      { key: 'id', label: t('reports.employeeId') },
+      { key: 'role_label', label: t('access.role') },
+      { key: 'station', label: t('reports.stationDeployed') },
+      { key: 'dept', label: t('reports.department') },
+      { key: 'contact', label: t('reports.contact') }
+    ],
+    [t]
+  );
 
   // Translate roles dynamically
   const getRoleLabel = (role: string) => {
@@ -59,6 +72,7 @@ export default function AllocationReport() {
     if (role === 'Micro Observer') return t('analytics.moDeployed').replace(' Deployed', '').replace(' तैनात', '');
     return role;
   };
+  const exportRows = useMemo(() => filteredRoster.map((item, index) => ({ ...item, __sno: index + 1, role_label: getRoleLabel(item.role) })), [filteredRoster, t]);
 
   return (
     <Stack sx={{ gap: 2.5 }}>
@@ -70,10 +84,8 @@ export default function AllocationReport() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
-          <Button variant="outlined" color="primary" startIcon={<DescriptionOutlinedIcon />} sx={{ borderRadius: 2, textTransform: 'none', px: 2.25 }}>
-            {t('reports.exportCsv')}
-          </Button>
-          <Button variant="contained" color="primary" startIcon={<LocalPrintshopOutlinedIcon />} sx={{ borderRadius: 2, textTransform: 'none', px: 2.25, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)' }}>
+          <DownloadMenu title={t('reports.allocationTitle')} columns={exportColumns} rows={exportRows} disabled={exportRows.length === 0} />
+          <Button variant="contained" color="primary" startIcon={<LocalPrintshopOutlinedIcon />} onClick={() => window.print()} sx={{ borderRadius: 2, textTransform: 'none', px: 2.25, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)' }}>
             {t('reports.printRoster')}
           </Button>
         </Stack>
@@ -127,9 +139,9 @@ export default function AllocationReport() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredRoster.map((item, index) => (
+              {paginatedRoster.map((item, index) => (
                 <TableRow key={item.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{item.name}</Typography>
                   </TableCell>

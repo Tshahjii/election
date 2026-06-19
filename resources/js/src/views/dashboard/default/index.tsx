@@ -20,6 +20,7 @@ import { useSelector } from 'react-redux';
 
 // project imports
 import MainCard from 'components/cards/MainCard';
+import DownloadMenu from 'components/DownloadMenu';
 import { GRID_SPACING } from 'config';
 import { useAppPreferences } from 'contexts/AppPreferences';
 
@@ -45,6 +46,14 @@ const constituencyRows = [
   { name: 'Central City', booths: 246, officers: 492, turnout: 57, status: 'Review' },
   { name: 'River Belt', booths: 154, officers: 308, turnout: 63, status: 'Normal' },
   { name: 'Rural East', booths: 211, officers: 422, turnout: 52, status: 'Attention' }
+];
+const constituencyExportColumns = [
+  { key: '__sno', label: 'S.No.' },
+  { key: 'name', label: 'Constituency' },
+  { key: 'booths', label: 'Booths' },
+  { key: 'officers', label: 'Officers' },
+  { key: 'turnout_label', label: 'Turnout' },
+  { key: 'status', label: 'Status' }
 ];
 
 const operations = [
@@ -119,6 +128,7 @@ export default function Default() {
   const { t } = useAppPreferences();
   const stateName = user?.state_info?.name || user?.office_info?.state || 'State';
   const officeName = user?.office_info?.office_name || 'Election Office';
+  const constituencyExportRows = constituencyRows.map((row, index) => ({ ...row, __sno: index + 1, turnout_label: `${row.turnout}%` }));
 
   return (
     <Stack sx={{ gap: GRID_SPACING }}>
@@ -256,6 +266,7 @@ export default function Default() {
         <Grid size={{ xs: 12, lg: 8 }}>
           <MainCard
             title={t('dashboard.monitoring')}
+            headerAction={<DownloadMenu title={t('dashboard.monitoring')} columns={constituencyExportColumns} rows={constituencyExportRows} />}
             sx={{ borderRadius: 2, boxShadow: `0 12px 34px ${alpha(theme.palette.primary.dark, 0.08)}` }}
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >

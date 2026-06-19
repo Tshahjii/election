@@ -31,6 +31,7 @@ import FormHelperText from '@mui/material/FormHelperText';
 // project imports
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
+import DownloadMenu from 'components/DownloadMenu';
 import PaginationFooter from 'components/PaginationFooter';
 import { useAppPreferences } from 'contexts/AppPreferences';
 import { showNotification } from 'store/slices/notificationSlice';
@@ -41,7 +42,8 @@ import {
   useGetMastersQuery,
   useCreateMasterMutation,
   useUpdateMasterMutation,
-  useDeleteMasterMutation
+  useDeleteMasterMutation,
+  useImportMasterMutation
 } from 'store/apiSlice';
 
 // assets
@@ -51,6 +53,7 @@ import EditOutlined from '@mui/icons-material/EditOutlined';
 import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 import InsertDriveFileOutlined from '@mui/icons-material/InsertDriveFileOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
+import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_DOB = '2000-05-18';
@@ -380,6 +383,24 @@ const defaultForm: Record<string, any> = {
 };
 
 const USER_DEFAULT_SKIP_MASTERS = ['countries', 'states', 'districts', 'departments'];
+const IMPORTABLE_MASTERS = ['employees', 'np-cities', 'rp-cities'];
+
+const csvEscape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+function downloadCsvTemplate(title: string, columns: { key: string; label: string; required?: boolean }[]) {
+  const headers = columns.map((column) => column.key);
+  const helperRow = columns.map((column) => `${column.label}${column.required ? ' (required)' : ''}`);
+  const csv = [headers, helperRow].map((row) => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'import'}-template.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 function firstValue(...values) {
   return values.find((value) => value !== undefined && value !== null && value !== '');
@@ -437,6 +458,9 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [deleteRow, setDeleteRow] = useState(null);
   const [form, setForm] = useState<Record<string, any>>(defaultForm);
   const [attachment, setAttachment] = useState(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importErrors, setImportErrors] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const master = MASTER_TYPES.find((item) => item.key === masterKey) || MASTER_TYPES[0];
@@ -444,6 +468,7 @@ export default function MasterData({ masterKey = 'countries' }) {
   const canCreate = hasPermission(user, `${master.module}.create`);
   const canEdit = hasPermission(user, `${master.module}.edit`);
   const canDelete = hasPermission(user, `${master.module}.delete`);
+  const canImport = canCreate && IMPORTABLE_MASTERS.includes(master.key);
 
   // RTK Query hooks
   const { data: optionsData } = useGetOptionsQuery();
@@ -467,10 +492,25 @@ export default function MasterData({ masterKey = 'countries' }) {
       per_page: rowsPerPage
     }
   });
+  const { data: exportListData, isFetching: exportLoading } = useGetMastersQuery({
+    type: master.key,
+    params: {
+      search: filters.search || undefined,
+      status: filters.status === '' ? undefined : filters.status,
+      country_id: filters.country_id || undefined,
+      state_id: filters.state_id || undefined,
+      district_id: filters.district_id || undefined,
+      city_id: filters.city_id || undefined,
+      ward_id: filters.ward_id || undefined,
+      page: 1,
+      per_page: Math.max(Number(listData?.total || 0), rowsPerPage, 100)
+    }
+  });
 
   const [createMaster] = useCreateMasterMutation();
   const [updateMaster] = useUpdateMasterMutation();
   const [deleteMaster] = useDeleteMasterMutation();
+  const [importMaster, { isLoading: importing }] = useImportMasterMutation();
 
   const rows = useMemo(() => {
     let rowsData = listData?.data || [];
@@ -482,8 +522,26 @@ export default function MasterData({ masterKey = 'countries' }) {
     }
     return rowsData;
   }, [listData, master.key]);
+  const exportRawRows = useMemo(() => exportListData?.data || rows, [exportListData, rows]);
 
   const totalRows = listData?.total || 0;
+  const exportTitle = `${t(master.labelKey || '') || master.label} Report`;
+  const exportColumns = useMemo(
+    () => [
+      { key: '__sno', label: t('common.sno') || 'S.No.' },
+      ...master.columns.map((column) => ({ key: column.key, label: tl(column.label) })),
+      ...(master.supportsAttachment ? [{ key: 'attachment_url', label: t('common.attachment') || 'Attachment' }] : []),
+      { key: 'status_label', label: t('common.status') || 'Status' }
+    ],
+    [master.columns, master.supportsAttachment, t, tl]
+  );
+  const importTemplateColumns = useMemo(
+    () =>
+      master.fields
+        .filter((field) => field.key !== 'remark' || master.key === 'employees')
+        .map((field) => ({ key: field.key, label: tl(field.label), required: field.required })),
+    [master.fields, master.key, tl]
+  );
 
   const createFormDefaults = useMemo(() => getCreateFormDefaults(master.key, user, options), [master.key, options, user]);
 
@@ -562,16 +620,30 @@ export default function MasterData({ masterKey = 'countries' }) {
     return (wardsList || []).filter((ward) => Number(ward.city_id) === Number(filters.city_id));
   }, [filters.city_id, options.wards, options.np_wards, options.rp_wards, master.key]);
 
-  const decoratedRows = useMemo(
-    () =>
-      rows.map((row) => ({
+  const decorateRows = (sourceRows) =>
+    sourceRows.map((row) => ({
         ...row,
         country_name: row.country_name || countriesById.get(Number(row.country_id)) || '-',
         state_name: row.state_name || statesById.get(Number(row.state_id)) || '-',
         city_type_label: row.city_type ? row.city_type.charAt(0).toUpperCase() + row.city_type.slice(1) : '-',
         office_type_label: Number(row.office_type) === 2 ? t('data.branchOffice') : t('data.headOffice')
+      }));
+  const decoratedRows = useMemo(
+    () => decorateRows(rows),
+    [countriesById, rows, statesById, t]
+  );
+  const exportDecoratedRows = useMemo(
+    () => decorateRows(exportRawRows),
+    [countriesById, exportRawRows, statesById, t]
+  );
+  const exportRows = useMemo(
+    () =>
+      exportDecoratedRows.map((row, index) => ({
+        ...row,
+        __sno: index + 1,
+        status_label: Number(row.status) === 1 ? t('common.active') : t('common.inactive')
       })),
-    [countriesById, rows, statesById]
+    [exportDecoratedRows, t]
   );
 
   useEffect(() => {
@@ -733,6 +805,48 @@ export default function MasterData({ masterKey = 'countries' }) {
     }
 
     setAttachment(file);
+  };
+
+  const handleImportFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && !file.name.toLowerCase().endsWith('.csv')) {
+      dispatch(showNotification({ message: 'Please upload a CSV file.', severity: 'error' }));
+      event.target.value = '';
+      setImportFile(null);
+      return;
+    }
+    setImportErrors([]);
+    setImportFile(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    downloadCsvTemplate(`${master.title}-import`, [
+      ...importTemplateColumns,
+      { key: 'status', label: t('common.status') || 'Status', required: false }
+    ]);
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importFile) {
+      dispatch(showNotification({ message: 'Please choose a CSV file to import.', severity: 'error' }));
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', importFile);
+
+    try {
+      const response = await importMaster({ type: master.key, data: formData }).unwrap();
+      setImportErrors(response.failed || []);
+      dispatch(showNotification({ message: response.message || 'Import completed.', severity: response.failed?.length ? 'warning' : 'success' }));
+      if (!response.failed?.length) {
+        setImportModalOpen(false);
+        setImportFile(null);
+      }
+    } catch (error: any) {
+      const errMsg = error?.data?.message || error?.message || 'Import failed.';
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
+    }
   };
 
   const handleDelete = async () => {
@@ -1159,14 +1273,22 @@ export default function MasterData({ masterKey = 'countries' }) {
             {t('masters.managePrefix')} {(t(master.labelKey || '') || master.label).toLowerCase()} {t('masters.manageSuffix')}
           </Typography>
         </Box>
-        {canCreate && (
-          <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate}>
-            {t('common.create')} {t(master.titleKey || '') || master.title}
-          </Button>
-        )}
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
+          <DownloadMenu title={exportTitle} columns={exportColumns} rows={exportRows} disabled={loading || exportLoading || exportRows.length === 0} />
+          {canImport && (
+            <Button variant="outlined" color="secondary" startIcon={<UploadFileOutlined />} onClick={() => setImportModalOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+              Import
+            </Button>
+          )}
+          {canCreate && (
+            <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+              {t('common.create')} {t(master.titleKey || '') || master.title}
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
-      <MainCard sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
+      <MainCard sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: '0 14px 36px rgba(15, 23, 42, 0.07)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
@@ -1293,26 +1415,26 @@ export default function MasterData({ masterKey = 'countries' }) {
 
       <MainCard
         title={`${t(master.labelKey || '') || master.label} (${totalRows})`}
-        sx={{ borderRadius: 2, boxShadow: '0 10px 30px rgba(16, 60, 92, 0.08)' }}
+        sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: '0 14px 36px rgba(15, 23, 42, 0.07)', overflow: 'hidden' }}
         headerSX={{ p: 2, '& .MuiCardHeader-title': { fontSize: '1rem' } }}
         contentSX={{ p: 2, '&:last-child': { pb: 2 } }}
       >
-        <TableContainer>
+        <TableContainer sx={{ '&::-webkit-scrollbar': { height: 8 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 8 } }}>
           <Table sx={{ minWidth: 960 }}>
             <TableHead>
-              <TableRow>
-                <TableCell>{t('common.sno')}</TableCell>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{t('common.sno')}</TableCell>
                 {master.columns.map((column) => (
-                  <TableCell key={column.key}>{tl(column.label)}</TableCell>
+                  <TableCell key={column.key} sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{tl(column.label)}</TableCell>
                 ))}
-                {master.supportsAttachment && <TableCell>{t('common.attachment')}</TableCell>}
-                <TableCell>{t('common.status')}</TableCell>
-                <TableCell align="right">{t('common.action')}</TableCell>
+                {master.supportsAttachment && <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{t('common.attachment')}</TableCell>}
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{t('common.status')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{t('common.action')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {decoratedRows.map((row, index) => (
-                <TableRow key={`${master.key}-${row[master.primaryKey]}`} hover>
+                <TableRow key={`${master.key}-${row[master.primaryKey]}`} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
                   <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   {master.columns.map((column) => (
                     <TableCell key={column.key}>{row[column.key] || '-'}</TableCell>
@@ -1416,6 +1538,57 @@ export default function MasterData({ masterKey = 'countries' }) {
             </Button>
           </DialogActions>
         </Box>
+      </Dialog>
+
+      <Dialog open={importModalOpen} onClose={() => setImportModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle component="div" sx={{ pb: 1 }}>
+          <Typography variant="h3" component="h2">
+            Import {t(master.titleKey || '') || master.title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Upload a CSV file with the template columns. Existing duplicate values will be rejected row-wise.
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack sx={{ gap: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1 }}>
+              <Button variant="outlined" startIcon={<InsertDriveFileOutlined />} onClick={handleDownloadTemplate} sx={{ borderRadius: 2, textTransform: 'none' }}>
+                Download Template
+              </Button>
+              <Button component="label" variant="contained" startIcon={<UploadFileOutlined />} sx={{ borderRadius: 2, textTransform: 'none' }}>
+                {importFile?.name || 'Choose CSV'}
+                <input hidden type="file" accept=".csv,text/csv" onChange={handleImportFileChange} />
+              </Button>
+            </Stack>
+            {importErrors.length > 0 && (
+              <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'warning.light', borderRadius: 1.5, bgcolor: 'warning.lighter', maxHeight: 220, overflow: 'auto' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Rows needing correction
+                </Typography>
+                <Stack sx={{ gap: 0.75 }}>
+                  {importErrors.slice(0, 8).map((item, index) => (
+                    <Typography key={`${item.line}-${index}`} variant="caption" color="text.secondary">
+                      Line {item.line}: {(item.errors || []).join(', ')}
+                    </Typography>
+                  ))}
+                  {importErrors.length > 8 && (
+                    <Typography variant="caption" color="text.secondary">
+                      +{importErrors.length - 8} more rows.
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 1.5 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setImportModalOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="contained" startIcon={<UploadFileOutlined />} onClick={handleImportSubmit} disabled={importing || !importFile}>
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} fullWidth maxWidth="xs">

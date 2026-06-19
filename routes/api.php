@@ -25,6 +25,7 @@ Route::middleware('jwt')->prefix('masters')->group(function () {
     Route::get('search', [MasterDataController::class, 'search']);
     Route::get('employees/search', [MasterDataController::class, 'searchEmployees']);
     Route::get('{type}', [MasterDataController::class, 'index']);
+    Route::post('{type}/import', [MasterDataController::class, 'import']);
     Route::post('{type}', [MasterDataController::class, 'store']);
     Route::post('{type}/{id}', [MasterDataController::class, 'update']);
     Route::delete('{type}/{id}', [MasterDataController::class, 'destroy']);

@@ -294,6 +294,77 @@ class MasterDataController extends Controller
         return response()->json(['message' => 'Master record deleted successfully.']);
     }
 
+    public function import(Request $request, string $type): JsonResponse
+    {
+        $config = $this->config($type);
+        abort_unless(AccessScope::can($request->user(), $config['module'], 'create'), 403, 'You do not have create permission.');
+        abort_unless(in_array($type, ['employees', 'np-cities', 'rp-cities'], true), 404, 'Import is not available for this master.');
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if (! $handle) {
+            throw ValidationException::withMessages(['file' => 'Unable to read the uploaded file.']);
+        }
+
+        $headers = fgetcsv($handle);
+        if (! $headers) {
+            fclose($handle);
+            throw ValidationException::withMessages(['file' => 'CSV header row is required.']);
+        }
+
+        $headerMap = $this->headerMap($headers, $this->importFields($type));
+        $created = 0;
+        $failed = [];
+        $line = 1;
+
+        while (($csvRow = fgetcsv($handle)) !== false) {
+            $line++;
+            if (count(array_filter($csvRow, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            $rowData = [];
+            foreach ($headerMap as $index => $key) {
+                $rowData[$key] = trim((string) ($csvRow[$index] ?? ''));
+            }
+            $rowData = $this->normalizeImportRow($rowData, $type);
+
+            try {
+                $rowRequest = Request::create($request->path(), 'POST', $rowData);
+                $rowRequest->setUserResolver(fn () => $request->user());
+                $data = $this->validated($rowRequest, $type);
+                $data['created_by'] = $request->user()->id;
+                $data['updated_by'] = $request->user()->id;
+
+                /** @var class-string<Model> $model */
+                $model = $config['model'];
+                $model::query()->create($data);
+                $created++;
+            } catch (ValidationException $exception) {
+                $failed[] = [
+                    'line' => $line,
+                    'errors' => collect($exception->errors())->flatten()->values(),
+                ];
+            } catch (\Throwable $exception) {
+                $failed[] = [
+                    'line' => $line,
+                    'errors' => [$exception->getMessage()],
+                ];
+            }
+        }
+
+        fclose($handle);
+
+        return response()->json([
+            'message' => "Import completed. Created: {$created}. Failed: ".count($failed).'.',
+            'created' => $created,
+            'failed' => $failed,
+        ]);
+    }
+
     public function options(Request $request): JsonResponse
     {
         $countries = MasterCountry::query()->where('status', 1);
@@ -721,6 +792,96 @@ class MasterDataController extends Controller
                 ]);
             }
         }
+    }
+
+    private function importFields(string $type): array
+    {
+        return match ($type) {
+            'np-cities', 'rp-cities' => [
+                'state_id' => 'State ID',
+                'district_id' => 'District ID',
+                'city_name' => 'City Name',
+                'karyalay_name' => 'Karyalay Name',
+                'status' => 'Status',
+            ],
+            'employees' => [
+                'emp_code' => 'NIC Code',
+                'gov_emp_code' => 'Govt Employee Code',
+                'title' => 'Title',
+                'name' => 'Name',
+                'gender' => 'Gender',
+                'dob' => 'Date of Birth',
+                'mobile' => 'Mobile',
+                'email' => 'Email',
+                'emp_type_id' => 'Employee Type ID',
+                'department_id' => 'Department ID',
+                'designation_id' => 'Designation ID',
+                'ofc_id' => 'Office ID',
+                'pay_level_id' => 'Pay Level ID',
+                'basic_pay' => 'Basic Pay',
+                'country_id' => 'Country ID',
+                'state_id' => 'State ID',
+                'district_id' => 'District ID',
+                'city_type' => 'City Type',
+                'city_id' => 'City ID',
+                'any_disability' => 'Any Disability',
+                'remark' => 'Remark',
+                'status' => 'Status',
+            ],
+        };
+    }
+
+    private function headerMap(array $headers, array $fields): array
+    {
+        $aliases = [];
+        foreach ($fields as $key => $label) {
+            $aliases[$this->normalizeHeader($key)] = $key;
+            $aliases[$this->normalizeHeader($label)] = $key;
+        }
+
+        $map = [];
+        foreach ($headers as $index => $header) {
+            $normalized = $this->normalizeHeader((string) $header);
+            if (isset($aliases[$normalized])) {
+                $map[$index] = $aliases[$normalized];
+            }
+        }
+
+        if (! $map) {
+            throw ValidationException::withMessages(['file' => 'No recognizable columns were found in the CSV.']);
+        }
+
+        return $map;
+    }
+
+    private function normalizeHeader(string $value): string
+    {
+        return preg_replace('/[^a-z0-9]+/', '', strtolower($value)) ?: '';
+    }
+
+    private function normalizeImportRow(array $data, string $type): array
+    {
+        if (isset($data['status'])) {
+            $status = strtolower((string) $data['status']);
+            $data['status'] = in_array($status, ['inactive', '0', 'false', 'no'], true) ? 0 : 1;
+        }
+
+        if ($type === 'employees') {
+            if (isset($data['gender']) && ! is_numeric($data['gender'])) {
+                $data['gender'] = str_starts_with(strtolower($data['gender']), 'f') ? 2 : 1;
+            }
+
+            if (isset($data['any_disability']) && ! is_numeric($data['any_disability'])) {
+                $data['any_disability'] = in_array(strtolower($data['any_disability']), ['yes', 'true', 'y'], true) ? 1 : 0;
+            }
+
+            if (isset($data['city_type'])) {
+                $value = strtolower($data['city_type']);
+                $data['city_type'] = in_array($value, ['rural', 'rp', 'nagari', 'nagari nikay'], true) ? 'rural' : 'urban';
+            }
+        }
+
+        return $data;
     }
 
     private function validateOfficeLocation(array $data): void

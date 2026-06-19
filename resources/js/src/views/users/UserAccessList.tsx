@@ -29,6 +29,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 // project imports
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
+import DownloadMenu from 'components/DownloadMenu';
 import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
 import { ROLE_LABELS } from 'utils/access';
@@ -197,6 +198,15 @@ export default function UserAccessList() {
         page,
         per_page: rowsPerPage
     });
+    const { data: exportUsersData, isFetching: exportLoading } = useGetUsersQuery({
+        name: filters.name || undefined,
+        mobile: filters.mobile || undefined,
+        user_code: filters.user_code || undefined,
+        role: filters.role || undefined,
+        status: filters.status || undefined,
+        page: 1,
+        per_page: Math.max(Number(usersData?.total || 0), rowsPerPage, 100)
+    });
 
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
@@ -206,6 +216,30 @@ export default function UserAccessList() {
 
     const rows = usersData?.data || [];
     const totalRows = usersData?.total || 0;
+    const exportRows = useMemo(
+        () =>
+            (exportUsersData?.data || rows).map((row, index) => ({
+                ...row,
+                __sno: index + 1,
+                display_user_code: row.user_code || `USR-${row.id}`,
+                role_label: translateRole(row.role),
+                status_label: Number(row.is_active) === 1 ? t('common.active') : t('common.inactive'),
+                permission_count: row.permissions_count || 0
+            })),
+        [exportUsersData, rows, t]
+    );
+    const exportColumns = useMemo(
+        () => [
+            { key: '__sno', label: t('common.sno') || 'S.No.' },
+            { key: 'name', label: t('access.user') },
+            { key: 'display_user_code', label: t('access.userId') },
+            { key: 'mobile', label: t('access.mobile') },
+            { key: 'role_label', label: t('access.role') },
+            { key: 'permission_count', label: t('access.permissions') },
+            { key: 'status_label', label: t('common.status') || 'Status' }
+        ],
+        [t]
+    );
 
     const availableStates = useMemo(() => {
         const states = accessForm.country_ids.length ? options.states.filter((state) => accessForm.country_ids.includes(state.country_id)) : options.states;
@@ -386,13 +420,13 @@ export default function UserAccessList() {
         }
     };
 
-    const translateRole = (roleVal) => {
+    function translateRole(roleVal) {
         const defaultLabel = ROLE_LABELS[roleVal] || roleVal;
         if (roleVal === 1) return t('translations.superAdmin') || 'Super Admin';
         if (roleVal === 2) return t('translations.systemAdmin') || 'System Admin';
         if (roleVal === 3) return t('translations.operator') || 'Operator';
         return defaultLabel;
-    };
+    }
 
     return (
         <Stack sx={{ gap: 2.5 }}>
@@ -403,9 +437,12 @@ export default function UserAccessList() {
                         {t('access.subtitle')}
                     </Typography>
                 </Box>
-                <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', px: 2.5, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>
-                    {t('access.createUser')}
-                </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
+                    <DownloadMenu title={`${t('access.userRecords')} Report`} columns={exportColumns} rows={exportRows} disabled={loading || exportLoading || exportRows.length === 0} />
+                    <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', px: 2.5, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>
+                        {t('access.createUser')}
+                    </Button>
+                </Stack>
             </Stack>
 
             <MainCard sx={{ borderRadius: 2.5, border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)' }} contentSX={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>

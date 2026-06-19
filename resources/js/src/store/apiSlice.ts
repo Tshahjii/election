@@ -76,6 +76,15 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, arg) => ['Masters', { type: 'Masters', id: arg.type }]
     }),
+    importMaster: builder.mutation<any, { type: string; data: FormData }>({
+      query: ({ type, data }) => ({
+        url: `/masters/${type}/import`,
+        method: 'POST',
+        data,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }),
+      invalidatesTags: (result, error, arg) => ['Masters', { type: 'Masters', id: arg.type }]
+    }),
     searchEmployees: builder.query<any, { q: string }>({
       query: ({ q }) => ({
         url: '/masters/employees/search',
@@ -224,6 +233,7 @@ export const {
   useCreateMasterMutation,
   useUpdateMasterMutation,
   useDeleteMasterMutation,
+  useImportMasterMutation,
   useLazySearchEmployeesQuery,
 
   useGetAccessOptionsQuery,

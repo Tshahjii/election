@@ -1042,6 +1042,12 @@ export default function VoiceAssistant() {
   const panelBg = isDark ? '#111827' : theme.palette.background.paper;
   const panelText = isDark ? '#f8fafc' : theme.palette.text.primary;
   const subtleBg = isDark ? 'rgba(255,255,255,0.08)' : 'grey.100';
+  const panelBorder = isDark ? 'rgba(255,255,255,0.12)' : theme.palette.divider;
+  const quickPrompts = [
+    'यहाँ क्या भरना है?',
+    'Employee page खोलिए',
+    'Project modules बताइए'
+  ];
 
   const renderTabs = () => (
     <Stack
@@ -1068,7 +1074,7 @@ export default function VoiceAssistant() {
           startIcon={tab.icon}
           variant={activeTab === tab.key ? 'contained' : 'text'}
           onClick={() => setActiveTab(tab.key as AssistantTab)}
-          sx={{ minWidth: 'auto', px: 1, flexShrink: 0 }}
+          sx={{ minWidth: 'auto', px: 1.15, borderRadius: 2, flexShrink: 0, textTransform: 'none', fontWeight: 700 }}
         >
           {tab.label}
         </Button>
@@ -1078,6 +1084,17 @@ export default function VoiceAssistant() {
 
   const renderChat = () => (
     <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 2 }}>
+      <Stack direction="row" sx={{ gap: 1, mb: 1.5, overflowX: 'auto', pb: 0.5 }}>
+        {quickPrompts.map((prompt) => (
+          <Chip
+            key={prompt}
+            label={prompt}
+            size="small"
+            onClick={() => handleSendMessage(prompt)}
+            sx={{ flexShrink: 0, borderRadius: 2, bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'primary.lighter', color: isDark ? '#f8fafc' : 'primary.dark', fontWeight: 700 }}
+          />
+        ))}
+      </Stack>
       <List sx={{ p: 0 }}>
         {messages.map((message, index) => {
           const isUser = message.sender === 'user';
@@ -1089,7 +1106,9 @@ export default function VoiceAssistant() {
                   p: 1.5,
                   borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                   bgcolor: isUser ? 'primary.main' : subtleBg,
-                  color: isUser ? '#fff' : panelText
+                  color: isUser ? '#fff' : panelText,
+                  border: isUser ? 'none' : `1px solid ${panelBorder}`,
+                  boxShadow: isUser ? '0 8px 18px rgba(25, 118, 210, 0.2)' : 'none'
                 }}
               >
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
@@ -1237,7 +1256,8 @@ export default function VoiceAssistant() {
             zIndex: (theme) => theme.zIndex.appBar + 20,
             width: { xs: 56, sm: 58 },
             height: { xs: 56, sm: 58 },
-            boxShadow: theme.shadows[10]
+            background: 'linear-gradient(135deg, #0f766e, #2563eb)',
+            boxShadow: '0 18px 36px rgba(37, 99, 235, 0.32)'
           }}
         >
           <AutoAwesomeTwoToneIcon sx={{ fontSize: '1.8rem', color: '#fff' }} />
@@ -1253,22 +1273,23 @@ export default function VoiceAssistant() {
             bottom: { xs: 82, sm: 94 },
             left: { xs: 12, sm: 'auto' },
             right: { xs: 12, sm: 24 },
-            width: { xs: 'auto', sm: 420 },
-            height: { xs: 'auto', sm: 620 },
+            width: { xs: 'auto', sm: 440 },
+            height: { xs: 'auto', sm: 650 },
             maxHeight: { xs: 'none', sm: 680 },
             zIndex: (theme) => theme.zIndex.appBar + 20,
-            borderRadius: { xs: 1.5, sm: 2 },
+            borderRadius: { xs: 2, sm: 2.5 },
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : theme.palette.divider}`,
+            border: `1px solid ${panelBorder}`,
             bgcolor: panelBg,
-            color: panelText
+            color: panelText,
+            boxShadow: isDark ? '0 24px 70px rgba(0,0,0,0.55)' : '0 24px 70px rgba(15,23,42,0.2)'
           }}
         >
-          <Box sx={{ p: { xs: 1.25, sm: 2 }, bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 1 }}>
+          <Box sx={{ p: { xs: 1.25, sm: 2 }, background: 'linear-gradient(135deg, #0f766e, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 1 }}>
             <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 36, height: 36 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40, border: '1px solid rgba(255,255,255,0.28)' }}>
                 <AutoAwesomeTwoToneIcon sx={{ color: '#fff', fontSize: '1.3rem' }} />
               </Avatar>
               <Box sx={{ minWidth: 0 }}>
@@ -1278,6 +1299,10 @@ export default function VoiceAssistant() {
                 <Typography variant="caption" sx={{ opacity: 0.85, display: 'block' }}>
                   Free Local Voice Assistant
                 </Typography>
+                <Stack direction="row" sx={{ gap: 0.75, mt: 0.75 }}>
+                  <Chip size="small" label={isListening ? 'Listening' : 'Ready'} color={isListening ? 'error' : 'success'} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 800 }} />
+                  <Chip size="small" label={settings.language === 'hi-IN' ? 'Hindi' : 'English'} sx={{ height: 20, fontSize: '0.68rem', color: '#fff', bgcolor: 'rgba(255,255,255,0.16)' }} />
+                </Stack>
               </Box>
             </Stack>
 
