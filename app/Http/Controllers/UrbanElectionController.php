@@ -142,71 +142,79 @@ class UrbanElectionController extends Controller
             ->whereNotNull('master_n_p_mappings.emp_id')
             ->count();
 
-        // Get teams
-        $teamMappings = DB::table('master_n_p_team_mappings')
-            ->join('master_np_polling_stations', 'master_np_polling_stations.id', '=', 'master_n_p_team_mappings.ps_id')
-            ->join('master_np_wards', 'master_np_wards.id', '=', 'master_n_p_team_mappings.ward_id')
-            ->when($cityId, fn($query) => $query->where('master_n_p_team_mappings.city_id', $cityId))
-            ->select([
-                'master_n_p_team_mappings.id as mapping_id',
-                'master_n_p_team_mappings.team_id',
-                'master_np_polling_stations.polling_station_name',
-                'master_np_wards.ward_no',
-                'master_np_wards.ward_name',
-            ])
-            ->get();
-
-        // Load the P0-P3 posts for these team mappings
-        $postsData = DB::table('master_n_p_mappings')
-            ->leftJoin('master_employees', 'master_employees.id', '=', 'master_n_p_mappings.emp_id')
-            ->whereIn('master_n_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
-            ->select([
-                'master_n_p_mappings.id as post_mapping_id',
-                'master_n_p_mappings.team_id as team_mapping_id',
-                'master_n_p_mappings.post_name',
-                'master_n_p_mappings.emp_id',
-                'master_employees.name as employee_name',
-                'master_employees.emp_code as employee_code',
-            ])
-            ->get()
-            ->groupBy('team_mapping_id');
-
+        // Get teams (Only fetch teams list if city_id is selected to prevent massive payloads)
         $teams = [];
-        $grouped = $teamMappings->groupBy('team_id');
-        foreach ($grouped as $teamId => $rows) {
-            $firstRow = $rows->first();
-            $paddedTeamId = sprintf('%04d', $teamId);
+        if ($cityId) {
+            $teamMappings = DB::table('master_n_p_team_mappings')
+                ->join('master_np_polling_stations', 'master_np_polling_stations.id', '=', 'master_n_p_team_mappings.ps_id')
+                ->join('master_np_wards', 'master_np_wards.id', '=', 'master_n_p_team_mappings.ward_id')
+                ->where('master_n_p_team_mappings.city_id', $cityId)
+                ->select([
+                    'master_n_p_team_mappings.id as mapping_id',
+                    'master_n_p_team_mappings.team_id',
+                    'master_np_polling_stations.polling_station_name',
+                    'master_np_wards.ward_no',
+                    'master_np_wards.ward_name',
+                ])
+                ->get();
 
-            $posts = [];
-            foreach ($rows as $row) {
-                $rowPosts = $postsData->get($row->mapping_id) ?? collect();
-                foreach ($rowPosts as $postInfo) {
-                    $posts[] = [
-                        'post_mapping_id' => $postInfo->post_mapping_id,
-                        'post_name' => $postInfo->post_name,
-                        'emp_id' => $postInfo->emp_id,
-                        'employee_name' => $postInfo->employee_name,
-                        'employee_code' => $postInfo->employee_code,
-                    ];
+            // Load the P0-P3 posts for these team mappings
+            $postsData = DB::table('master_n_p_mappings')
+                ->leftJoin('master_employees', 'master_employees.id', '=', 'master_n_p_mappings.emp_id')
+                ->whereIn('master_n_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
+                ->select([
+                    'master_n_p_mappings.id as post_mapping_id',
+                    'master_n_p_mappings.team_id as team_mapping_id',
+                    'master_n_p_mappings.post_name',
+                    'master_n_p_mappings.emp_id',
+                    'master_employees.name as employee_name',
+                    'master_employees.emp_code as employee_code',
+                ])
+                ->get()
+                ->groupBy('team_mapping_id');
+
+            $grouped = $teamMappings->groupBy('team_id');
+            foreach ($grouped as $teamId => $rows) {
+                $firstRow = $rows->first();
+                $paddedTeamId = sprintf('%04d', $teamId);
+
+                $posts = [];
+                foreach ($rows as $row) {
+                    $rowPosts = $postsData->get($row->mapping_id) ?? collect();
+                    foreach ($rowPosts as $postInfo) {
+                        $posts[] = [
+                            'post_mapping_id' => $postInfo->post_mapping_id,
+                            'post_name' => $postInfo->post_name,
+                            'emp_id' => $postInfo->emp_id,
+                            'employee_name' => $postInfo->employee_name,
+                            'employee_code' => $postInfo->employee_code,
+                        ];
+                    }
                 }
+
+                usort($posts, fn($a, $b) => strcmp($a['post_name'], $b['post_name']));
+
+                $teams[] = [
+                    'team_id' => $teamId,
+                    'padded_team_id' => $paddedTeamId,
+                    'polling_station_name' => $firstRow->polling_station_name,
+                    'ward_no' => $firstRow->ward_no,
+                    'ward_name' => $firstRow->ward_name,
+                    'posts' => $posts,
+                ];
             }
 
-            usort($posts, fn($a, $b) => strcmp($a['post_name'], $b['post_name']));
-
-            $teams[] = [
-                'team_id' => $teamId,
-                'padded_team_id' => $paddedTeamId,
-                'polling_station_name' => $firstRow->polling_station_name,
-                'ward_no' => $firstRow->ward_no,
-                'ward_name' => $firstRow->ward_name,
-                'posts' => $posts,
-            ];
+            usort($teams, fn($a, $b) => $a['team_id'] - $b['team_id']);
         }
 
-        usort($teams, fn($a, $b) => $a['team_id'] - $b['team_id']);
         // Compute vacant counts per post (P0..P3)
         $vacantCountsRaw = DB::table('master_n_p_mappings')
-            ->whereIn('team_id', $teamMappings->pluck('mapping_id'))
+            ->when($cityId, function ($query) use ($cityId) {
+                $teamMappingIds = DB::table('master_n_p_team_mappings')
+                    ->where('city_id', $cityId)
+                    ->pluck('id');
+                return $query->whereIn('team_id', $teamMappingIds);
+            })
             ->whereNull('emp_id')
             ->select('post_name', DB::raw('count(*) as cnt'))
             ->groupBy('post_name')

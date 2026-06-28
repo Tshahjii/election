@@ -37,9 +37,11 @@ import { useAppPreferences } from 'contexts/AppPreferences';
 import { showNotification } from 'store/slices/notificationSlice';
 import { fetchAuthUser } from 'store/slices/authSlice';
 import { hasPermission } from 'utils/access';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   useGetOptionsQuery,
   useGetMastersQuery,
+  useLazyGetMastersQuery,
   useCreateMasterMutation,
   useUpdateMasterMutation,
   useDeleteMasterMutation,
@@ -472,40 +474,48 @@ export default function MasterData({ masterKey = 'countries' }) {
 
   // RTK Query hooks
   const { data: optionsData } = useGetOptionsQuery();
-  const options = useMemo(() => optionsData || {
-    countries: [], states: [], districts: [], cities: [], wards: [],
-    np_cities: [], rp_cities: [], np_wards: [], rp_wards: [],
-    offices: [], emp_types: [], designations: [], departments: [], pay_levels: []
+  const options = useMemo(() => {
+    const rawOptions = optionsData || {
+      countries: [], states: [], districts: [], cities: [], wards: [],
+      np_cities: [], rp_cities: [], np_wards: [], rp_wards: [],
+      offices: [], emp_types: [], designations: [], departments: [], pay_levels: []
+    };
+
+    const npCities = rawOptions.np_cities || [];
+    const rpCities = rawOptions.rp_cities || [];
+    const citiesCombined = [
+      ...npCities.map((c) => ({ ...c, city_type: 'urban' })),
+      ...rpCities.map((c) => ({ ...c, city_type: 'rural' }))
+    ];
+
+    const npWards = rawOptions.np_wards || [];
+    const rpWards = rawOptions.rp_wards || [];
+    const wardsCombined = [...npWards, ...rpWards];
+
+    return {
+      ...rawOptions,
+      cities: citiesCombined,
+      wards: wardsCombined
+    };
   }, [optionsData]);
+
+  const debouncedFilters = useDebounce(filters, 400);
 
   const { data: listData, isFetching: loading } = useGetMastersQuery({
     type: master.key,
     params: {
-      search: filters.search || undefined,
-      status: filters.status === '' ? undefined : filters.status,
-      country_id: filters.country_id || undefined,
-      state_id: filters.state_id || undefined,
-      district_id: filters.district_id || undefined,
-      city_id: filters.city_id || undefined,
-      ward_id: filters.ward_id || undefined,
+      search: debouncedFilters.search || undefined,
+      status: debouncedFilters.status === '' ? undefined : debouncedFilters.status,
+      country_id: debouncedFilters.country_id || undefined,
+      state_id: debouncedFilters.state_id || undefined,
+      district_id: debouncedFilters.district_id || undefined,
+      city_id: debouncedFilters.city_id || undefined,
+      ward_id: debouncedFilters.ward_id || undefined,
       page,
       per_page: rowsPerPage
     }
   });
-  const { data: exportListData, isFetching: exportLoading } = useGetMastersQuery({
-    type: master.key,
-    params: {
-      search: filters.search || undefined,
-      status: filters.status === '' ? undefined : filters.status,
-      country_id: filters.country_id || undefined,
-      state_id: filters.state_id || undefined,
-      district_id: filters.district_id || undefined,
-      city_id: filters.city_id || undefined,
-      ward_id: filters.ward_id || undefined,
-      page: 1,
-      per_page: Math.max(Number(listData?.total || 0), rowsPerPage, 100)
-    }
-  });
+  const [triggerExportQuery] = useLazyGetMastersQuery();
 
   const [createMaster] = useCreateMasterMutation();
   const [updateMaster] = useUpdateMasterMutation();
@@ -522,7 +532,6 @@ export default function MasterData({ masterKey = 'countries' }) {
     }
     return rowsData;
   }, [listData, master.key]);
-  const exportRawRows = useMemo(() => exportListData?.data || rows, [exportListData, rows]);
 
   const totalRows = listData?.total || 0;
   const exportTitle = `${t(master.labelKey || '') || master.label} Report`;
@@ -632,19 +641,31 @@ export default function MasterData({ masterKey = 'countries' }) {
     () => decorateRows(rows),
     [countriesById, rows, statesById, t]
   );
-  const exportDecoratedRows = useMemo(
-    () => decorateRows(exportRawRows),
-    [countriesById, exportRawRows, statesById, t]
-  );
-  const exportRows = useMemo(
-    () =>
-      exportDecoratedRows.map((row, index) => ({
-        ...row,
-        __sno: index + 1,
-        status_label: Number(row.status) === 1 ? t('common.active') : t('common.inactive')
-      })),
-    [exportDecoratedRows, t]
-  );
+
+  const handleGetRows = async () => {
+    const result = await triggerExportQuery({
+      type: master.key,
+      params: {
+        search: debouncedFilters.search || undefined,
+        status: debouncedFilters.status === '' ? undefined : debouncedFilters.status,
+        country_id: debouncedFilters.country_id || undefined,
+        state_id: debouncedFilters.state_id || undefined,
+        district_id: debouncedFilters.district_id || undefined,
+        city_id: debouncedFilters.city_id || undefined,
+        ward_id: debouncedFilters.ward_id || undefined,
+        page: 1,
+        per_page: Math.max(Number(listData?.total || 0), 10000)
+      }
+    }).unwrap();
+
+    const rawRows = result?.data || [];
+    const decRows = decorateRows(rawRows);
+    return decRows.map((row, index) => ({
+      ...row,
+      __sno: index + 1,
+      status_label: Number(row.status) === 1 ? t('common.active') : t('common.inactive')
+    }));
+  };
 
   useEffect(() => {
     setFilters({ search: '', status: '', country_id: '', state_id: '', district_id: '', city_id: '', ward_id: '' });
@@ -1274,7 +1295,7 @@ export default function MasterData({ masterKey = 'countries' }) {
           </Typography>
         </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
-          <DownloadMenu title={exportTitle} columns={exportColumns} rows={exportRows} disabled={loading || exportLoading || exportRows.length === 0} />
+          <DownloadMenu title={exportTitle} columns={exportColumns} getRowsLazy={handleGetRows} disabled={loading} />
           {canImport && (
             <Button variant="outlined" color="secondary" startIcon={<UploadFileOutlined />} onClick={() => setImportModalOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
               Import

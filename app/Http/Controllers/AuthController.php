@@ -199,10 +199,24 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check password history (last 5 passwords)
+        $passwordHistories = $user->passwordHistories()->latest('id')->take(5)->get();
+        foreach ($passwordHistories as $history) {
+            if (Hash::check($data['password'], $history->password)) {
+                throw ValidationException::withMessages([
+                    'password' => 'New password cannot be same as any of your last 5 passwords.'
+                ]);
+            }
+        }
+
         $user->forceFill([
             'password' => Hash::make($data['password']),
             'password_changed_at' => now(),
         ])->save();
+
+        $user->passwordHistories()->create([
+            'password' => $user->password,
+        ]);
 
         return response()->json([
             'message' => 'Password changed successfully.',

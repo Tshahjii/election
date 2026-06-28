@@ -34,9 +34,11 @@ import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
 import { ROLE_LABELS } from 'utils/access';
 import { useAppPreferences } from 'contexts/AppPreferences';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
     useGetAccessOptionsQuery,
     useGetUsersQuery,
+    useLazyGetUsersQuery,
     useCreateUserMutation,
     useUpdateUserMutation,
     useUpdateAccessMutation,
@@ -189,24 +191,18 @@ export default function UserAccessList() {
         };
     }, [accessOptionsData]);
 
+    const debouncedFilters = useDebounce(filters, 400);
+
     const { data: usersData, isFetching: loading } = useGetUsersQuery({
-        name: filters.name || undefined,
-        mobile: filters.mobile || undefined,
-        user_code: filters.user_code || undefined,
-        role: filters.role || undefined,
-        status: filters.status || undefined,
+        name: debouncedFilters.name || undefined,
+        mobile: debouncedFilters.mobile || undefined,
+        user_code: debouncedFilters.user_code || undefined,
+        role: debouncedFilters.role || undefined,
+        status: debouncedFilters.status || undefined,
         page,
         per_page: rowsPerPage
     });
-    const { data: exportUsersData, isFetching: exportLoading } = useGetUsersQuery({
-        name: filters.name || undefined,
-        mobile: filters.mobile || undefined,
-        user_code: filters.user_code || undefined,
-        role: filters.role || undefined,
-        status: filters.status || undefined,
-        page: 1,
-        per_page: Math.max(Number(usersData?.total || 0), rowsPerPage, 100)
-    });
+    const [triggerExportQuery] = useLazyGetUsersQuery();
 
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
@@ -216,18 +212,28 @@ export default function UserAccessList() {
 
     const rows = usersData?.data || [];
     const totalRows = usersData?.total || 0;
-    const exportRows = useMemo(
-        () =>
-            (exportUsersData?.data || rows).map((row, index) => ({
-                ...row,
-                __sno: index + 1,
-                display_user_code: row.user_code || `USR-${row.id}`,
-                role_label: translateRole(row.role),
-                status_label: Number(row.is_active) === 1 ? t('common.active') : t('common.inactive'),
-                permission_count: row.permissions_count || 0
-            })),
-        [exportUsersData, rows, t]
-    );
+
+    const handleGetRows = async () => {
+        const result = await triggerExportQuery({
+            name: debouncedFilters.name || undefined,
+            mobile: debouncedFilters.mobile || undefined,
+            user_code: debouncedFilters.user_code || undefined,
+            role: debouncedFilters.role || undefined,
+            status: debouncedFilters.status || undefined,
+            page: 1,
+            per_page: Math.max(Number(usersData?.total || 0), 10000)
+        }).unwrap();
+
+        const rawRows = result?.data || [];
+        return rawRows.map((row, index) => ({
+            ...row,
+            __sno: index + 1,
+            display_user_code: row.user_code || `USR-${row.id}`,
+            role_label: translateRole(row.role),
+            status_label: Number(row.is_active) === 1 ? t('common.active') : t('common.inactive'),
+            permission_count: row.permissions_count || 0
+        }));
+    };
     const exportColumns = useMemo(
         () => [
             { key: '__sno', label: t('common.sno') || 'S.No.' },
@@ -438,7 +444,7 @@ export default function UserAccessList() {
                     </Typography>
                 </Box>
                 <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
-                    <DownloadMenu title={`${t('access.userRecords')} Report`} columns={exportColumns} rows={exportRows} disabled={loading || exportLoading || exportRows.length === 0} />
+                    <DownloadMenu title={`${t('access.userRecords')} Report`} columns={exportColumns} getRowsLazy={handleGetRows} disabled={loading} />
                     <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', px: 2.5, boxShadow: '0 4px 12px rgba(67, 56, 202, 0.15)' }}>
                         {t('access.createUser')}
                     </Button>

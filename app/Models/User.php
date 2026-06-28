@@ -91,4 +91,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(MasterOffice::class, 'ofc_id', 'ofc_id');
     }
+
+    public function passwordHistories(): HasMany
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
 }

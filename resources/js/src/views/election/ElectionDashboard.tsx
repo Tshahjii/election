@@ -126,11 +126,10 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   });
 
   const { data: optionsData } = useGetOptionsQuery();
-  const cities = optionsData?.cities || [];
-  const filteredCities = useMemo(
-    () => cities.filter((city: any) => city.city_type === (isUrban ? 'urban' : 'rural')),
-    [cities, isUrban]
-  );
+  const filteredCities = useMemo(() => {
+    if (!optionsData) return [];
+    return isUrban ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
+  }, [optionsData, isUrban]);
 
   const urbanQuery = useGetUrbanDashboardQuery(
     isUrban && selectedCityId !== '' && selectedCityId !== 'all' ? { city_id: selectedCityId } : {},
@@ -202,7 +201,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     setDutyCriteria((prev) => ({ ...prev, [field]: value }));
   };
 
-  const hasGeneratedTeams = Boolean(dashboardData && dashboardData.teams.length > 0);
+  const hasGeneratedTeams = Boolean(dashboardData && dashboardData.stats.teams_count > 0);
   const allCityOptionLabel = isUrban ? t('election.allNpCities') : t('election.allRnCities');
 
   return (

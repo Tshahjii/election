@@ -61,6 +61,10 @@ class UserAccessController extends Controller
             $user = User::query()->create($this->userData($data));
             $this->saveBaseAccess($user, $data, $request->user());
 
+            $user->passwordHistories()->create([
+                'password' => $user->password,
+            ]);
+
             return $user->fresh('accessManagment');
         });
 
@@ -81,6 +85,12 @@ class UserAccessController extends Controller
         DB::transaction(function () use ($data, $user, $request) {
             $user->fill($this->userData($data, $user))->save();
             $this->saveBaseAccess($user, $data, $request->user());
+
+            if ($user->wasChanged('password')) {
+                $user->passwordHistories()->create([
+                    'password' => $user->password,
+                ]);
+            }
         });
 
         return response()->json([
@@ -110,6 +120,10 @@ class UserAccessController extends Controller
             'password' => Hash::make('Admin@123'),
             'password_changed_at' => null,
         ])->save();
+
+        $user->passwordHistories()->create([
+            'password' => $user->password,
+        ]);
 
         return response()->json(['message' => 'Password reset successfully.']);
     }

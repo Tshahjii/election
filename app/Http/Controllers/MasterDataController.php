@@ -424,11 +424,6 @@ class MasterDataController extends Controller
         $npWardsList = $npWards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']);
         $rpWardsList = $rpWards->orderBy('ward_no')->orderBy('ward_name')->get(['id', 'state_id', 'district_id', 'city_id', 'ward_no', 'ward_name']);
 
-        $citiesCombined = $npCitiesList->map(fn($c) => array_merge($c->toArray(), ['city_type' => 'urban']))
-            ->merge($rpCitiesList->map(fn($c) => array_merge($c->toArray(), ['city_type' => 'rural'])));
-
-        $wardsCombined = $npWardsList->merge($rpWardsList);
-
         return response()->json([
             'countries' => $countries->orderBy('name')->get(['id', 'name']),
             'states' => $states->orderBy('name')->get(['id', 'country_id', 'name']),
@@ -437,8 +432,6 @@ class MasterDataController extends Controller
             'rp_cities' => $rpCitiesList,
             'np_wards' => $npWardsList,
             'rp_wards' => $rpWardsList,
-            'cities' => $citiesCombined,
-            'wards' => $wardsCombined,
             'offices' => $offices->orderBy('office_name')->get(['ofc_id', 'state_id', 'district_id', 'office_name']),
             'emp_types' => $empTypes->orderBy('emp_type')->get(['id', 'emp_type']),
             'designations' => $designations->orderBy('designation')->get(['id', 'designation']),

@@ -230,6 +230,7 @@ export const apiSlice = createApi({
 export const {
   useGetOptionsQuery,
   useGetMastersQuery,
+  useLazyGetMastersQuery,
   useCreateMasterMutation,
   useUpdateMasterMutation,
   useDeleteMasterMutation,
@@ -238,6 +239,7 @@ export const {
 
   useGetAccessOptionsQuery,
   useGetUsersQuery,
+  useLazyGetUsersQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useUpdateAccessMutation,

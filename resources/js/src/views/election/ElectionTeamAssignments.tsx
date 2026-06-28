@@ -80,7 +80,11 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   // 1. Fetch cities options
   const { data: optionsData } = useGetOptionsQuery();
-  const cities = optionsData?.cities || [];
+
+  const filteredCities = useMemo(() => {
+    if (!optionsData) return [];
+    return type === 'Nagar Panchayat' ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
+  }, [optionsData, type]);
 
   // 2. Fetch dashboard data (urban vs rural)
   const hasSearch = teamSearch.trim() || employeeSearch.trim();
@@ -130,13 +134,6 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       `P4 (${t('election.pollingOfficer4')})`
     ];
   }, [type, t]);
-
-  const filteredCities = useMemo(() => {
-    if (type === 'Nagar Panchayat') {
-      return cities.filter((city: any) => city.city_type === 'urban');
-    }
-    return cities.filter((city: any) => city.city_type === 'rural');
-  }, [cities, type]);
 
   const searchedTeams = useMemo(() => {
     const teamTerms = teamSearch
