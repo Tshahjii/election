@@ -35,7 +35,7 @@ class UrbanElectionController extends Controller
         // 2. Delete existing rows for this city or selections to prevent duplication
         $existingTeamIds = DB::table('master_n_p_team_mappings')
             ->whereIn('city_id', $cityIds)
-            ->pluck('team_id');
+            ->pluck('id');
 
         DB::table('master_n_p_mappings')->whereIn('team_id', $existingTeamIds)->delete();
         DB::table('master_n_p_team_mappings')->whereIn('city_id', $cityIds)->delete();
@@ -43,34 +43,42 @@ class UrbanElectionController extends Controller
         // 3. Find the maximum sequential team_id across the whole database
         $maxTeamId = DB::table('master_n_p_team_mappings')->max('team_id') ?? 0;
 
-        $teamMappingsData = [];
         $mappingsData = [];
         $currentTime = now();
+        $cityPpCounters = [];
 
-        // 4. Generate data arrays
+        // 4. Generate data arrays and insert parent team mappings
         foreach ($pollingStations as $index => $ps) {
             $seqTeamId = $maxTeamId + $index + 1;
             $posts = ['P0', 'P1', 'P2', 'P3'];
 
-            // Team mapping mein sirf EK baar entry jayegi is polling station ki team ke liye
-            $teamMappingsData[] = [
+            $cityId = $ps->city_id;
+            if (!isset($cityPpCounters[$cityId])) {
+                $cityPpCounters[$cityId] = 1;
+            } else {
+                $cityPpCounters[$cityId]++;
+            }
+            $ppId = $cityPpCounters[$cityId];
+
+            // Team mapping table entry is created row-by-row to get the auto-incremented primary key ID
+            $teamMappingId = DB::table('master_n_p_team_mappings')->insertGetId([
                 'team_id'      => $seqTeamId,
                 'state_id'     => $ps->state_id,
                 'district_id'  => $ps->district_id,
                 'ward_id'      => $ps->ward_id,
-                'city_id'      => $ps->city_id,
+                'city_id'      => $cityId,
                 'ps_id'        => $ps->id,
                 'created_by'   => $user->id,
                 'updated_by'   => $user->id,
                 'created_at'   => $currentTime,
                 'updated_at'   => $currentTime,
-            ];
+            ]);
 
-            // Usi sequential team_id ko lekar 4 posts create honge
+            // Using the actual primary key ID as team_id in master_n_p_mappings
             foreach ($posts as $post) {
                 $mappingsData[] = [
-                    'team_id'    => $seqTeamId,
-                    'city_id'    => $ps->city_id,
+                    'team_id'    => $teamMappingId,
+                    'pp_id'      => $ppId,
                     'post_name'  => $post,
                     'emp_id'     => null,
                     'created_by' => $user->id,
@@ -81,11 +89,7 @@ class UrbanElectionController extends Controller
             }
         }
 
-        // 5. Bulk Insert into Database (Loop ke bahar single query se data insert hoga)
-        if (!empty($teamMappingsData)) {
-            DB::table('master_n_p_team_mappings')->insert($teamMappingsData);
-        }
-
+        // 5. Bulk Insert into Database for mappings posts
         if (!empty($mappingsData)) {
             DB::table('master_n_p_mappings')->insert($mappingsData);
         }
