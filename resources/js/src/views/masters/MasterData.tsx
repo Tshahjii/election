@@ -60,6 +60,31 @@ import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_DOB = '2000-05-18';
 
+const SearchTextField = ({ value, onChange, ...props }: any) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localValue !== value) {
+        onChange(localValue);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [localValue, onChange, value]);
+
+  return (
+    <TextField
+      {...props}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+    />
+  );
+};
+
 const MASTER_TYPES = [
   {
     key: 'countries',
@@ -672,8 +697,7 @@ export default function MasterData({ masterKey = 'countries' }) {
     setPage(1);
   }, [master.key]);
 
-  const handleSearchFilterChange = (event) => {
-    const value = event.target.value;
+  const handleSearchFilterChange = (value: string) => {
     setFilters((current) => ({ ...current, search: value }));
     setPage(1);
   };
@@ -1285,34 +1309,12 @@ export default function MasterData({ masterKey = 'countries' }) {
     return field ? renderField(field) : null;
   };
 
-  return (
-    <Stack sx={{ gap: 2 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2 }}>
-        <Box>
-          <Typography variant="h2">{t('masters.master')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('masters.managePrefix')} {(t(master.labelKey || '') || master.label).toLowerCase()} {t('masters.manageSuffix')}
-          </Typography>
-        </Box>
-        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
-          <DownloadMenu title={exportTitle} columns={exportColumns} getRowsLazy={handleGetRows} disabled={loading} />
-          {canImport && (
-            <Button variant="outlined" color="secondary" startIcon={<UploadFileOutlined />} onClick={() => setImportModalOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
-              Import
-            </Button>
-          )}
-          {canCreate && (
-            <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
-              {t('common.create')} {t(master.titleKey || '') || master.title}
-            </Button>
-          )}
-        </Stack>
-      </Stack>
-
+  const filtersCard = useMemo(() => {
+    return (
       <MainCard sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: '0 14px 36px rgba(15, 23, 42, 0.07)' }} contentSX={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
+            <SearchTextField
               fullWidth
               size="small"
               label={`${t('common.search')} ${t(master.labelKey || '') || master.label}`}
@@ -1433,7 +1435,11 @@ export default function MasterData({ masterKey = 'countries' }) {
           </Grid>
         </Grid>
       </MainCard>
+    );
+  }, [filters, rowsPerPage, options, filterStateOptions, filterDistrictOptions, filterCityOptions, filterWardOptions, t, master]);
 
+  const tableCard = useMemo(() => {
+    return (
       <MainCard
         title={`${t(master.labelKey || '') || master.label} (${totalRows})`}
         sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: '0 14px 36px rgba(15, 23, 42, 0.07)', overflow: 'hidden' }}
@@ -1508,6 +1514,36 @@ export default function MasterData({ masterKey = 'countries' }) {
 
         <PaginationFooter page={page} rowsPerPage={rowsPerPage} totalRows={totalRows} onPageChange={setPage} />
       </MainCard>
+    );
+  }, [decoratedRows, loading, page, rowsPerPage, totalRows, canEdit, canDelete, tableColumnCount, t, tl, master]);
+
+  return (
+    <Stack sx={{ gap: 2 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2 }}>
+        <Box>
+          <Typography variant="h2">{t('masters.master')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('masters.managePrefix')} {(t(master.labelKey || '') || master.label).toLowerCase()} {t('masters.manageSuffix')}
+          </Typography>
+        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
+          <DownloadMenu title={exportTitle} columns={exportColumns} getRowsLazy={handleGetRows} disabled={loading} />
+          {canImport && (
+            <Button variant="outlined" color="secondary" startIcon={<UploadFileOutlined />} onClick={() => setImportModalOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+              Import
+            </Button>
+          )}
+          {canCreate && (
+            <Button variant="contained" color="primary" startIcon={<AddOutlined />} onClick={handleOpenCreate} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+              {t('common.create')} {t(master.titleKey || '') || master.title}
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
+      {filtersCard}
+
+      {tableCard}
 
       <Dialog open={modal.open} onClose={handleCloseModal} fullWidth maxWidth={masterKey === 'employees' ? 'lg' : 'md'}>
         <Box component="form" onSubmit={handleSubmit} noValidate>

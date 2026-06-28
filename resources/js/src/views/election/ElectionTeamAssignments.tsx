@@ -42,7 +42,30 @@ import {
 
 // assets
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined';
-import SaveOutlined from '@mui/icons-material/SaveOutlined';
+const SearchTextField = ({ value, onChange, ...props }: any) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localValue !== value) {
+        onChange(localValue);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [localValue, onChange, value]);
+
+  return (
+    <TextField
+      {...props}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+    />
+  );
+};
 
 interface ElectionTeamAssignmentsProps {
   type: 'Nagar Panchayat' | 'Nagari Nikay';
@@ -252,25 +275,25 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
+            <SearchTextField
               fullWidth
               size="small"
               label={t('election.searchTeam')}
               placeholder={t('election.searchTeamPlaceholder')}
               value={teamSearch}
-              onChange={(event) => setTeamSearch(event.target.value)}
+              onChange={(value: string) => setTeamSearch(value)}
               disabled={loading}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
+            <SearchTextField
               fullWidth
               size="small"
               label={t('election.searchEmp')}
               placeholder={t('election.searchEmpPlaceholder2')}
               value={employeeSearch}
-              onChange={(event) => setEmployeeSearch(event.target.value)}
+              onChange={(value: string) => setEmployeeSearch(value)}
               disabled={loading}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
