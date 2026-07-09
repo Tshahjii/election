@@ -17,6 +17,9 @@ use App\Models\MasterEmpType;
 use App\Models\MasterOffice;
 use App\Models\MasterPayLevel;
 use App\Models\MasterState;
+use App\Models\MasterNPMapping;
+use App\Models\MasterRPMapping;
+use App\Models\MasterElectionSalaryRule;
 use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -134,6 +137,44 @@ class MasterDataController extends Controller
             'file_dir' => 'masters/employees',
         ],
     ];
+
+    public function getSalaryRules(Request $request): JsonResponse
+    {
+        $rules = MasterElectionSalaryRule::query()
+            ->orderBy('post_name')
+            ->get();
+
+        return response()->json($rules);
+    }
+
+    public function saveSalaryRules(Request $request): JsonResponse
+    {
+        $request->validate([
+            'rules' => 'required|array|min:4|max:5',
+            'rules.*.post_name' => 'required|string|in:P0,P1,P2,P3,P4',
+            'rules.*.min_salary' => 'required|numeric|min:0',
+            'rules.*.comparison_operator' => 'required|string|in:above,under',
+        ]);
+
+        $rulesInput = $request->input('rules');
+        $user = $request->user();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($rulesInput, $user) {
+            foreach ($rulesInput as $item) {
+                MasterElectionSalaryRule::query()
+                    ->where('post_name', $item['post_name'])
+                    ->update([
+                        'min_salary' => $item['min_salary'],
+                        'comparison_operator' => $item['comparison_operator'],
+                        'updated_at' => now(),
+                    ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Election salary rules updated successfully.',
+        ]);
+    }
 
     public function index(Request $request, string $type): JsonResponse
     {
@@ -443,8 +484,30 @@ class MasterDataController extends Controller
     public function searchEmployees(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
+        $postName = $request->query('post_name');
 
-        $query = \Illuminate\Support\Facades\DB::table('master_employees')->where('status', 1);
+        $query = MasterEmployee::query()->where('status', 1);
+
+        // 1. Exclude already assigned employees across both NP and RP mapping tables
+        $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+        $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+        $assignedEmpIds = array_unique(array_merge($assignedNP, $assignedRP));
+
+        if (!empty($assignedEmpIds)) {
+            $query->whereNotIn('id', $assignedEmpIds);
+        }
+
+        // 2. Filter by salary rules if post_name is provided
+        if (!empty($postName)) {
+            $rule = MasterElectionSalaryRule::query()
+                ->where('post_name', $postName)
+                ->first();
+
+            if ($rule) {
+                $op = $rule->comparison_operator === 'above' ? '>=' : '<';
+                $query->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
+            }
+        }
 
         if ($term !== '') {
             $query->where(function ($q) use ($term) {

@@ -85,11 +85,25 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, arg) => ['Masters', { type: 'Masters', id: arg.type }]
     }),
-    searchEmployees: builder.query<any, { q: string }>({
-      query: ({ q }) => ({
+    searchEmployees: builder.query<any, { q: string; post_name?: string }>({
+      query: ({ q, post_name }) => ({
         url: '/masters/employees/search',
-        params: { q }
+        params: { q, post_name }
       })
+    }),
+    getElectionSalaryRules: builder.query<any, void>({
+      query: () => ({
+        url: '/masters/election-salary-rules'
+      }),
+      providesTags: ['Masters']
+    }),
+    saveElectionSalaryRules: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/masters/election-salary-rules',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['Masters']
     }),
 
     // Users endpoints
@@ -183,6 +197,14 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['UrbanElection']
     }),
+    applyUrbanTargetedDuty: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/urban-election/apply-targeted-duty',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['UrbanElection']
+    }),
 
     // Rural Election endpoints
     getRuralDashboard: builder.query<any, any>({
@@ -223,6 +245,14 @@ export const apiSlice = createApi({
         data
       }),
       invalidatesTags: ['RuralElection']
+    }),
+    applyRuralTargetedDuty: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/rural-election/apply-targeted-duty',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['RuralElection']
     })
   })
 });
@@ -236,6 +266,8 @@ export const {
   useDeleteMasterMutation,
   useImportMasterMutation,
   useLazySearchEmployeesQuery,
+  useGetElectionSalaryRulesQuery,
+  useSaveElectionSalaryRulesMutation,
 
   useGetAccessOptionsQuery,
   useGetUsersQuery,
@@ -251,10 +283,12 @@ export const {
   useSaveUrbanAssignmentsMutation,
   useExemptUrbanEmployeeMutation,
   useApplyUrbanDutyMutation,
+  useApplyUrbanTargetedDutyMutation,
 
   useGetRuralDashboardQuery,
   useCreateRuralTeamsMutation,
   useSaveRuralAssignmentsMutation,
   useExemptRuralEmployeeMutation,
-  useApplyRuralDutyMutation
+  useApplyRuralDutyMutation,
+  useApplyRuralTargetedDutyMutation
 } = apiSlice;

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -45,7 +46,9 @@ import {
   useCreateMasterMutation,
   useUpdateMasterMutation,
   useDeleteMasterMutation,
-  useImportMasterMutation
+  useImportMasterMutation,
+  useGetElectionSalaryRulesQuery,
+  useSaveElectionSalaryRulesMutation
 } from 'store/apiSlice';
 
 // assets
@@ -56,6 +59,8 @@ import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 import InsertDriveFileOutlined from '@mui/icons-material/InsertDriveFileOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import SaveOutlined from '@mui/icons-material/SaveOutlined';
 
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_DOB = '2000-05-18';
@@ -490,6 +495,10 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [importErrors, setImportErrors] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [salaryRulesModalOpen, setSalaryRulesModalOpen] = useState(false);
+  const [salaryRules, setSalaryRules] = useState<any[]>([]);
+  const [savingSalaryRules, setSavingSalaryRules] = useState(false);
+
   const master = MASTER_TYPES.find((item) => item.key === masterKey) || MASTER_TYPES[0];
   const tableColumnCount = master.columns.length + (master.supportsAttachment ? 4 : 3);
   const canCreate = hasPermission(user, `${master.module}.create`);
@@ -546,6 +555,30 @@ export default function MasterData({ masterKey = 'countries' }) {
   const [updateMaster] = useUpdateMasterMutation();
   const [deleteMaster] = useDeleteMasterMutation();
   const [importMaster, { isLoading: importing }] = useImportMasterMutation();
+
+  const [saveElectionSalaryRules] = useSaveElectionSalaryRulesMutation();
+  const { data: salaryRulesData, isFetching: loadingSalaryRules } = useGetElectionSalaryRulesQuery(undefined, {
+    skip: masterKey !== 'pay-levels' || !salaryRulesModalOpen
+  });
+
+  useEffect(() => {
+    if (salaryRulesData) {
+      setSalaryRules(salaryRulesData.map((rule: any) => ({ ...rule })));
+    }
+  }, [salaryRulesData]);
+
+  const handleSaveSalaryRules = async () => {
+    try {
+      setSavingSalaryRules(true);
+      await saveElectionSalaryRules({ rules: salaryRules }).unwrap();
+      dispatch(showNotification({ message: 'Election salary rules updated successfully.' }));
+      setSalaryRulesModalOpen(false);
+    } catch (error: any) {
+      dispatch(showNotification({ message: error?.data?.message || 'Failed to save salary rules.', severity: 'error' }));
+    } finally {
+      setSavingSalaryRules(false);
+    }
+  };
 
   const rows = useMemo(() => {
     let rowsData = listData?.data || [];
@@ -1449,7 +1482,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         <TableContainer sx={{ '&::-webkit-scrollbar': { height: 8 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 8 } }}>
           <Table sx={{ minWidth: 960 }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableRow sx={{ bgcolor: 'bg.100' }}>
                 <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{t('common.sno')}</TableCell>
                 {master.columns.map((column) => (
                   <TableCell key={column.key} sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{tl(column.label)}</TableCell>
@@ -1528,6 +1561,17 @@ export default function MasterData({ masterKey = 'countries' }) {
         </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
           <DownloadMenu title={exportTitle} columns={exportColumns} getRowsLazy={handleGetRows} disabled={loading} />
+          {masterKey === 'pay-levels' && (
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<SettingsOutlined />}
+              onClick={() => setSalaryRulesModalOpen(true)}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+            >
+              {t('election.salaryRulesBtn') || 'Salary Rules'}
+            </Button>
+          )}
           {canImport && (
             <Button variant="outlined" color="secondary" startIcon={<UploadFileOutlined />} onClick={() => setImportModalOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
               Import
@@ -1664,6 +1708,104 @@ export default function MasterData({ masterKey = 'countries' }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {masterKey === 'pay-levels' && (
+        <Dialog
+          open={salaryRulesModalOpen}
+          onClose={() => setSalaryRulesModalOpen(false)}
+          fullWidth
+          maxWidth="sm"
+          sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}
+        >
+          <DialogTitle component="div" sx={{ pb: 1, pt: 2.5 }}>
+            <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
+              {t('election.salaryRulesTitle') || 'Configure Post Salary Rules'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t('election.salaryRulesSubtitle') || 'Set basic pay rules for assigning employees to P0, P1, P2, P3, and P4 posts.'}
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            {loadingSalaryRules ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Stack spacing={2.5} sx={{ py: 1 }}>
+                {salaryRules.map((rule, index) => (
+                  <Grid container spacing={2} key={rule.post_name} sx={{ alignItems: 'center' }}>
+                    <Grid size={{ xs: 3, sm: 2 }}>
+                      <Chip
+                        label={rule.post_name}
+                        color="primary"
+                        sx={{ fontWeight: 700, borderRadius: 1.5, minWidth: 50 }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 5, sm: 5 }}>
+                      <FormControl fullWidth size="small">
+                        <ChosenSelect
+                          label={t('election.comparison') || 'Operator'}
+                          value={rule.comparison_operator}
+                          options={[
+                            { value: 'above', label: t('election.above') || 'Above' },
+                            { value: 'under', label: t('election.under') || 'Under' }
+                          ]}
+                          onChange={(e) => {
+                            const updated = [...salaryRules];
+                            updated[index] = { ...updated[index], comparison_operator: e.target.value };
+                            setSalaryRules(updated);
+                          }}
+                        />
+                      </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 4, sm: 5 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        type="number"
+                        label={t('field.basicPay') || 'Basic Pay Limit'}
+                        value={rule.min_salary}
+                        onChange={(e) => {
+                          const val = Math.max(0, Number(e.target.value));
+                          const updated = [...salaryRules];
+                          updated[index] = { ...updated[index], min_salary: val };
+                          setSalaryRules(updated);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                            e.preventDefault();
+                          }
+                        }}
+                        slotProps={{
+                          htmlInput: {
+                            min: 0
+                          }
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                ))}
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button variant="outlined" color="inherit" size="small" onClick={() => setSalaryRulesModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              disabled={savingSalaryRules || loadingSalaryRules}
+              startIcon={savingSalaryRules ? <CircularProgress size={16} color="inherit" /> : <SaveOutlined />}
+              onClick={handleSaveSalaryRules}
+              sx={{ borderRadius: 1.5, textTransform: 'none', px: 2.5 }}
+            >
+              {t('common.save')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Stack>
   );
 }

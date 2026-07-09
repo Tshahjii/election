@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTheme } from '@mui/material/styles';
 
 import AssignmentTurnedInOutlined from '@mui/icons-material/AssignmentTurnedInOutlined';
 import HowToVoteOutlined from '@mui/icons-material/HowToVoteOutlined';
@@ -44,13 +45,15 @@ interface ElectionDashboardProps {
 
 type Tone = 'primary' | 'success' | 'info' | 'warning' | 'error';
 
-const surfaceSx = {
+const getSurfaceSx = (theme: any) => ({
   border: '1px solid',
-  borderColor: 'rgba(148, 163, 184, 0.22)',
+  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(148, 163, 184, 0.22)',
   borderRadius: 3,
-  boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)',
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92))'
-};
+  boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 18px 45px rgba(15, 23, 42, 0.08)',
+  background: theme.palette.mode === 'dark'
+    ? 'linear-gradient(180deg, rgba(17, 28, 46, 0.95), rgba(12, 20, 34, 0.9))'
+    : 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92))'
+});
 
 const actionButtonSx = {
   borderRadius: 2,
@@ -62,7 +65,7 @@ const actionButtonSx = {
 };
 
 const tableHeadCellSx = {
-  color: 'text.dark',
+  color: 'text.primary',
   fontWeight: 800,
   whiteSpace: 'nowrap'
 };
@@ -79,13 +82,13 @@ const MetricCard = memo(function MetricCard({
   tone?: Tone;
 }) {
   return (
-    <Card sx={{ ...surfaceSx, height: '100%', p: { xs: 2, sm: 2.4 } }}>
+    <Card sx={(theme) => ({ ...getSurfaceSx(theme), height: '100%', p: { xs: 2, sm: 2.4 } })}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2, minHeight: 78 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, lineHeight: 1.45 }}>
             {label}
           </Typography>
-          <Typography variant="h3" sx={{ mt: 0.5, color: tone === 'error' ? 'error.main' : 'text.dark', fontWeight: 800, lineHeight: 1.15 }}>
+          <Typography variant="h3" sx={{ mt: 0.5, color: tone === 'error' ? 'error.main' : 'text.primary', fontWeight: 800, lineHeight: 1.15 }}>
             {value}
           </Typography>
         </Box>
@@ -112,6 +115,7 @@ const MetricCard = memo(function MetricCard({
 export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   const dispatch = useDispatch();
   const { t } = useAppPreferences();
+  const theme = useTheme();
   const isUrban = type === 'Nagar Panchayat';
   const postOptions = useMemo(() => (isUrban ? ['P0', 'P1', 'P2', 'P3'] : ['P0', 'P1', 'P2', 'P3', 'P4']), [isUrban]);
 
@@ -210,7 +214,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
         sx={{
           p: { xs: 2.25, sm: 3 },
           borderRadius: 3,
-          background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.98), rgba(49, 46, 129, 0.92))',
+          background: `linear-gradient(135deg, ${theme.palette.primary.darker}, ${theme.palette.primary.dark})`,
           color: 'primary.contrastText',
           overflow: 'hidden'
         }}
@@ -223,7 +227,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
         </Typography>
       </Box>
 
-      <Card sx={{ ...surfaceSx, p: { xs: 2, sm: 2.5 } }}>
+      <Card sx={(theme) => ({ ...getSurfaceSx(theme), p: { xs: 2, sm: 2.5 } })}>
         <Grid container spacing={2} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth>
@@ -277,7 +281,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
       )}
 
       {loading && (
-        <Box sx={{ ...surfaceSx, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, p: 4 }}>
+        <Box sx={(theme) => ({ ...getSurfaceSx(theme), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, p: 4 })}>
           <CircularProgress />
           <Typography variant="subtitle1" color="text.secondary">
             {t('election.loadingDashboard')}
@@ -304,7 +308,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
           {selectedCityId !== '' && (
             <>
-              <MainCard title={t('election.dutyCriteria')} sx={surfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
+              <MainCard title={t('election.dutyCriteria')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
                 <Grid container spacing={2.5}>
                   <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
@@ -356,7 +360,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 8 }}>
-              <MainCard title={t('election.zonesOverview')} sx={surfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }} contentSX={{ p: 0 }}>
+              <MainCard title={t('election.zonesOverview')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }} contentSX={{ p: 0 }}>
                 <TableContainer>
                   <Table sx={{ minWidth: 640 }}>
                     <TableHead>
@@ -391,7 +395,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
             </Grid>
 
             <Grid size={{ xs: 12, md: 4 }}>
-              <MainCard title={t('election.timeline')} sx={surfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
+              <MainCard title={t('election.timeline')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
                 <Stack spacing={2}>
                   {[
                     [t('election.nominationStage'), t('election.open'), 'success.main'],
@@ -427,8 +431,8 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
       {!loading && !dashboardData && (
         <Box
-          sx={{
-            ...surfaceSx,
+          sx={(theme) => ({
+            ...getSurfaceSx(theme),
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -437,7 +441,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
             minHeight: 220,
             borderStyle: 'dashed',
             textAlign: 'center'
-          }}
+          })}
         >
           <PeopleAltOutlined style={{ fontSize: '48px', color: '#64748b', marginBottom: '16px' }} />
           <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 600 }}>

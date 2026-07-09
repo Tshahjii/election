@@ -24,6 +24,8 @@ Route::middleware('jwt')->prefix('masters')->group(function () {
     Route::get('options', [MasterDataController::class, 'options']);
     Route::get('search', [MasterDataController::class, 'search']);
     Route::get('employees/search', [MasterDataController::class, 'searchEmployees']);
+    Route::get('election-salary-rules', [MasterDataController::class, 'getSalaryRules']);
+    Route::post('election-salary-rules', [MasterDataController::class, 'saveSalaryRules']);
     Route::get('{type}', [MasterDataController::class, 'index']);
     Route::post('{type}/import', [MasterDataController::class, 'import']);
     Route::post('{type}', [MasterDataController::class, 'store']);
@@ -37,6 +39,7 @@ Route::middleware('jwt')->prefix('urban-election')->group(function () {
     Route::post('save-assignments', [UrbanElectionController::class, 'saveAssignments']);
     Route::post('exempt-employee', [UrbanElectionController::class, 'exemptEmployee']);
     Route::post('apply-duty', [UrbanElectionController::class, 'applyDuty']);
+    Route::post('apply-targeted-duty', [UrbanElectionController::class, 'applyTargetedDuty']);
 });
 
 Route::middleware('jwt')->prefix('rural-election')->group(function () {
@@ -45,6 +48,7 @@ Route::middleware('jwt')->prefix('rural-election')->group(function () {
     Route::post('save-assignments', [RuralElectionController::class, 'saveAssignments']);
     Route::post('exempt-employee', [RuralElectionController::class, 'exemptEmployee']);
     Route::post('apply-duty', [RuralElectionController::class, 'applyDuty']);
+    Route::post('apply-targeted-duty', [RuralElectionController::class, 'applyTargetedDuty']);
 });
 
 Route::middleware('jwt')->prefix('users')->group(function () {
