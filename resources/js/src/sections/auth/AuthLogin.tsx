@@ -19,6 +19,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { useForm } from 'react-hook-form';
 
 // project imports
+import apiClient from 'api/client';
 import { useAppPreferences } from 'contexts/AppPreferences';
 import { clearAuthError, clearOtpMessage, expireOtpState, resetOtpState, sendLoginOtp, verifyLoginOtp } from 'store/slices/authSlice';
 import { otpSchema } from 'utils/validationSchema';
@@ -52,11 +53,15 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { t } = useAppPreferences();
-  const { error, isAuthenticated, loading, otpExpiresAt, otpMessage, otpSent } = useSelector((state) => state.auth);
+  const { error, isAuthenticated, loading, otpExpiresAt, otpMessage, otpSent, devOtp } = useSelector((state: any) => state.auth);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaReady, setCaptchaReady] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [loginConfig, setLoginConfig] = useState({
+    password_login_enabled: true,
+    default_otp_enabled: false
+  });
   const turnstileRef = useRef(null);
   const widgetIdRef = useRef(null);
   const lastPasswordRef = useRef('');
@@ -75,7 +80,20 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
     required: 'Mobile number is required',
     pattern: { value: /^[6-9]\d{9}$/, message: 'Enter a valid 10 digit mobile number' }
   };
-  const passwordSchema = { required: 'Password is required' };
+  const passwordSchema = loginConfig.password_login_enabled ? { required: 'Password is required' } : {};
+
+  useEffect(() => {
+    apiClient.get('/auth/login-config')
+      .then(({ data }) => {
+        setLoginConfig({
+          password_login_enabled: data.password_login_enabled,
+          default_otp_enabled: data.default_otp_enabled
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to load login config:', err);
+      });
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -201,7 +219,7 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
 
     const password = getValues('password') || lastPasswordRef.current;
 
-    if (!password) {
+    if (loginConfig.password_login_enabled && !password) {
       setError('password', { type: 'required', message: t('auth.passwordLabel') });
       dispatch(resetOtpState());
       return;
@@ -253,7 +271,7 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
           )}
         </Box>
 
-        {!otpSent && (
+        {!otpSent && loginConfig.password_login_enabled && (
           <Box>
             <TextField
               id="outlined-password"
@@ -305,9 +323,13 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
             />
             {errors.otp?.message && <FormHelperText error>{String(errors.otp.message)}</FormHelperText>}
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-              <Button size="small" variant="text" onClick={handleResendOtp} sx={{ minWidth: 'auto', p: 0 }}>
-                {t('auth.resendOtp')}
-              </Button>
+              {isOtpExpired ? (
+                <Button size="small" variant="text" onClick={handleResendOtp} sx={{ minWidth: 'auto', p: 0 }}>
+                  {t('auth.resendOtp')}
+                </Button>
+              ) : (
+                <Box />
+              )}
               <Typography
                 variant="caption"
                 sx={{
@@ -348,6 +370,11 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
         )}
 
         {isOtpExpired && <Alert severity="warning">{t('auth.otpExpiredFull')}</Alert>}
+        {devOtp && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            {t('auth.defaultOtpAlert') || 'Bypass Mode Active: default OTP is'} <strong>{devOtp}</strong>
+          </Alert>
+        )}
         {error && <Alert severity="error">{error}</Alert>}
         </Stack>
 

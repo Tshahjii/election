@@ -10,6 +10,7 @@ import RouteError from 'components/RouteError';
 // pages
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/default')));
 const UserAccessListPage = Loadable(lazy(() => import('views/users/UserAccessList')));
+const AuthSettingsPage = Loadable(lazy(() => import('views/users/AuthSettings')));
 const MasterDataPage = Loadable(lazy(() => import('views/masters/MasterData')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
 
@@ -65,6 +66,10 @@ const MainRoutes = {
     {
       path: 'users/access-management',
       element: <UserAccessListPage />
+    },
+    {
+      path: 'users/auth-settings',
+      element: <AuthSettingsPage />
     },
     {
       path: 'masters',

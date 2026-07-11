@@ -11,12 +11,15 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:5,1');
     Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+    Route::get('login-config', [AuthController::class, 'getLoginConfig']);
 
     Route::middleware('jwt')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
         Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('auth-settings', [AuthController::class, 'getAuthSettings']);
+        Route::post('auth-settings', [AuthController::class, 'updateAuthSettings']);
     });
 });
 

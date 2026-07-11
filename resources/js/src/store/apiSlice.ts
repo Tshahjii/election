@@ -156,6 +156,18 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Users']
     }),
+    getAuthSettings: builder.query<any, void>({
+      query: () => ({ url: '/auth/auth-settings' }),
+      providesTags: ['Users']
+    }),
+    updateAuthSettings: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/auth/auth-settings',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['Users']
+    }),
 
     // Urban Election endpoints
     getUrbanDashboard: builder.query<any, any>({
@@ -277,6 +289,8 @@ export const {
   useUpdateAccessMutation,
   useResetPasswordMutation,
   useDeleteUserMutation,
+  useGetAuthSettingsQuery,
+  useUpdateAuthSettingsMutation,
 
   useGetUrbanDashboardQuery,
   useCreateUrbanTeamsMutation,

@@ -8,6 +8,7 @@ use App\Models\MasterDistrict;
 use App\Models\MasterOffice;
 use App\Models\MasterState;
 use App\Models\User;
+use App\Models\SystemSetting;
 use App\Services\JwtService;
 use App\Services\TurnstileService;
 use App\Support\AccessScope;
@@ -29,10 +30,18 @@ class AuthController extends Controller
 
     public function sendOtp(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $passwordRequired = SystemSetting::isEnabled('password_login_enabled', true);
+        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+
+        $rules = [
             'mobile' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
-            'password' => ['required', 'string'],
-        ]);
+        ];
+
+        if ($passwordRequired) {
+            $rules['password'] = ['required', 'string'];
+        }
+
+        $data = $request->validate($rules);
 
         $user = User::query()->where('mobile', $data['mobile'])->first();
 
@@ -50,9 +59,21 @@ class AuthController extends Controller
             ]);
         }
 
-        if (!Hash::check($data['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'password' => 'The provided password is incorrect.'
+        if ($passwordRequired) {
+            if (!Hash::check($data['password'], $user->password)) {
+                throw ValidationException::withMessages([
+                    'password' => 'The provided password is incorrect.'
+                ]);
+            }
+        }
+
+        if ($defaultOtpEnabled) {
+            Log::info('Login OTP bypassed (default OTP mode active).', ['mobile' => $user->mobile]);
+
+            return response()->json([
+                'message' => 'OTP sent successfully.',
+                'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
+                'otp' => '123456',
             ]);
         }
 
@@ -88,6 +109,52 @@ class AuthController extends Controller
         ]);
     }
 
+    public function getLoginConfig(): JsonResponse
+    {
+        return response()->json([
+            'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
+            'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+        ]);
+    }
+
+    public function getAuthSettings(Request $request): JsonResponse
+    {
+        abort_unless(in_array((int) $request->user()->role, [1, 2], true), 403, 'Unauthorized access.');
+
+        return response()->json([
+            'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
+            'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+        ]);
+    }
+
+    public function updateAuthSettings(Request $request): JsonResponse
+    {
+        abort_unless(in_array((int) $request->user()->role, [1, 2], true), 403, 'Unauthorized access.');
+
+        $data = $request->validate([
+            'password_login_enabled' => ['required', 'boolean'],
+            'default_otp_enabled' => ['required', 'boolean'],
+        ]);
+
+        SystemSetting::query()->updateOrCreate(
+            ['key' => 'password_login_enabled'],
+            ['value' => $data['password_login_enabled'] ? '1' : '0']
+        );
+
+        SystemSetting::query()->updateOrCreate(
+            ['key' => 'default_otp_enabled'],
+            ['value' => $data['default_otp_enabled'] ? '1' : '0']
+        );
+
+        return response()->json([
+            'message' => 'Authentication settings updated successfully.',
+            'settings' => [
+                'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
+                'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+            ]
+        ]);
+    }
+
     public function verifyOtp(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -114,6 +181,18 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'mobile' => 'This account is inactive. Please contact the administrator.'
             ]);
+        }
+
+        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+
+        if ($defaultOtpEnabled && $data['otp'] === '123456') {
+            $user->forceFill([
+                'user_verified_at' => $user->user_verified_at ?: now(),
+                'last_active' => now(),
+                'last_active_ip' => $request->ip(),
+            ])->save();
+
+            return response()->json($this->tokenResponse($user));
         }
 
         $otpExpiresAt = now()->subMinutes(self::OTP_TTL_MINUTES);

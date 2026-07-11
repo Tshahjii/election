@@ -133,6 +133,15 @@ const dashboard = {
           icon: SecurityOutlinedIcon,
           url: '/admin/users/access-management',
           permission: 'users.access.read'
+        },
+        {
+          id: 'auth-settings',
+          title: 'Auth Settings',
+          titleKey: 'menu.authSettings',
+          type: 'item',
+          icon: SecurityOutlinedIcon,
+          url: '/admin/users/auth-settings',
+          permission: 'users.access.read'
         }
       ]
     }
