@@ -736,7 +736,7 @@ class MasterDataController extends Controller
                 'title' => ['required', 'string', 'max:100'],
                 'name' => ['required', 'string', 'max:100'],
                 'gender' => ['required', 'integer', Rule::in([1, 2])],
-                'dob' => ['required', 'date', 'before_or_equal:2000-05-18'],
+                'dob' => ['required', 'date'],
                 'mobile' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/', $this->uniqueRule('master_employees', 'mobile', $row)],
                 'email' => ['required', 'email', 'max:100', $this->uniqueRule('master_employees', 'email', $row)],
                 'emp_type_id' => ['required', 'integer', 'exists:master_emp_types,id'],
@@ -744,7 +744,26 @@ class MasterDataController extends Controller
                 'designation_id' => ['required', 'integer', 'exists:master_designations,id'],
                 'ofc_id' => ['nullable', 'integer', 'exists:master_offices,ofc_id'],
                 'pay_level_id' => ['required', 'integer', 'exists:master_pay_levels,id'],
-                'basic_pay' => ['required', 'string', 'max:50'],
+                'basic_pay' => [
+                    'required',
+                    'numeric',
+                    function ($attribute, $value, $fail) use ($request) {
+                        $payLevelId = $request->input('pay_level_id');
+                        if ($payLevelId) {
+                            $payLevel = \Illuminate\Support\Facades\DB::table('master_pay_levels')
+                                ->where('id', $payLevelId)
+                                ->first(['min_amount_pay', 'max_amount_pay']);
+                            if ($payLevel) {
+                                $min = (float) $payLevel->min_amount_pay;
+                                $max = (float) $payLevel->max_amount_pay;
+                                $val = (float) $value;
+                                if ($val < $min || $val > $max) {
+                                    $fail("The Basic Pay must be between {$min} and {$max} for the selected Pay Level.");
+                                }
+                            }
+                        }
+                    }
+                ],
                 'country_id' => ['required', 'integer', 'exists:master_countries,id'],
                 'state_id' => ['required', 'integer', 'exists:master_states,id'],
                 'district_id' => ['required', 'integer', 'exists:master_districts,id'],

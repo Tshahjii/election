@@ -610,14 +610,16 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                           <TextField
                             {...params}
                             placeholder={t('election.searchEmpPlaceholder')}
-                            InputProps={{
-                              ...params.InputProps,
-                              endAdornment: (
-                                <>
-                                  {searchLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                  {params.InputProps?.endAdornment}
-                                </>
-                              )
+                            slotProps={{
+                              input: {
+                                ...params.slotProps?.input,
+                                endAdornment: (
+                                  <>
+                                    {searchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                    {params.slotProps?.input?.endAdornment}
+                                  </>
+                                )
+                              }
                             }}
                           />
                         )}

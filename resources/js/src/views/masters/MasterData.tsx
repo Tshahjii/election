@@ -63,7 +63,6 @@ import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import SaveOutlined from '@mui/icons-material/SaveOutlined';
 
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_DOB = '2000-05-18';
 
 const SearchTextField = ({ value, onChange, ...props }: any) => {
   const [localValue, setLocalValue] = useState(value);
@@ -761,6 +760,26 @@ export default function MasterData({ masterKey = 'countries' }) {
 
   const handleFormChange = (field) => (event) => {
     const value = event.target.value;
+
+    // Restrict basic_pay typing if it exceeds max pay level value
+    if (field === 'basic_pay' && master.key === 'employees') {
+      const payLevelId = form.pay_level_id;
+      if (payLevelId) {
+        const selectedPayLevel = options.pay_levels.find((pl) => Number(pl.id) === Number(payLevelId));
+        if (selectedPayLevel) {
+          const max = parseFloat(selectedPayLevel.max_amount_pay);
+          const val = parseFloat(value);
+          if (!isNaN(val) && val > max) {
+            setErrors((current) => ({
+              ...current,
+              basic_pay: `Basic Pay cannot exceed ${max} for the selected Pay Level.`
+            }));
+            return; // Block the update
+          }
+        }
+      }
+    }
+
     setErrors((current) => {
       const next = { ...current };
       delete next[field];
@@ -773,6 +792,21 @@ export default function MasterData({ masterKey = 'countries' }) {
           next.gender = 1;
         } else if (value === 'श्रीमती' || value === 'सुश्री' || value === 'कुमारी') {
           next.gender = 2;
+        }
+      }
+      if (field === 'pay_level_id' && value && master.key === 'employees') {
+        const selectedPayLevel = options.pay_levels.find((pl) => Number(pl.id) === Number(value));
+        if (selectedPayLevel) {
+          const min = parseFloat(selectedPayLevel.min_amount_pay);
+          const max = parseFloat(selectedPayLevel.max_amount_pay);
+          const currentBasicPay = parseFloat(next.basic_pay);
+          if (!isNaN(currentBasicPay)) {
+            if (currentBasicPay > max) {
+              next.basic_pay = String(max);
+            } else if (currentBasicPay < min) {
+              next.basic_pay = String(min);
+            }
+          }
         }
       }
       if (field === 'country_id') {
@@ -799,6 +833,28 @@ export default function MasterData({ masterKey = 'countries' }) {
     });
   };
 
+  const handleBasicPayBlur = (event: any) => {
+    const value = event.target.value;
+    const payLevelId = form.pay_level_id;
+    if (payLevelId && value) {
+      const selectedPayLevel = options.pay_levels.find((pl) => Number(pl.id) === Number(payLevelId));
+      if (selectedPayLevel) {
+        const min = parseFloat(selectedPayLevel.min_amount_pay);
+        const val = parseFloat(value);
+        if (!isNaN(val) && val < min) {
+          setForm((current) => ({
+            ...current,
+            basic_pay: String(min)
+          }));
+          setErrors((current) => ({
+            ...current,
+            basic_pay: `Basic Pay set to minimum limit of ${min} for the selected Pay Level.`
+          }));
+        }
+      }
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -812,6 +868,21 @@ export default function MasterData({ masterKey = 'countries' }) {
         }
       }
     });
+    
+    if (master.key === 'employees') {
+      const payLevelId = form.pay_level_id;
+      const basicPay = parseFloat(form.basic_pay);
+      if (payLevelId && !isNaN(basicPay)) {
+        const selectedPayLevel = options.pay_levels.find((pl) => Number(pl.id) === Number(payLevelId));
+        if (selectedPayLevel) {
+          const min = parseFloat(selectedPayLevel.min_amount_pay);
+          const max = parseFloat(selectedPayLevel.max_amount_pay);
+          if (basicPay < min || basicPay > max) {
+            clientErrors.basic_pay = `Basic Pay must be between ${min} and ${max} for the selected Pay Level.`;
+          }
+        }
+      }
+    }
 
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
@@ -1319,8 +1390,7 @@ export default function MasterData({ masterKey = 'countries' }) {
         minRows={field.multiline ? 3 : undefined}
         value={form[field.key] ?? ''}
         onChange={handleFormChange(field.key)}
-        onKeyDown={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
-        onPaste={field.key === 'dob' ? (event) => event.preventDefault() : undefined}
+        onBlur={field.key === 'basic_pay' && master.key === 'employees' ? handleBasicPayBlur : undefined}
         error={hasError}
         helperText={errText}
         size="small"
@@ -1328,7 +1398,6 @@ export default function MasterData({ masterKey = 'countries' }) {
           inputLabel: { shrink: field.type === 'date' ? true : undefined },
           input: {
             inputProps: {
-              max: field.key === 'dob' ? MAX_DOB : undefined,
               maxLength: field.maxLength
             }
           }
