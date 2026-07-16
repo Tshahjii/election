@@ -11,7 +11,21 @@ import RouteError from 'components/RouteError';
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/default')));
 const UserAccessListPage = Loadable(lazy(() => import('views/users/UserAccessList')));
 const AuthSettingsPage = Loadable(lazy(() => import('views/users/AuthSettings')));
-const MasterDataPage = Loadable(lazy(() => import('views/masters/MasterData')));
+const CountriesPage = Loadable(lazy(() => import('views/masters/Countries')));
+const StatesPage = Loadable(lazy(() => import('views/masters/States')));
+const DistrictsPage = Loadable(lazy(() => import('views/masters/Districts')));
+const OfficesPage = Loadable(lazy(() => import('views/masters/Offices')));
+const NPCitiesPage = Loadable(lazy(() => import('views/masters/NPCities')));
+const NPWardsPage = Loadable(lazy(() => import('views/masters/NPWards')));
+const NPPollingStationsPage = Loadable(lazy(() => import('views/masters/NPPollingStations')));
+const RPCitiesPage = Loadable(lazy(() => import('views/masters/RPCities')));
+const RPWardsPage = Loadable(lazy(() => import('views/masters/RPWards')));
+const RPPollingStationsPage = Loadable(lazy(() => import('views/masters/RPPollingStations')));
+const EmpTypesPage = Loadable(lazy(() => import('views/masters/EmpTypes')));
+const DesignationsPage = Loadable(lazy(() => import('views/masters/Designations')));
+const DepartmentsPage = Loadable(lazy(() => import('views/masters/Departments')));
+const PayLevelsPage = Loadable(lazy(() => import('views/masters/PayLevels')));
+const EmployeesPage = Loadable(lazy(() => import('views/masters/Employees')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
 
 // new modules
@@ -77,63 +91,63 @@ const MainRoutes = {
     },
     {
       path: 'masters/countries',
-      element: <MasterDataPage masterKey="countries" />
+      element: <CountriesPage />
     },
     {
       path: 'masters/states',
-      element: <MasterDataPage masterKey="states" />
+      element: <StatesPage />
     },
     {
       path: 'masters/districts',
-      element: <MasterDataPage masterKey="districts" />
+      element: <DistrictsPage />
     },
     {
       path: 'masters/offices',
-      element: <MasterDataPage masterKey="offices" />
+      element: <OfficesPage />
     },
     {
       path: 'masters/np-cities',
-      element: <MasterDataPage masterKey="np-cities" />
+      element: <NPCitiesPage />
     },
     {
       path: 'masters/np-wards',
-      element: <MasterDataPage masterKey="np-wards" />
+      element: <NPWardsPage />
     },
     {
       path: 'masters/np-polling-stations',
-      element: <MasterDataPage masterKey="np-polling-stations" />
+      element: <NPPollingStationsPage />
     },
     {
       path: 'masters/rp-cities',
-      element: <MasterDataPage masterKey="rp-cities" />
+      element: <RPCitiesPage />
     },
     {
       path: 'masters/rp-wards',
-      element: <MasterDataPage masterKey="rp-wards" />
+      element: <RPWardsPage />
     },
     {
       path: 'masters/rp-polling-stations',
-      element: <MasterDataPage masterKey="rp-polling-stations" />
+      element: <RPPollingStationsPage />
     },
     {
       path: 'masters/emp-types',
-      element: <MasterDataPage masterKey="emp-types" />
+      element: <EmpTypesPage />
     },
     {
       path: 'masters/designations',
-      element: <MasterDataPage masterKey="designations" />
+      element: <DesignationsPage />
     },
     {
       path: 'masters/departments',
-      element: <MasterDataPage masterKey="departments" />
+      element: <DepartmentsPage />
     },
     {
       path: 'masters/pay-levels',
-      element: <MasterDataPage masterKey="pay-levels" />
+      element: <PayLevelsPage />
     },
     {
       path: 'hrms/master-employee',
-      element: <MasterDataPage masterKey="employees" />
+      element: <EmployeesPage />
     },
     {
       path: 'sample-page',
