@@ -26,6 +26,8 @@ const DesignationsPage = Loadable(lazy(() => import('views/masters/Designations'
 const DepartmentsPage = Loadable(lazy(() => import('views/masters/Departments')));
 const PayLevelsPage = Loadable(lazy(() => import('views/masters/PayLevels')));
 const EmployeesPage = Loadable(lazy(() => import('views/masters/Employees')));
+const DistrictConfigsPage = Loadable(lazy(() => import('views/masters/DistrictConfigs')));
+const UserProfilePage = Loadable(lazy(() => import('views/auth/UserProfile')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
 
 // new modules
@@ -88,6 +90,14 @@ const MainRoutes = {
     {
       path: 'masters',
       element: <Navigate to="/admin/masters/countries" replace />
+    },
+    {
+      path: 'masters/district-config',
+      element: <DistrictConfigsPage />
+    },
+    {
+      path: 'profile',
+      element: <UserProfilePage />
     },
     {
       path: 'masters/countries',

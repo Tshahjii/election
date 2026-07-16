@@ -30,6 +30,13 @@ class JwtAuthenticate
                 ->whereKey($payload['sub'] ?? null)
                 ->where('is_active', 1)
                 ->first();
+
+            if ($user && isset($payload['jti'])) {
+                $cachedJti = \Illuminate\Support\Facades\Cache::get("user_active_jti_{$user->id}");
+                if ($cachedJti && $cachedJti !== $payload['jti']) {
+                    return response()->json(['message' => 'Session expired. You have been logged in from another device.'], 401);
+                }
+            }
         } catch (Throwable) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }

@@ -74,6 +74,7 @@ const hiOverrides: Record<string, string> = {
   'menu.users': 'उपयोगकर्ता',
   'menu.accessManagement': 'एक्सेस प्रबंधन',
   'menu.authSettings': 'लॉगिन सेटिंग्स',
+  'menu.districtConfig': 'जिला कॉन्फ़िगरेशन',
   'authSettings.title': 'प्रमाणीकरण सेटिंग्स',
   'authSettings.subtitle': 'लॉगिन प्रवाह, पासवर्ड आवश्यकताओं और डिफ़ॉल्ट ओटीपी बाईपास मोड को प्रबंधित करें।',
   'authSettings.defaultOtpTitle': 'डिफ़ॉल्ट ओटीपी मोड (एसएमएस बाईपास)',

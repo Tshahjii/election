@@ -248,6 +248,102 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully.']);
     }
 
+    public function unlock(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => 'Incorrect password.'
+            ]);
+        }
+
+        return response()->json(['message' => 'Unlocked successfully.']);
+    }
+
+    public function unlockSendOtp(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+
+        if ($defaultOtpEnabled) {
+            return response()->json([
+                'message' => 'OTP sent successfully.',
+                'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
+                'otp' => '123456',
+            ]);
+        }
+
+        CheckOtp::query()
+            ->where('mobile', $user->mobile)
+            ->where('is_active', 1)
+            ->update(['is_active' => 0]);
+
+        $otp = (string) random_int(100000, 999999);
+
+        CheckOtp::query()->create([
+            'user_id' => (string) $user->id,
+            'mobile' => $user->mobile,
+            'otp' => $otp,
+        ]);
+
+        Log::info('Unlock OTP generated.', ['mobile' => $user->mobile]);
+
+        return response()->json([
+            'message' => 'OTP sent successfully.',
+            'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
+        ]);
+    }
+
+    public function unlockVerifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+
+        if ($defaultOtpEnabled && $data['otp'] === '123456') {
+            return response()->json(['message' => 'Unlocked successfully.']);
+        }
+
+        $otpExpiresAt = now()->subMinutes(self::OTP_TTL_MINUTES);
+
+        $otpRecord = CheckOtp::query()
+            ->where('user_id', (string) $user->id)
+            ->where('mobile', $user->mobile)
+            ->where('otp', $data['otp'])
+            ->where('is_active', 1)
+            ->whereNull('verified_at')
+            ->where('created_at', '>=', $otpExpiresAt)
+            ->latest()
+            ->first();
+
+        if (! $otpRecord) {
+            throw ValidationException::withMessages(['otp' => 'The OTP is invalid or expired.']);
+        }
+
+        $otpRecord->forceFill([
+            'verified_at' => now(),
+            'is_active' => 0,
+        ])->save();
+
+        return response()->json(['message' => 'Unlocked successfully.']);
+    }
+
     public function changePassword(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -305,10 +401,20 @@ class AuthController extends Controller
 
     private function tokenResponse(User $user): array
     {
+        $token = $this->jwt->makeToken($user->getKey());
+        try {
+            $payload = $this->jwt->decode($token);
+            if (isset($payload['jti'])) {
+                \Illuminate\Support\Facades\Cache::put("user_active_jti_{$user->id}", $payload['jti'], now()->addMinutes(config('jwt.ttl', 60)));
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
         return [
             'token_type' => 'Bearer',
             'expires_in' => config('jwt.ttl') * 60,
-            'access_token' => $this->jwt->makeToken($user->getKey()),
+            'access_token' => $token,
             'user' => $this->userPayload($user),
         ];
     }
@@ -330,13 +436,14 @@ class AuthController extends Controller
             ->first(['id', 'name', 'state_code', 'attachment_path']) : null;
         $country = MasterCountry::query()->whereKey($user->country_id ?: $office?->country_id)->first(['id', 'name']);
         $district = MasterDistrict::query()->whereKey($user->district_id ?: $office?->district_id)->first(['id', 'name']);
-        $isDefaultPassword = Hash::check('Admin@123', $user->password);
+        $passwordRequired = SystemSetting::isEnabled('password_login_enabled', true);
+        $isDefaultPassword = $passwordRequired && Hash::check('Admin@123', $user->password);
         $passwordChangedAt = $user->password_changed_at ?: $user->created_at;
-        $isPasswordExpired = ! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7));
+        $isPasswordExpired = $passwordRequired && (! $passwordChangedAt || $passwordChangedAt->lte(now()->subDays(7)));
 
         $data['must_change_password'] = $isDefaultPassword || $isPasswordExpired;
         $data['password_change_reason'] = $isDefaultPassword ? 'default' : ($isPasswordExpired ? 'expired' : null);
-        $data['password_expires_at'] = $passwordChangedAt ? $passwordChangedAt->copy()->addDays(7)->toISOString() : null;
+        $data['password_expires_at'] = $passwordChangedAt && $passwordRequired ? $passwordChangedAt->copy()->addDays(7)->toISOString() : null;
         $data['access'] = $access;
         $data['office_info'] = $office ? [
             'ofc_id' => $office->ofc_id,

@@ -33,8 +33,8 @@ import PersonTwoToneIcon from '@mui/icons-material/PersonTwoTone';
 import SettingsTwoToneIcon from '@mui/icons-material/SettingsTwoTone';
 
 const menuItems: any[] = [
-  { icon: <SettingsTwoToneIcon />, label: 'Settings' },
-  { icon: <PersonTwoToneIcon />, label: 'Profile' },
+  { icon: <SettingsTwoToneIcon />, label: 'Settings', path: '/admin/masters/district-config' },
+  { icon: <PersonTwoToneIcon />, label: 'Profile', path: '/admin/profile' },
   { icon: <DraftsTwoToneIcon />, label: 'My Messages' },
   { icon: <LockOpenTwoTone />, label: 'Lock Screen' },
   { icon: <MeetingRoomTwoToneIcon />, label: 'Logout' }
@@ -66,7 +66,10 @@ export default function Profile({ inverse = true }) {
   const handleMenuItemClick = (index, item) => {
     setSelectedIndex(index);
 
-    if (item.path) {
+    if (item.label === 'Lock Screen') {
+      localStorage.setItem('is_locked', 'true');
+      navigate('/lockscreen');
+    } else if (item.path) {
       navigate(item.path);
     } else if (item.action) {
       item.action();

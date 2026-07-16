@@ -395,14 +395,41 @@ class UrbanElectionController extends Controller
         }
 
         $assignedCount = 0;
-        $mappingsByPost = $vacantMappings->groupBy('post_name');
 
-        // Load all salary rules
-        $salaryRules = MasterElectionSalaryRule::query()->get()->keyBy('post_name');
+        // Resolve district ID
+        $districtId = null;
+        if ($cityId) {
+            $districtId = DB::table('master_np_cities')->where('id', $cityId)->value('district_id');
+        } else {
+            $districtId = $user->district_id ?: (AccessScope::payload($user)['district_ids'][0] ?? null);
+        }
 
-        DB::transaction(function () use ($mappingsByPost, $salaryRules, $request, $cityId, $dob, $user, &$assignedCount) {
+        // Load district configurations
+        $distConfig = null;
+        if ($districtId) {
+            $distConfig = DB::table('district_election_configs')->where('district_id', $districtId)->first();
+        }
+
+        // Load salary rules (district-specific or fallback to global)
+        $salaryRules = collect();
+        if ($districtId) {
+            $salaryRules = \App\Models\DistrictElectionSalaryRule::where('district_id', $districtId)->get()->keyBy('post_name');
+        }
+        if ($salaryRules->isEmpty()) {
+            $salaryRules = \App\Models\MasterElectionSalaryRule::get()->keyBy('post_name');
+        }
+
+        DB::transaction(function () use ($vacantMappings, $salaryRules, $distConfig, $request, $cityId, $districtId, $dob, $user, &$assignedCount, $teamMappingIds) {
             $posts = ['P0', 'P1', 'P2', 'P3'];
             $newlyAssignedIds = [];
+
+            // Fetch currently assigned employee IDs across both NP and RP
+            $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+            $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+            $globalAssignedIds = array_unique(array_merge($assignedNP, $assignedRP));
+
+            // Group vacant mappings by post name
+            $mappingsByPost = $vacantMappings->groupBy('post_name');
 
             foreach ($posts as $post) {
                 $genderCriteria = $request->input($post, 'any');
@@ -413,35 +440,45 @@ class UrbanElectionController extends Controller
                 }
 
                 $rule = $salaryRules->get($post);
-                $limit = count($postMappings);
 
-                // Fetch currently assigned employee IDs across both NP and RP
-                $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-                $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-                $allAssignedIds = array_unique(array_merge($assignedNP, $assignedRP, $newlyAssignedIds));
+                // Fetch all unassigned district employees matching this post's criteria
+                $allAssignedIds = array_unique(array_merge($globalAssignedIds, $newlyAssignedIds));
 
-                // Query available matching employees for this specific post
                 $empQuery = MasterEmployee::query()
                     ->where('status', 1)
-                    ->where('city_type', 'urban')
-                    ->when($cityId, fn($q) => $q->where('city_id', $cityId));
+                    ->where('city_type', 'urban');
+
+                if ($districtId) {
+                    $empQuery->where('district_id', $districtId);
+                }
 
                 if (!empty($allAssignedIds)) {
                     $empQuery->whereNotIn('id', $allAssignedIds);
                 }
 
+                // Check DOB limits from district config
+                if ($distConfig) {
+                    if ($distConfig->dob_from) {
+                        $empQuery->where('dob', '>=', $distConfig->dob_from);
+                    }
+                    if ($distConfig->dob_to) {
+                        $empQuery->where('dob', '<=', $distConfig->dob_to);
+                    }
+                }
+
+                // Check manual DOB filter from request
                 if ($dob) {
                     $empQuery->where('dob', '>=', $dob);
                 }
 
-                // Apply gender filter
+                // Check gender filter
                 if ($genderCriteria === 'male') {
                     $empQuery->where('gender', 1);
                 } elseif ($genderCriteria === 'female') {
                     $empQuery->where('gender', 2);
                 }
 
-                // Apply basic pay salary rules
+                // Check salary rules
                 if ($rule) {
                     $op = $rule->comparison_operator === 'above' ? '>=' : '<';
                     $empQuery->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
@@ -449,30 +486,75 @@ class UrbanElectionController extends Controller
 
                 $availableEmps = $empQuery
                     ->inRandomOrder()
-                    ->limit($limit)
-                    ->get(['id']);
+                    ->get(['id', 'city_id', 'gender']);
 
-                foreach ($postMappings as $index => $mapping) {
-                    if (!$availableEmps->has($index)) {
-                        break;
+                // Fetch post mappings details (joined with team mappings to know target city)
+                $mappedRows = MasterNPMapping::query()
+                    ->join('master_n_p_team_mappings', 'master_n_p_team_mappings.id', '=', 'master_n_p_mappings.team_id')
+                    ->whereIn('master_n_p_mappings.id', $postMappings->pluck('id'))
+                    ->select('master_n_p_mappings.id as post_mapping_id', 'master_n_p_team_mappings.city_id as dest_city_id')
+                    ->get();
+
+                foreach ($mappedRows as $mapping) {
+                    $candidateKey = null;
+
+                    // Same-city restriction config
+                    $sameCityMaleAllowed = $distConfig->same_city_duty_male ?? true;
+                    $sameCityFemaleAllowed = $distConfig->same_city_duty_female ?? true;
+
+                    // First pass: try to assign to same city if allowed
+                    foreach ($availableEmps as $key => $emp) {
+                        if (in_array($emp->id, $newlyAssignedIds)) {
+                            continue;
+                        }
+
+                        $sameCityAllowed = (int)$emp->gender === 2 ? $sameCityFemaleAllowed : $sameCityMaleAllowed;
+                        $isSameCity = (int)$emp->city_id === (int)$mapping->dest_city_id;
+
+                        if ($isSameCity) {
+                            if ($sameCityAllowed) {
+                                $candidateKey = $key;
+                                break;
+                            }
+                        }
                     }
-                    $empId = $availableEmps[$index]->id;
-                    MasterNPMapping::query()
-                        ->where('id', $mapping->id)
-                        ->update([
-                            'emp_id' => $empId,
-                            'updated_by' => $user->id,
-                            'updated_at' => now(),
-                        ]);
-                    $newlyAssignedIds[] = $empId;
-                    $assignedCount++;
+
+                    // Second pass: fallback or find different city
+                    if ($candidateKey === null) {
+                        foreach ($availableEmps as $key => $emp) {
+                            if (in_array($emp->id, $newlyAssignedIds)) {
+                                continue;
+                            }
+
+                            $sameCityAllowed = (int)$emp->gender === 2 ? $sameCityFemaleAllowed : $sameCityMaleAllowed;
+                            $isSameCity = (int)$emp->city_id === (int)$mapping->dest_city_id;
+
+                            if (!$isSameCity || $sameCityAllowed) {
+                                $candidateKey = $key;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($candidateKey !== null) {
+                        $empId = $availableEmps[$candidateKey]->id;
+                        MasterNPMapping::query()
+                            ->where('id', $mapping->post_mapping_id)
+                            ->update([
+                                'emp_id' => $empId,
+                                'updated_by' => $user->id,
+                                'updated_at' => now(),
+                            ]);
+                        $newlyAssignedIds[] = $empId;
+                        $assignedCount++;
+                    }
                 }
             }
         });
 
         if ($assignedCount === 0) {
             return response()->json([
-                'message' => 'Could not assign any duties. Please check if you have enough employees matching the salary, gender and DOB criteria.',
+                'message' => 'Could not assign any duties. Please check if you have enough employees matching the salary, gender, DOB and Same City configuration criteria.',
             ], 422);
         }
 
@@ -524,8 +606,44 @@ class UrbanElectionController extends Controller
         // 3. Find matching active employees
         $employeesQuery = MasterEmployee::query()
             ->where('status', 1)
-            ->where('city_type', 'urban')
-            ->where('city_id', $cityId);
+            ->where('city_type', 'urban');
+
+        $districtId = DB::table('master_np_cities')->where('id', $cityId)->value('district_id');
+        $distConfig = DB::table('district_election_configs')->where('district_id', $districtId)->first();
+
+        // DOB config check
+        if ($distConfig) {
+            if ($distConfig->dob_from) {
+                $employeesQuery->where('dob', '>=', $distConfig->dob_from);
+            }
+            if ($distConfig->dob_to) {
+                $employeesQuery->where('dob', '<=', $distConfig->dob_to);
+            }
+        }
+
+        // Salary rule check
+        $rule = null;
+        if ($districtId) {
+            $rule = \App\Models\DistrictElectionSalaryRule::where('district_id', $districtId)
+                ->where('post_name', $postName)
+                ->first();
+        }
+        if (!$rule) {
+            $rule = MasterElectionSalaryRule::where('post_name', $postName)->first();
+        }
+        if ($rule) {
+            $op = $rule->comparison_operator === 'above' ? '>=' : '<';
+            $employeesQuery->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
+        }
+
+        // Same-city restriction check
+        $sameCityMaleAllowed = $distConfig->same_city_duty_male ?? true;
+        $sameCityFemaleAllowed = $distConfig->same_city_duty_female ?? true;
+
+        // Query employees of the same district
+        if ($districtId) {
+            $employeesQuery->where('district_id', $districtId);
+        }
 
         if (!empty($assignedEmpIds)) {
             $employeesQuery->whereNotIn('id', $assignedEmpIds);
@@ -533,8 +651,41 @@ class UrbanElectionController extends Controller
 
         if ($gender === 'male') {
             $employeesQuery->where('gender', 1);
+            if (!$sameCityMaleAllowed) {
+                $employeesQuery->where('city_id', '<>', $cityId);
+            } else {
+                $employeesQuery->orderByRaw("CASE WHEN city_id = ? THEN 0 ELSE 1 END", [$cityId]);
+            }
         } elseif ($gender === 'female') {
             $employeesQuery->where('gender', 2);
+            if (!$sameCityFemaleAllowed) {
+                $employeesQuery->where('city_id', '<>', $cityId);
+            } else {
+                $employeesQuery->orderByRaw("CASE WHEN city_id = ? THEN 0 ELSE 1 END", [$cityId]);
+            }
+        } else {
+            // Gender is 'any'
+            if (!$sameCityMaleAllowed && !$sameCityFemaleAllowed) {
+                $employeesQuery->where('city_id', '<>', $cityId);
+            } elseif (!$sameCityMaleAllowed) {
+                $employeesQuery->where(function($q) use ($cityId) {
+                    $q->where('gender', 2)
+                      ->orWhere(function($sub) use ($cityId) {
+                          $sub->where('gender', 1)->where('city_id', '<>', $cityId);
+                      });
+                });
+                $employeesQuery->orderByRaw("CASE WHEN city_id = ? THEN 0 ELSE 1 END", [$cityId]);
+            } elseif (!$sameCityFemaleAllowed) {
+                $employeesQuery->where(function($q) use ($cityId) {
+                    $q->where('gender', 1)
+                      ->orWhere(function($sub) use ($cityId) {
+                          $sub->where('gender', 2)->where('city_id', '<>', $cityId);
+                      });
+                });
+                $employeesQuery->orderByRaw("CASE WHEN city_id = ? THEN 0 ELSE 1 END", [$cityId]);
+            } else {
+                $employeesQuery->orderByRaw("CASE WHEN city_id = ? THEN 0 ELSE 1 END", [$cityId]);
+            }
         }
 
         if ($designationId) {

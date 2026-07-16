@@ -7,6 +7,7 @@ import RouteError from 'components/RouteError';
 
 // pages
 const LoginPage = Loadable(lazy(() => import('views/auth/Login')));
+const LockScreenPage = Loadable(lazy(() => import('views/auth/LockScreen')));
 const ErrorPage = Loadable(lazy(() => import('views/pages/ErrorPage')));
 
 // ==============================|| PAGES ROUTES ||============================== //
@@ -29,6 +30,10 @@ const PagesRoutes = {
         {
           path: 'error',
           element: <ErrorPage />
+        },
+        {
+          path: 'lockscreen',
+          element: <LockScreenPage />
         }
       ]
     }

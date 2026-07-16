@@ -13,6 +13,7 @@ import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlin
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';

@@ -17,6 +17,10 @@ export default function ProtectedRoute({ children, permission = '' }) {
     }
   }, [dispatch, token, user]);
 
+  if (localStorage.getItem('is_locked') === 'true') {
+    return <Navigate to="/lockscreen" replace />;
+  }
+
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }

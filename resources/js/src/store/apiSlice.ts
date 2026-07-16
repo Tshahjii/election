@@ -105,6 +105,18 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Masters']
     }),
+    getDistrictConfigs: builder.query<any, void>({
+      query: () => ({ url: '/district-config' }),
+      providesTags: ['Masters']
+    }),
+    saveDistrictConfig: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/district-config',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['Masters', 'UrbanElection', 'RuralElection']
+    }),
 
     // Users endpoints
     getAccessOptions: builder.query<any, void>({
@@ -280,6 +292,8 @@ export const {
   useLazySearchEmployeesQuery,
   useGetElectionSalaryRulesQuery,
   useSaveElectionSalaryRulesMutation,
+  useGetDistrictConfigsQuery,
+  useSaveDistrictConfigMutation,
 
   useGetAccessOptionsQuery,
   useGetUsersQuery,

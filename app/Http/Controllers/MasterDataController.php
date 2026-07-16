@@ -499,9 +499,19 @@ class MasterDataController extends Controller
 
         // 2. Filter by salary rules if post_name is provided
         if (!empty($postName)) {
-            $rule = MasterElectionSalaryRule::query()
-                ->where('post_name', $postName)
-                ->first();
+            $user = $request->user();
+            $districtId = $user->district_id ?: (AccessScope::payload($user)['district_ids'][0] ?? null);
+            $rule = null;
+            if ($districtId) {
+                $rule = \App\Models\DistrictElectionSalaryRule::where('district_id', $districtId)
+                    ->where('post_name', $postName)
+                    ->first();
+            }
+            if (!$rule) {
+                $rule = MasterElectionSalaryRule::query()
+                    ->where('post_name', $postName)
+                    ->first();
+            }
 
             if ($rule) {
                 $op = $rule->comparison_operator === 'above' ? '>=' : '<';
@@ -736,7 +746,25 @@ class MasterDataController extends Controller
                 'title' => ['required', 'string', 'max:100'],
                 'name' => ['required', 'string', 'max:100'],
                 'gender' => ['required', 'integer', Rule::in([1, 2])],
-                'dob' => ['required', 'date'],
+                'dob' => [
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) use ($request) {
+                        $districtId = $request->input('district_id');
+                        if ($districtId) {
+                            $config = \App\Models\DistrictElectionConfig::where('district_id', $districtId)->first();
+                            if ($config) {
+                                $dob = \Carbon\Carbon::parse($value);
+                                if ($config->dob_from && $dob->lt($config->dob_from)) {
+                                    $fail("The Employee's Date of Birth must be after " . $config->dob_from->format('Y-m-d') . " as per configuration for the selected District.");
+                                }
+                                if ($config->dob_to && $dob->gt($config->dob_to)) {
+                                    $fail("The Employee's Date of Birth must be before " . $config->dob_to->format('Y-m-d') . " as per configuration for the selected District.");
+                                }
+                            }
+                        }
+                    }
+                ],
                 'mobile' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/', $this->uniqueRule('master_employees', 'mobile', $row)],
                 'email' => ['required', 'email', 'max:100', $this->uniqueRule('master_employees', 'email', $row)],
                 'emp_type_id' => ['required', 'integer', 'exists:master_emp_types,id'],

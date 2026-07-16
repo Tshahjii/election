@@ -6,6 +6,7 @@ use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\UserAccessController;
 use App\Http\Controllers\UrbanElectionController;
 use App\Http\Controllers\RuralElectionController;
+use App\Http\Controllers\DistrictConfigController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -18,6 +19,9 @@ Route::prefix('auth')->group(function () {
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
         Route::post('logout', [AuthController::class, 'logout']);
+        Route::post('unlock', [AuthController::class, 'unlock']);
+        Route::post('unlock-send-otp', [AuthController::class, 'unlockSendOtp']);
+        Route::post('unlock-verify-otp', [AuthController::class, 'unlockVerifyOtp']);
         Route::get('auth-settings', [AuthController::class, 'getAuthSettings']);
         Route::post('auth-settings', [AuthController::class, 'updateAuthSettings']);
     });
@@ -34,6 +38,11 @@ Route::middleware('jwt')->prefix('masters')->group(function () {
     Route::post('{type}', [MasterDataController::class, 'store']);
     Route::post('{type}/{id}', [MasterDataController::class, 'update']);
     Route::delete('{type}/{id}', [MasterDataController::class, 'destroy']);
+});
+
+Route::middleware('jwt')->prefix('district-config')->group(function () {
+    Route::get('/', [DistrictConfigController::class, 'getConfigs']);
+    Route::post('/', [DistrictConfigController::class, 'saveConfig']);
 });
 
 Route::middleware('jwt')->prefix('urban-election')->group(function () {
