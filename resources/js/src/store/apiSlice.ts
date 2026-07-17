@@ -85,10 +85,10 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, arg) => ['Masters', { type: 'Masters', id: arg.type }]
     }),
-    searchEmployees: builder.query<any, { q: string; post_name?: string }>({
-      query: ({ q, post_name }) => ({
+    searchEmployees: builder.query<any, { q: string; post_name?: string; city_type?: string; city_id?: number }>({
+      query: ({ q, post_name, city_type, city_id }) => ({
         url: '/masters/employees/search',
-        params: { q, post_name }
+        params: { q, post_name, city_type, city_id }
       })
     }),
     getElectionSalaryRules: builder.query<any, void>({

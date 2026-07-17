@@ -21,7 +21,6 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import ChosenSelect from 'components/ChosenSelect';
@@ -121,7 +120,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   const [selectedCityId, setSelectedCityId] = useState<number | 'all' | ''>('all');
   const [dutyCriteria, setDutyCriteria] = useState<Record<string, string>>({
-    date_of_birth: '',
     P0: 'any',
     P1: 'any',
     P2: 'any',
@@ -176,7 +174,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     if (selectedCityId === '') return;
     try {
       const payload: any = {
-        date_of_birth: dutyCriteria.date_of_birth || null,
         P0: dutyCriteria.P0,
         P1: dutyCriteria.P1,
         P2: dutyCriteria.P2,
@@ -310,18 +307,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
             <>
               <MainCard title={t('election.dutyCriteria')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
                 <Grid container spacing={2.5}>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="date"
-                      label={t('election.dob')}
-                      value={dutyCriteria.date_of_birth}
-                      onChange={(event) => updateDutyCriteria('date_of_birth', event.target.value)}
-                      slotProps={{ inputLabel: { shrink: true } }}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                    />
-                  </Grid>
                   {postOptions.map((post) => (
                     <Grid key={post} size={{ xs: 12, sm: 6, md: 4 }}>
                       <ChosenSelect

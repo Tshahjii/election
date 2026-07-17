@@ -485,8 +485,14 @@ class MasterDataController extends Controller
     {
         $term = trim((string) $request->query('q', ''));
         $postName = $request->query('post_name');
+        $cityType = $request->query('city_type');
+        $cityId = $request->query('city_id');
 
         $query = MasterEmployee::query()->where('status', 1);
+
+        if (!empty($cityType)) {
+            $query->where('city_type', $cityType);
+        }
 
         // 1. Exclude already assigned employees across both NP and RP mapping tables
         $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
@@ -497,10 +503,59 @@ class MasterDataController extends Controller
             $query->whereNotIn('id', $assignedEmpIds);
         }
 
-        // 2. Filter by salary rules if post_name is provided
-        if (!empty($postName)) {
+        // Resolve district ID
+        $districtId = null;
+        if (!empty($cityId) && !empty($cityType)) {
+            $table = $cityType === 'urban' ? 'master_np_cities' : 'master_rp_cities';
+            $districtId = \Illuminate\Support\Facades\DB::table($table)->where('id', $cityId)->value('district_id');
+        }
+
+        if (!$districtId) {
             $user = $request->user();
             $districtId = $user->district_id ?: (AccessScope::payload($user)['district_ids'][0] ?? null);
+        }
+
+        // Load district configurations
+        $distConfig = null;
+        if ($districtId) {
+            $distConfig = \Illuminate\Support\Facades\DB::table('district_election_configs')->where('district_id', $districtId)->first();
+        }
+
+        // Apply DOB limits from district config
+        if ($distConfig) {
+            if ($distConfig->dob_from) {
+                $query->where('dob', '>=', $distConfig->dob_from);
+            }
+            if ($distConfig->dob_to) {
+                $query->where('dob', '<=', $distConfig->dob_to);
+            }
+        }
+
+        // Apply same-city duty restrictions from district config
+        if ($distConfig && !empty($cityId)) {
+            $sameCityMaleAllowed = $distConfig->same_city_duty_male ?? true;
+            $sameCityFemaleAllowed = $distConfig->same_city_duty_female ?? true;
+
+            if (!$sameCityMaleAllowed || !$sameCityFemaleAllowed) {
+                $query->where(function ($q) use ($cityId, $sameCityMaleAllowed, $sameCityFemaleAllowed) {
+                    if (!$sameCityMaleAllowed) {
+                        $q->where(function ($sub) use ($cityId) {
+                            $sub->where('gender', '<>', 1)
+                                ->orWhere('city_id', '<>', $cityId);
+                        });
+                    }
+                    if (!$sameCityFemaleAllowed) {
+                        $q->where(function ($sub) use ($cityId) {
+                            $sub->where('gender', '<>', 2)
+                                ->orWhere('city_id', '<>', $cityId);
+                        });
+                    }
+                });
+            }
+        }
+
+        // 2. Filter by salary rules if post_name is provided
+        if (!empty($postName)) {
             $rule = null;
             if ($districtId) {
                 $rule = \App\Models\DistrictElectionSalaryRule::where('district_id', $districtId)

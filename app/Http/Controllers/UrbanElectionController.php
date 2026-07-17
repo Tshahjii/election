@@ -163,6 +163,7 @@ class UrbanElectionController extends Controller
                     'master_np_polling_stations.polling_station_name',
                     'master_np_wards.ward_no',
                     'master_np_wards.ward_name',
+                    'master_n_p_team_mappings.city_id',
                 ])
                 ->get();
 
@@ -209,6 +210,7 @@ class UrbanElectionController extends Controller
                     'ward_no' => $firstRow->ward_no,
                     'ward_name' => $firstRow->ward_name,
                     'posts' => $posts,
+                    'city_id' => $firstRow->city_id,
                 ];
             }
 

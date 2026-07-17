@@ -263,7 +263,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       initial[post.post_mapping_id] = post.emp_id ? { id: post.emp_id, name: post.employee_name, emp_code: post.employee_code } : null;
     });
     setModalAssignments(initial);
-    triggerSearchEmployees({ q: '' });
+    triggerSearchEmployees({ q: '', city_type: isUrban ? 'urban' : 'rural', city_id: team.city_id });
   };
 
   const handleSaveModalAssignments = async () => {
@@ -598,11 +598,21 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                           }));
                         }}
                         onOpen={() => {
-                          triggerSearchEmployees({ q: '', post_name: post.post_name });
+                          triggerSearchEmployees({
+                            q: '',
+                            post_name: post.post_name,
+                            city_type: isUrban ? 'urban' : 'rural',
+                            city_id: activeTeam?.city_id
+                          });
                         }}
                         onInputChange={(event, newInputValue, reason) => {
                           if (reason === 'input') {
-                            triggerSearchEmployees({ q: newInputValue, post_name: post.post_name });
+                            triggerSearchEmployees({
+                              q: newInputValue,
+                              post_name: post.post_name,
+                              city_type: isUrban ? 'urban' : 'rural',
+                              city_id: activeTeam?.city_id
+                            });
                           }
                         }}
                         loading={searchLoading}
@@ -611,6 +621,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                             {...params}
                             placeholder={t('election.searchEmpPlaceholder')}
                             slotProps={{
+                              ...params.slotProps,
                               input: {
                                 ...params.slotProps?.input,
                                 endAdornment: (
