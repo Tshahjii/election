@@ -213,6 +213,13 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['UrbanElection']
     }),
+    getExemptEmployeeLogs: builder.query<any[], void>({
+      query: () => ({
+        url: '/urban-election/exempt-employee-logs',
+        method: 'GET'
+      }),
+      providesTags: ['UrbanElection', 'RuralElection']
+    }),
     applyUrbanDuty: builder.mutation<any, any>({
       query: (data) => ({
         url: '/urban-election/apply-duty',
@@ -310,6 +317,7 @@ export const {
   useCreateUrbanTeamsMutation,
   useSaveUrbanAssignmentsMutation,
   useExemptUrbanEmployeeMutation,
+  useGetExemptEmployeeLogsQuery,
   useApplyUrbanDutyMutation,
   useApplyUrbanTargetedDutyMutation,
 

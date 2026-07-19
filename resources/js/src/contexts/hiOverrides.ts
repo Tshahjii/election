@@ -340,7 +340,19 @@ const hiOverrides: Record<string, string> = {
   'election.pollingOfficer1': 'मतदान अधिकारी 1',
   'election.pollingOfficer2': 'मतदान अधिकारी 2',
   'election.pollingOfficer3': 'मतदान अधिकारी 3',
-  'election.pollingOfficer4': 'मतदान अधिकारी 4'
+  'election.pollingOfficer4': 'मतदान अधिकारी 4',
+  'election.exemptReasonLabel': 'छूट का कारण',
+  'election.exemptReasonPlaceholder': 'ड्यूटी से हटाने का कारण दर्ज करें...',
+  'election.exemptLogsTitle': 'छूट प्राप्त कर्मचारियों का इतिहास (लॉग)',
+  'election.empCode': 'कर्मचारी कोड',
+  'election.empName': 'कर्मचारी का नाम',
+  'election.urbanPost': 'शहरी ड्यूटी पद',
+  'election.ruralPost': 'ग्रामीण ड्यूटी पद',
+  'election.dateTime': 'दिनांक और समय',
+  'election.exemptScopeLabel': 'छूट का दायरा (Scope)',
+  'election.exemptScopeBoth': 'दोनों (शहरी और ग्रामीण)',
+  'election.exemptScopeUrban': 'केवल शहरी (Urban)',
+  'election.exemptScopeRural': 'केवल ग्रामीण (Rural)'
 };
 
 export default hiOverrides;

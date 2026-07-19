@@ -343,7 +343,19 @@ const translations = {
     'election.saveFailed': 'Failed to save assignments.',
     'election.searchTeamPlaceholder': 'Example: 0001, 0002 or 1, 2',
     'election.searchEmpPlaceholder2': 'Example: NIC001 or 123',
-    'election.searchEmpPlaceholderExempt': 'Enter employee id or code (e.g. NIC001)'
+    'election.searchEmpPlaceholderExempt': 'Enter employee id or code (e.g. NIC001)',
+    'election.exemptReasonLabel': 'Reason for Exemption',
+    'election.exemptReasonPlaceholder': 'Enter reason for removing from duty...',
+    'election.exemptLogsTitle': 'Exempted Employees Log History',
+    'election.empCode': 'Employee Code',
+    'election.empName': 'Employee Name',
+    'election.urbanPost': 'Urban Post',
+    'election.ruralPost': 'Rural Post',
+    'election.dateTime': 'Date & Time',
+    'election.exemptScopeLabel': 'Exemption Scope',
+    'election.exemptScopeBoth': 'Both (Urban & Rural)',
+    'election.exemptScopeUrban': 'Urban Only',
+    'election.exemptScopeRural': 'Rural Only'
   },
   hi: {
     'app.name': 'निर्वाचन प्रबंधन पोर्टल',
@@ -683,7 +695,19 @@ const translations = {
     'election.saveFailed': 'असाइनमेंट सहेजने में विफल।',
     'election.searchTeamPlaceholder': 'उदाहरण: 0001, 0002 या 1, 2',
     'election.searchEmpPlaceholder2': 'उदाहरण: NIC001 या 123',
-    'election.searchEmpPlaceholderExempt': 'कर्मचारी आईडी या कोड दर्ज करें (जैसे NIC001)'
+    'election.searchEmpPlaceholderExempt': 'कर्मचारी आईडी या कोड दर्ज करें (जैसे NIC001)',
+    'election.exemptReasonLabel': 'छूट का कारण',
+    'election.exemptReasonPlaceholder': 'ड्यूटी से हटाने का कारण दर्ज करें...',
+    'election.exemptLogsTitle': 'छूट प्राप्त कर्मचारियों का इतिहास (लॉग)',
+    'election.empCode': 'कर्मचारी कोड',
+    'election.empName': 'कर्मचारी का नाम',
+    'election.urbanPost': 'शहरी ड्यूटी पद',
+    'election.ruralPost': 'ग्रामीण ड्यूटी पद',
+    'election.dateTime': 'दिनांक और समय',
+    'election.exemptScopeLabel': 'छूट का दायरा (Scope)',
+    'election.exemptScopeBoth': 'दोनों (शहरी और ग्रामीण)',
+    'election.exemptScopeUrban': 'केवल शहरी (Urban)',
+    'election.exemptScopeRural': 'केवल ग्रामीण (Rural)'
   }
 };
 

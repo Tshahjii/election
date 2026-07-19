@@ -23,6 +23,8 @@ const exportValue = (row: Record<string, any>, column: ExportColumn) => {
   return String(value);
 };
 
+const escapeAttribute = (value: string) => value.replace(/['"<>`&]/g, '');
+
 export function downloadExcelFile(title: string, columns: ExportColumn[], rows: Record<string, any>[]) {
   const header = columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('');
   const body = rows
@@ -58,6 +60,7 @@ export function downloadPdfReport(title: string, columns: ExportColumn[], rows: 
   const popup = window.open('', '_blank', 'noopener,noreferrer,width=1120,height=760');
   if (!popup) return;
 
+  const safeTitle = escapeAttribute(title);
   popup.document.write(`
     <!doctype html>
     <html>
@@ -77,7 +80,7 @@ export function downloadPdfReport(title: string, columns: ExportColumn[], rows: 
       </head>
       <body>
         <h1>${escapeHtml(title)}</h1>
-        <div class="meta">Generated on ${new Date().toLocaleString()} | Records: ${rows.length}</div>
+        <div class="meta">Generated on ${escapeHtml(new Date().toLocaleString())} | Records: ${escapeHtml(String(rows.length))}</div>
         <table>
           <thead><tr>${header}</tr></thead>
           <tbody>${body || `<tr><td colspan="${columns.length}">No records</td></tr>`}</tbody>

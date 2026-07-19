@@ -28,8 +28,10 @@ import Autocomplete from '@mui/material/Autocomplete';
 // project imports
 import MainCard from 'components/cards/MainCard';
 import ChosenSelect from 'components/ChosenSelect';
+import PaginationFooter from 'components/PaginationFooter';
 import { showNotification } from 'store/slices/notificationSlice';
 import { useAppPreferences } from 'contexts/AppPreferences';
+import TableSortLabel from '@mui/material/TableSortLabel';
 import {
   useGetOptionsQuery,
   useGetUrbanDashboardQuery,
@@ -39,8 +41,11 @@ import {
   useSaveRuralAssignmentsMutation,
   useExemptUrbanEmployeeMutation,
   useExemptRuralEmployeeMutation,
+  useCreateUrbanTeamsMutation,
+  useCreateRuralTeamsMutation,
   useApplyUrbanTargetedDutyMutation,
-  useApplyRuralTargetedDutyMutation
+  useApplyRuralTargetedDutyMutation,
+  useGetExemptEmployeeLogsQuery
 } from 'store/apiSlice';
 
 // assets
@@ -93,6 +98,83 @@ const buttonSx = {
   fontWeight: 700
 };
 
+interface ExemptEmployeeFormProps {
+  onExempt: (empCode: string, reason: string, scope: 'both' | 'urban' | 'rural') => Promise<void>;
+  loading: boolean;
+}
+
+function ExemptEmployeeForm({ onExempt, loading }: ExemptEmployeeFormProps) {
+  const { t } = useAppPreferences();
+  const [empCode, setEmpCode] = useState('');
+  const [reason, setReason] = useState('');
+  const [scope, setScope] = useState<'both' | 'urban' | 'rural'>('both');
+
+  const handleSubmit = async () => {
+    const trimmed = empCode.trim();
+    if (!trimmed) {
+      return;
+    }
+    await onExempt(trimmed, reason, scope);
+    setEmpCode('');
+    setReason('');
+    setScope('both');
+  };
+
+  return (
+    <MainCard title={t('election.exemptTitle')} sx={(theme) => ({ ...getSurfaceSx(theme) })}>
+      <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={t('election.searchEmp')}
+            placeholder={t('election.searchEmpPlaceholderExempt')}
+            value={empCode}
+            onChange={(e) => setEmpCode(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <ChosenSelect
+            label={t('election.exemptScopeLabel') || 'Exemption Scope'}
+            value={scope}
+            options={[
+              { value: 'both', label: t('election.exemptScopeBoth') || 'Both (Urban & Rural)' },
+              { value: 'urban', label: t('election.exemptScopeUrban') || 'Urban Only' },
+              { value: 'rural', label: t('election.exemptScopeRural') || 'Rural Only' }
+            ]}
+            onChange={(e) => setScope(e.target.value)}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={t('election.exemptReasonLabel')}
+            placeholder={t('election.exemptReasonPlaceholder')}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 2 }}>
+          <Button
+            fullWidth
+            type="button"
+            variant="contained"
+            color="secondary"
+            disabled={loading}
+            onClick={handleSubmit}
+            sx={{ ...buttonSx, height: 40 }}
+          >
+            {loading ? <CircularProgress size={18} color="inherit" /> : t('election.exemptBtn')}
+          </Button>
+        </Grid>
+      </Grid>
+    </MainCard>
+  );
+}
+
 export default function ElectionTeamAssignments({ type }: ElectionTeamAssignmentsProps) {
   const dispatch = useDispatch();
 
@@ -100,9 +182,15 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const [teamSearch, setTeamSearch] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
 
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [logPage, setLogPage] = useState(1);
+  const [logRowsPerPage, setLogRowsPerPage] = useState(10);
+  const [sortField, setSortField] = useState<string>('padded_team_id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const [activeTeam, setActiveTeam] = useState<any | null>(null);
   const [modalAssignments, setModalAssignments] = useState<Record<number, any | null>>({});
-  const [exemptEmployeeId, setExemptEmployeeId] = useState<string>('');
 
   const [activeTargetedDuty, setActiveTargetedDuty] = useState<{
     city_id: number;
@@ -155,6 +243,20 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const [exemptRuralEmployee, { isLoading: exemptRuralLoading }] = useExemptRuralEmployeeMutation();
   const exemptEmployee = isUrban ? exemptUrbanEmployee : exemptRuralEmployee;
   const exemptLoading = isUrban ? exemptUrbanLoading : exemptRuralLoading;
+
+  const [createUrbanTeams, { isLoading: urbanCreateLoading }] = useCreateUrbanTeamsMutation();
+  const [createRuralTeams, { isLoading: ruralCreateLoading }] = useCreateRuralTeamsMutation();
+  const createTeams = isUrban ? createUrbanTeams : createRuralTeams;
+  const createLoading = isUrban ? urbanCreateLoading : ruralCreateLoading;
+
+  // 5. Fetch exempt employee logs
+  const { data: logsData, isFetching: logsLoading } = useGetExemptEmployeeLogsQuery();
+  const logs = logsData || [];
+
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (logPage - 1) * logRowsPerPage;
+    return logs.slice(startIndex, startIndex + logRowsPerPage);
+  }, [logs, logPage, logRowsPerPage]);
 
   const [applyUrbanTargetedDuty, { isLoading: applyUrbanTargetedLoading }] = useApplyUrbanTargetedDutyMutation();
   const [applyRuralTargetedDuty, { isLoading: applyRuralTargetedLoading }] = useApplyRuralTargetedDutyMutation();
@@ -239,17 +341,43 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     });
   }, [dashboardData, teamSearch, employeeSearch]);
 
-  const handleExemptEmployee = async () => {
-    const trimmed = String(exemptEmployeeId).trim();
-    if (!trimmed) {
-      dispatch(showNotification({ message: t('election.enterEmpId'), severity: 'error' }));
-      return;
-    }
+  const handleRequestSort = (field: string) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+    setPage(1);
+  };
 
+  const sortedTeams = useMemo(() => {
+    if (!sortField) return searchedTeams;
+
+    return [...searchedTeams].sort((a: any, b: any) => {
+      let valA: any = '';
+      let valB: any = '';
+
+      if (sortField === 'padded_team_id') {
+        valA = Number(a.team_id) || 0;
+        valB = Number(b.team_id) || 0;
+      } else if (sortField === 'station') {
+        valA = String(a.polling_station_name || '').toLowerCase();
+        valB = String(b.polling_station_name || '').toLowerCase();
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [searchedTeams, sortField, sortOrder]);
+
+  const paginatedTeams = useMemo(() => {
+    const startIndex = (page - 1) * rowsPerPage;
+    return sortedTeams.slice(startIndex, startIndex + rowsPerPage);
+  }, [sortedTeams, page, rowsPerPage]);
+
+  const handleExemptEmployee = async (empCode: string, reason: string, scope: 'both' | 'urban' | 'rural') => {
     try {
-      const response = await exemptEmployee({ emp_code: trimmed }).unwrap();
+      const response = await exemptEmployee({ emp_code: empCode, reason, scope }).unwrap();
       dispatch(showNotification({ message: response.message || t('election.exemptSuccess'), severity: 'success' }));
-      setExemptEmployeeId('');
     } catch (err: any) {
       const errMsg = err.data?.message || err.message || t('election.exemptFailed');
       dispatch(showNotification({ message: errMsg, severity: 'error' }));
@@ -289,51 +417,21 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     setTeamSearch('');
     setEmployeeSearch('');
     setActiveTeam(null);
+    setPage(1);
   }, [type]);
 
   useEffect(() => {
     setTeamSearch('');
     setEmployeeSearch('');
+    setPage(1);
   }, [selectedCityId]);
 
   return (
     <Stack sx={{ gap: 3 }}>
-      {/* Exempt Employee Card placed at the top */}
-      <MainCard title={t('election.exemptTitle')} sx={(theme) => ({ ...getSurfaceSx(theme) })}>
-        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label={t('election.searchEmp')}
-              placeholder={t('election.searchEmpPlaceholderExempt')}
-              value={exemptEmployeeId}
-              onChange={(e) => setExemptEmployeeId(e.target.value)}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Stack direction="row" spacing={2} sx={{ justifyContent: { xs: 'stretch', md: 'flex-end' } }}>
-              <Button
-                fullWidth
-                type="button"
-                variant="contained"
-                color="secondary"
-                disabled={exemptLoading}
-                onClick={handleExemptEmployee}
-                sx={{ ...buttonSx, width: { xs: '100%', md: 'auto' } }}
-              >
-                {exemptLoading ? <CircularProgress size={18} color="inherit" /> : t('election.exemptBtn')}
-              </Button>
-            </Stack>
-          </Grid>
-        </Grid>
-      </MainCard>
-
       {/* City Selector and Search Card */}
       <Card sx={(theme) => ({ ...getSurfaceSx(theme), p: { xs: 2, sm: 2.5 } })}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth>
               <ChosenSelect
                 label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
@@ -344,14 +442,17 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               />
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <SearchTextField
               fullWidth
               size="small"
               label={t('election.searchTeam')}
               placeholder={t('election.searchTeamPlaceholder')}
               value={teamSearch}
-              onChange={(value: string) => setTeamSearch(value)}
+              onChange={(value: string) => {
+                setTeamSearch(value);
+                setPage(1);
+              }}
               disabled={loading}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
@@ -363,10 +464,26 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               label={t('election.searchEmp')}
               placeholder={t('election.searchEmpPlaceholder2')}
               value={employeeSearch}
-              onChange={(value: string) => setEmployeeSearch(value)}
+              onChange={(value: string) => {
+                setEmployeeSearch(value);
+                setPage(1);
+              }}
               disabled={loading}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <FormControl fullWidth>
+              <ChosenSelect
+                label={t('common.rows') || 'Rows'}
+                value={rowsPerPage}
+                options={[10, 25, 50, 100].map((value) => ({ value, label: `${value} ${t('common.rows') || 'rows'}` }))}
+                onChange={(event) => {
+                  setRowsPerPage(Number(event.target.value));
+                  setPage(1);
+                }}
+              />
+            </FormControl>
           </Grid>
         </Grid>
       </Card>
@@ -489,76 +606,218 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
       {!loading && (selectedCityId || teamSearch.trim() || employeeSearch.trim()) && (
         <MainCard title={`${isUrban ? t('menu.nagarPanchayat') : t('menu.nagariNikay')} ${t('election.teamAssignments')}`} sx={getSurfaceSx} contentSX={{ p: 0 }}>
-          {searchedTeams.length > 0 ? (
-            <TableContainer>
-              <Table size="small" sx={{ minWidth: 900 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'bg.100' }}>
-                    <TableCell align="center" sx={{ width: 90, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                      {t('election.teamId')}
-                    </TableCell>
-                    <TableCell sx={{ minWidth: 170, fontWeight: 800 }}>{t('election.stationWard')}</TableCell>
-                    {postHeaders.map((header) => (
-                      <TableCell key={header} sx={{ minWidth: 190, fontWeight: 800 }}>
-                        {header}
-                      </TableCell>
-                    ))}
-                    <TableCell align="center" sx={{ width: 100, fontWeight: 800 }}>
-                      {t('common.action')}
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {searchedTeams.map((team: any) => (
-                    <TableRow key={team.team_id} hover>
-                      <TableCell align="center">
-                        <Chip label={team.padded_team_id} color="primary" variant="outlined" size="small" style={{ fontWeight: 600 }} />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {team.polling_station_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('masters.ward')} {team.ward_no} - {team.ward_name}
-                        </Typography>
-                      </TableCell>
-                      {team.posts.map((post: any) => (
-                        <TableCell key={post.post_mapping_id}>
-                          {post.emp_id ? (
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                              {post.employee_name} ({post.employee_code})
-                            </Typography>
-                          ) : (
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main', fontStyle: 'italic' }}>
-                              {t('election.notAssigned')}
-                            </Typography>
-                          )}
+          {dashboardData?.teams && dashboardData.teams.length > 0 ? (
+            searchedTeams.length > 0 ? (
+              <>
+                <TableContainer>
+                  <Table size="small" sx={{ minWidth: 900 }}>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'bg.100' }}>
+                        <TableCell align="center" sx={{ width: 90, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                          <TableSortLabel
+                            active={sortField === 'padded_team_id'}
+                            direction={sortField === 'padded_team_id' ? sortOrder : 'asc'}
+                            onClick={() => handleRequestSort('padded_team_id')}
+                          >
+                            {t('election.teamId')}
+                          </TableSortLabel>
                         </TableCell>
+                        <TableCell sx={{ minWidth: 170, fontWeight: 800 }}>
+                          <TableSortLabel
+                            active={sortField === 'station'}
+                            direction={sortField === 'station' ? sortOrder : 'asc'}
+                            onClick={() => handleRequestSort('station')}
+                          >
+                            {t('election.stationWard')}
+                          </TableSortLabel>
+                        </TableCell>
+                        {postHeaders.map((header) => (
+                          <TableCell key={header} sx={{ minWidth: 190, fontWeight: 800 }}>
+                            {header}
+                          </TableCell>
+                        ))}
+                        <TableCell align="center" sx={{ width: 100, fontWeight: 800 }}>
+                          {t('common.action')}
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedTeams.map((team: any) => (
+                        <TableRow key={team.team_id} hover>
+                          <TableCell align="center">
+                            <Chip label={team.padded_team_id} color="primary" variant="outlined" size="small" style={{ fontWeight: 600 }} />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {team.polling_station_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {t('masters.ward')} {team.ward_no} - {team.ward_name}
+                            </Typography>
+                          </TableCell>
+                          {team.posts.map((post: any) => (
+                            <TableCell key={post.post_mapping_id}>
+                              {post.emp_id ? (
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                                  {post.employee_name} ({post.employee_code})
+                                </Typography>
+                              ) : (
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main', fontStyle: 'italic' }}>
+                                  {t('election.notAssigned')}
+                                </Typography>
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell align="center">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleOpenAssignModal(team)}
+                              sx={{ borderRadius: 1.5 }}
+                            >
+                              {t('common.update')}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                      <TableCell align="center">
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleOpenAssignModal(team)}
-                          sx={{ borderRadius: 1.5 }}
-                        >
-                          {t('common.update')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <PaginationFooter
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={searchedTeams.length}
+                    onPageChange={setPage}
+                  />
+                </Box>
+              </>
+            ) : (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h5" color="text.secondary">
+                  {t('election.noTeamRecord') || 'कोई मिलान रिकॉर्ड नहीं मिला।'}
+                </Typography>
+              </Box>
+            )
           ) : (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Box sx={{ p: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               <Typography variant="h5" color="text.secondary">
-                {teamSearch.trim() || employeeSearch.trim() ? t('election.noTeamRecord') : t('common.noRecords')}
+                इस शहर के लिए अभी तक कोई मतदान टीम जनरेट नहीं की गई है।
               </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 450 }}>
+                टीम असाइनमेंट देखने और ड्यूटी लगाने से पहले आपको मतदान टीमें बनानी होंगी।
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={createLoading}
+                onClick={async () => {
+                  try {
+                    const response = await createTeams({ city_id: Number(selectedCityId) }).unwrap();
+                    dispatch(showNotification({ message: response.message || 'टीमें सफलतापूर्वक जनरेट की गईं।', severity: 'success' }));
+                  } catch (err: any) {
+                    const errMsg = err.data?.message || err.message || 'टीमें जनरेट करने में विफल।';
+                    dispatch(showNotification({ message: errMsg, severity: 'error' }));
+                  }
+                }}
+                startIcon={createLoading ? <CircularProgress size={16} color="inherit" /> : <PeopleAltOutlined />}
+                sx={{ borderRadius: 1.5, mt: 1 }}
+              >
+                {createLoading ? 'टीमें जनरेट हो रही हैं...' : 'मतदान टीमें जनरेट करें'}
+              </Button>
             </Box>
           )}
         </MainCard>
       )}
+
+      {/* Exempt Employee Card placed at the bottom */}
+      <ExemptEmployeeForm onExempt={handleExemptEmployee} loading={exemptLoading} />
+
+      {/* Exempt Employee Logs Card */}
+      <MainCard title={t('election.exemptLogsTitle') || 'Exempted Employees Log History'} sx={(theme) => ({ ...getSurfaceSx(theme) })} contentSX={{ p: 0 }}>
+        {logsLoading ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : logs.length > 0 ? (
+          <>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'bg.100' }}>
+                    <TableCell align="center" sx={{ width: 80, fontWeight: 800 }}>{t('common.sno') || 'S.No'}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{t('election.empCode') || 'Employee Code'}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{t('election.empName') || 'Employee Name'}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{t('masters.designation') || 'Designation'}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.urbanPost') || 'Urban Post'}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.ruralPost') || 'Rural Post'}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{t('election.exemptReasonLabel') || 'Reason'}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{t('election.dateTime') || 'Date & Time'}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paginatedLogs.map((log: any, idx: number) => {
+                    const serialNumber = (logPage - 1) * logRowsPerPage + idx + 1;
+                    const formattedDate = new Date(log.created_at).toLocaleString();
+                    return (
+                      <TableRow key={log.id} hover>
+                        <TableCell align="center">{serialNumber}</TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{log.emp_code}</Typography>
+                        </TableCell>
+                        <TableCell>{log.employee?.name || '-'}</TableCell>
+                        <TableCell>{log.employee?.designation?.designation || log.employee?.designation?.name || '-'}</TableCell>
+                        <TableCell align="center">
+                          {log.urban_post ? (
+                            <Chip label={log.urban_post} color="warning" size="small" variant="outlined" style={{ fontWeight: 600 }} />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">N/A</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {log.rural_post ? (
+                            <Chip label={log.rural_post} color="info" size="small" variant="outlined" style={{ fontWeight: 600 }} />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">N/A</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          {log.urban_reason && (
+                            <Typography variant="body2" sx={{ fontSize: '0.825rem' }}>
+                              <strong>Urban: </strong>{log.urban_reason}
+                            </Typography>
+                          )}
+                          {log.rural_reason && (
+                            <Typography variant="body2" sx={{ fontSize: '0.825rem', mt: log.urban_reason ? 0.5 : 0 }}>
+                              <strong>Rural: </strong>{log.rural_reason}
+                            </Typography>
+                          )}
+                          {!log.urban_reason && !log.rural_reason && '-'}
+                        </TableCell>
+                        <TableCell>{formattedDate}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <PaginationFooter
+                page={logPage}
+                rowsPerPage={logRowsPerPage}
+                totalRows={logs.length}
+                onPageChange={setLogPage}
+              />
+            </Box>
+          </>
+        ) : (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              {t('common.noRecords') || 'No logs found.'}
+            </Typography>
+          </Box>
+        )}
+      </MainCard>
 
 
       <Dialog open={Boolean(activeTeam)} onClose={() => setActiveTeam(null)} maxWidth="sm" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2.5 } }}>
@@ -587,8 +846,22 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                     <FormControl fullWidth size="small">
                       <Autocomplete
                         size="small"
-                        options={searchOptions}
-                        getOptionLabel={(option) => (option && typeof option === 'object' && 'name' in option) ? `${option.name} (${option.emp_code || ''})` : ''}
+                        options={searchOptions.filter((opt: any) => {
+                          const currentVal = modalAssignments[post.post_mapping_id];
+                          if (currentVal && currentVal.id === opt.id) return true;
+                          return !Object.entries(modalAssignments).some(([key, val]: any) => 
+                            Number(key) !== post.post_mapping_id && val && val.id === opt.id
+                          );
+                        })}
+                        getOptionLabel={(option) => {
+                          if (option && typeof option === 'object' && 'name' in option) {
+                            const designationText = option.designation && typeof option.designation === 'object' && 'designation' in option.designation
+                              ? ` - ${option.designation.designation}`
+                              : '';
+                            return `${option.name} (${option.emp_code || ''})${designationText}`;
+                          }
+                          return '';
+                        }}
                         isOptionEqualToValue={(option, value) => Boolean(option && value && option.id === value.id)}
                         value={modalAssignments[post.post_mapping_id] ?? null}
                         onChange={(event, newValue) => {

@@ -50,6 +50,8 @@ Route::middleware('jwt')->prefix('urban-election')->group(function () {
     Route::post('create-teams-scheduled', [UrbanElectionController::class, 'createTeamsScheduled']);
     Route::post('save-assignments', [UrbanElectionController::class, 'saveAssignments']);
     Route::post('exempt-employee', [UrbanElectionController::class, 'exemptEmployee']);
+    Route::get('exempt-employee-logs', [UrbanElectionController::class, 'getExemptEmployeeLogs']);
+    Route::post('restore-exempt-employee', [UrbanElectionController::class, 'restoreExemptEmployee']);
     Route::post('apply-duty', [UrbanElectionController::class, 'applyDuty']);
     Route::post('apply-targeted-duty', [UrbanElectionController::class, 'applyTargetedDuty']);
 });

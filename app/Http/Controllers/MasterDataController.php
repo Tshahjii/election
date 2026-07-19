@@ -556,22 +556,7 @@ class MasterDataController extends Controller
 
         // 2. Filter by salary rules if post_name is provided
         if (!empty($postName)) {
-            $rule = null;
-            if ($districtId) {
-                $rule = \App\Models\DistrictElectionSalaryRule::where('district_id', $districtId)
-                    ->where('post_name', $postName)
-                    ->first();
-            }
-            if (!$rule) {
-                $rule = MasterElectionSalaryRule::query()
-                    ->where('post_name', $postName)
-                    ->first();
-            }
-
-            if ($rule) {
-                $op = $rule->comparison_operator === 'above' ? '>=' : '<';
-                $query->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
-            }
+            \App\Support\SalaryComparison::applyRangeFilter($query, $postName, $districtId, $cityType ?: 'urban');
         }
 
         if ($term !== '') {
@@ -581,9 +566,10 @@ class MasterDataController extends Controller
             });
         }
 
-        $employees = $query->orderBy('name')
+        $employees = $query->with('designation:id,designation')
+            ->orderBy('name')
             ->limit(20)
-            ->get(['id', 'name', 'emp_code']);
+            ->get(['id', 'name', 'emp_code', 'designation_id']);
 
         return response()->json($employees);
     }
@@ -671,11 +657,11 @@ class MasterDataController extends Controller
     {
         if ($type === 'employees' && !$row) {
             $mergeData = [];
-            
+
             if (!$request->has('ofc_id') || $request->input('ofc_id') === '') {
                 $mergeData['ofc_id'] = $request->user()->ofc_id;
             }
-            
+
             if (!$request->has('department_id') || $request->input('department_id') === '') {
                 $userDept = $request->user()->department;
                 if (!empty($userDept)) {
@@ -687,7 +673,7 @@ class MasterDataController extends Controller
                     }
                 }
             }
-            
+
             if (!empty($mergeData)) {
                 $request->merge($mergeData);
             }
@@ -876,7 +862,7 @@ class MasterDataController extends Controller
 
         if ($type === 'employees') {
             $this->validateOfficeLocation($data);
-            
+
             if (!empty($data['emp_code'])) {
                 $empCode = trim($data['emp_code']);
                 if (preg_match('/^emp/i', $empCode)) {

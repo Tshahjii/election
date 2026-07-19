@@ -13,6 +13,7 @@ use App\Models\MasterRPMapping;
 use App\Models\MasterNPMapping;
 use App\Models\MasterEmployee;
 use App\Models\MasterElectionSalaryRule;
+use App\Support\AccessScope;
 
 class RuralElectionController extends Controller
 {
@@ -315,6 +316,8 @@ class RuralElectionController extends Controller
     {
         $employeeIdInput = $request->input('employee_id');
         $empCodeInput = $request->input('emp_code');
+        $reason = $request->input('reason');
+        $scope = $request->input('scope', 'both'); // 'both', 'urban', 'rural'
 
         if (empty($employeeIdInput) && empty($empCodeInput)) {
             return response()->json(['message' => 'employee_id or emp_code is required.'], 422);
@@ -333,7 +336,7 @@ class RuralElectionController extends Controller
                 ->whereIn('emp_code', $codes)
                 ->pluck('id')
                 ->toArray();
-            
+
             $employeeIds = array_merge($employeeIds, $foundIds);
         }
 
@@ -343,18 +346,68 @@ class RuralElectionController extends Controller
 
         $user = $request->user();
 
-        // Unassign these employees from any RP mappings
-        $updated = MasterRPMapping::query()
-            ->whereIn('emp_id', $employeeIds)
-            ->update([
-                'emp_id' => null,
-                'updated_by' => $user->id,
-                'updated_at' => now(),
-            ]);
+        // 1. Fetch current mappings for these employees to record post info before unassigning
+        foreach ($employeeIds as $empId) {
+            $employee = MasterEmployee::find($empId);
+            if (!$employee) {
+                continue;
+            }
+
+            // Find current Urban (NP) and Rural (RP) mappings depending on scope
+            $urbanMapping = null;
+            $ruralMapping = null;
+
+            if ($scope === 'both' || $scope === 'urban') {
+                $urbanMapping = MasterNPMapping::where('emp_id', $empId)->first();
+            }
+            if ($scope === 'both' || $scope === 'rural') {
+                $ruralMapping = MasterRPMapping::where('emp_id', $empId)->first();
+            }
+
+            if ($urbanMapping || $ruralMapping) {
+                \App\Models\ExemptEmployeeLog::create([
+                    'emp_code' => $employee->emp_code,
+                    'employee_id' => $employee->id,
+                    'urban_post' => $urbanMapping ? $urbanMapping->post_name : null,
+                    'rural_post' => $ruralMapping ? $ruralMapping->post_name : null,
+                    'urban_mapping_id' => $urbanMapping ? $urbanMapping->id : null,
+                    'rural_mapping_id' => $ruralMapping ? $ruralMapping->id : null,
+                    'urban_reason' => $urbanMapping ? $reason : null,
+                    'rural_reason' => $ruralMapping ? $reason : null,
+                    'created_by' => $user->id,
+                ]);
+            }
+        }
+
+        $updatedNP = 0;
+        $updatedRP = 0;
+
+        // Unassign these employees from NP and RP mappings based on scope
+        if ($scope === 'both' || $scope === 'urban') {
+            $updatedNP = MasterNPMapping::query()
+                ->whereIn('emp_id', $employeeIds)
+                ->update([
+                    'emp_id' => null,
+                    'updated_by' => $user->id,
+                    'updated_at' => now(),
+                ]);
+        }
+
+        if ($scope === 'both' || $scope === 'rural') {
+            $updatedRP = MasterRPMapping::query()
+                ->whereIn('emp_id', $employeeIds)
+                ->update([
+                    'emp_id' => null,
+                    'updated_by' => $user->id,
+                    'updated_at' => now(),
+                ]);
+        }
+
+        $totalUpdated = $updatedNP + $updatedRP;
 
         return response()->json([
-            'message' => "Employee exemptions applied. Updated: {$updated} assignment(s).",
-            'updated' => $updated,
+            'message' => "Employee exemptions applied. Updated: {$totalUpdated} assignment(s).",
+            'updated' => $totalUpdated,
         ]);
     }
 
@@ -482,10 +535,7 @@ class RuralElectionController extends Controller
                 }
 
                 // Check salary rules
-                if ($rule) {
-                    $op = $rule->comparison_operator === 'above' ? '>=' : '<';
-                    $empQuery->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
-                }
+                \App\Support\SalaryComparison::applyRangeFilter($empQuery, $post, $districtId, 'rural');
 
                 $availableEmps = $empQuery
                     ->inRandomOrder()
@@ -634,10 +684,7 @@ class RuralElectionController extends Controller
         if (!$rule) {
             $rule = MasterElectionSalaryRule::where('post_name', $postName)->first();
         }
-        if ($rule) {
-            $op = $rule->comparison_operator === 'above' ? '>=' : '<';
-            $employeesQuery->whereRaw("CAST(basic_pay AS DECIMAL(10,2)) {$op} ?", [$rule->min_salary]);
-        }
+        \App\Support\SalaryComparison::applyRangeFilter($employeesQuery, $postName, $districtId, 'rural');
 
         // Same-city restriction check
         $sameCityMaleAllowed = $distConfig->same_city_duty_male ?? true;
