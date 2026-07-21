@@ -31,7 +31,7 @@ class AuthController extends Controller
     public function sendOtp(Request $request): JsonResponse
     {
         $passwordRequired = SystemSetting::isEnabled('password_login_enabled', true);
-        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+        $defaultOtpEnabled = $this->defaultOtpEnabled();
 
         $rules = [
             'mobile' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
@@ -73,7 +73,6 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'OTP sent successfully.',
                 'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
-                'otp' => '123456',
             ]);
         }
 
@@ -113,7 +112,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
-            'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+            'default_otp_enabled' => $this->defaultOtpEnabled(),
         ]);
     }
 
@@ -123,7 +122,7 @@ class AuthController extends Controller
 
         return response()->json([
             'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
-            'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+            'default_otp_enabled' => $this->defaultOtpEnabled(),
         ]);
     }
 
@@ -135,6 +134,12 @@ class AuthController extends Controller
             'password_login_enabled' => ['required', 'boolean'],
             'default_otp_enabled' => ['required', 'boolean'],
         ]);
+
+        if ($data['default_otp_enabled'] && ! app()->environment(['local', 'testing'])) {
+            throw ValidationException::withMessages([
+                'default_otp_enabled' => 'Default OTP mode is available only in local or testing environments.',
+            ]);
+        }
 
         SystemSetting::query()->updateOrCreate(
             ['key' => 'password_login_enabled'],
@@ -150,7 +155,7 @@ class AuthController extends Controller
             'message' => 'Authentication settings updated successfully.',
             'settings' => [
                 'password_login_enabled' => SystemSetting::isEnabled('password_login_enabled', true),
-                'default_otp_enabled' => SystemSetting::isEnabled('default_otp_enabled', false),
+                'default_otp_enabled' => $this->defaultOtpEnabled(),
             ]
         ]);
     }
@@ -183,7 +188,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+        $defaultOtpEnabled = $this->defaultOtpEnabled();
 
         if ($defaultOtpEnabled && $data['otp'] === '123456') {
             $user->forceFill([
@@ -272,13 +277,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+        $defaultOtpEnabled = $this->defaultOtpEnabled();
 
         if ($defaultOtpEnabled) {
             return response()->json([
                 'message' => 'OTP sent successfully.',
                 'otp_expires_in' => self::OTP_TTL_MINUTES * 60,
-                'otp' => '123456',
             ]);
         }
 
@@ -314,7 +318,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $defaultOtpEnabled = SystemSetting::isEnabled('default_otp_enabled', false);
+        $defaultOtpEnabled = $this->defaultOtpEnabled();
 
         if ($defaultOtpEnabled && $data['otp'] === '123456') {
             return response()->json(['message' => 'Unlocked successfully.']);
@@ -500,5 +504,15 @@ class AuthController extends Controller
             $user->forceFill(['is_active' => 0])->save();
             $user->refresh();
         }
+    }
+
+    /**
+     * A shared OTP is useful for local demos, but it must never be enabled in a
+     * deployed environment where it would bypass the normal OTP delivery flow.
+     */
+    private function defaultOtpEnabled(): bool
+    {
+        return app()->environment(['local', 'testing'])
+            && SystemSetting::isEnabled('default_otp_enabled', false);
     }
 }

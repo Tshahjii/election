@@ -43,7 +43,6 @@ export default function LockScreen() {
   // OTP states
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const [error, setError] = useState('');
@@ -91,12 +90,7 @@ export default function LockScreen() {
       const response = await apiClient.post('/auth/unlock-send-otp');
       setOtpSent(true);
       setCountdown(120);
-      if (response.data?.otp) {
-        setDevOtp(response.data.otp);
-        setSuccess(`${response.data.message || 'OTP sent.'} (Bypass OTP: ${response.data.otp})`);
-      } else {
-        setSuccess(response.data?.message || 'OTP sent successfully to registered mobile number.');
-      }
+      setSuccess(response.data?.message || 'OTP sent successfully to registered mobile number.');
     } catch (err: any) {
       const errMsg = err.response?.data?.message || 'Failed to send OTP.';
       setError(errMsg);

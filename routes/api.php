@@ -20,8 +20,8 @@ Route::prefix('auth')->group(function () {
         Route::post('change-password', [AuthController::class, 'changePassword']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('unlock', [AuthController::class, 'unlock']);
-        Route::post('unlock-send-otp', [AuthController::class, 'unlockSendOtp']);
-        Route::post('unlock-verify-otp', [AuthController::class, 'unlockVerifyOtp']);
+        Route::post('unlock-send-otp', [AuthController::class, 'unlockSendOtp'])->middleware('throttle:5,1');
+        Route::post('unlock-verify-otp', [AuthController::class, 'unlockVerifyOtp'])->middleware('throttle:10,1');
         Route::get('auth-settings', [AuthController::class, 'getAuthSettings']);
         Route::post('auth-settings', [AuthController::class, 'updateAuthSettings']);
     });

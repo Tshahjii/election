@@ -53,7 +53,7 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { t } = useAppPreferences();
-  const { error, isAuthenticated, loading, otpExpiresAt, otpMessage, otpSent, devOtp } = useSelector((state: any) => state.auth);
+  const { error, isAuthenticated, loading, otpExpiresAt, otpMessage, otpSent } = useSelector((state: any) => state.auth);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaReady, setCaptchaReady] = useState(false);
@@ -370,11 +370,6 @@ export default function AuthLogin({ inputSx = {} }: any = {}) {
         )}
 
         {isOtpExpired && <Alert severity="warning">{t('auth.otpExpiredFull')}</Alert>}
-        {devOtp && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            {t('auth.defaultOtpAlert') || 'Bypass Mode Active: default OTP is'} <strong>{devOtp}</strong>
-          </Alert>
-        )}
         {error && <Alert severity="error">{error}</Alert>}
         </Stack>
 

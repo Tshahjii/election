@@ -89,7 +89,6 @@ const authSlice = createSlice({
     error: null,
     otpSent: false,
     otpMessage: null,
-    devOtp: null,
     otpExpiresAt: null
   },
   reducers: {
@@ -99,17 +98,14 @@ const authSlice = createSlice({
     resetOtpState: (state) => {
       state.otpSent = false;
       state.otpMessage = null;
-      state.devOtp = null;
       state.otpExpiresAt = null;
       state.error = null;
     },
     clearOtpMessage: (state) => {
       state.otpMessage = null;
-      state.devOtp = null;
     },
     expireOtpState: (state) => {
       state.otpMessage = 'OTP expired. Please resend OTP.';
-      state.devOtp = null;
       state.otpExpiresAt = null;
     }
   },
@@ -123,7 +119,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.otpSent = true;
         state.otpMessage = action.payload.message || 'OTP sent successfully.';
-        state.devOtp = action.payload.otp || null;
         state.otpExpiresAt = Date.now() + (action.payload.otp_expires_in || 120) * 1000;
       })
       .addCase(sendLoginOtp.rejected, (state, action) => {
@@ -141,7 +136,6 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.otpSent = false;
         state.otpMessage = null;
-        state.devOtp = null;
         state.otpExpiresAt = null;
       })
       .addCase(verifyLoginOtp.rejected, (state, action) => {
@@ -175,7 +169,6 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.otpSent = false;
         state.otpMessage = null;
-        state.devOtp = null;
         state.otpExpiresAt = null;
       })
       .addCase(logoutUser.rejected, (state) => {
@@ -184,7 +177,6 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.otpSent = false;
         state.otpMessage = null;
-        state.devOtp = null;
         state.otpExpiresAt = null;
       });
   }

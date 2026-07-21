@@ -33,4 +33,22 @@ export default defineConfig({
             'views': path.resolve(__dirname, 'resources/js/src/views'),
         },
     },
+    build: {
+        // Keep framework code stable and cacheable so a page change does not make
+        // returning users download the complete application again.
+        rolldownOptions: {
+            output: {
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return undefined;
+
+                    if (/(?:react|reduxjs|react-router-dom|react-redux)/.test(id)) return 'react';
+                    if (/(?:@mui|@emotion)/.test(id)) return 'mui';
+                    if (/apexcharts/.test(id)) return 'apexcharts';
+                    if (/fullcalendar/.test(id)) return 'calendar';
+
+                    return 'vendor';
+                }
+            }
+        }
+    }
 })

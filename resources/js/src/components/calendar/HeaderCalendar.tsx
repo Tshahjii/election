@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Badge from '@mui/material/Badge';
@@ -8,7 +8,7 @@ import Tooltip from '@mui/material/Tooltip';
 
 import CalendarMonthTwoToneIcon from '@mui/icons-material/CalendarMonthTwoTone';
 
-import CalendarDialog from './CalendarDialog';
+const CalendarDialog = lazy(() => import('./CalendarDialog'));
 
 export default function HeaderCalendar({ inverse = true }) {
   const [open, setOpen] = useState(false);
@@ -22,7 +22,11 @@ export default function HeaderCalendar({ inverse = true }) {
           </Badge>
         </IconButton>
       </Tooltip>
-      <CalendarDialog open={open} onClose={() => setOpen(false)} />
+      {open && (
+        <Suspense fallback={null}>
+          <CalendarDialog open={open} onClose={() => setOpen(false)} />
+        </Suspense>
+      )}
     </Box>
   );
 }
