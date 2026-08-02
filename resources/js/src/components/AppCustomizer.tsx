@@ -29,6 +29,10 @@ const accentOptions = [
   { value: 'saffron', label: 'Saffron', color: '#b45309' }
 ];
 
+const sidebarOptions = [
+  { value: 'heritage', label: 'Heritage', image: "url('/sidebar-themes/heritage.svg')" }, { value: 'ballot', label: 'Ballot', image: "url('/sidebar-themes/ballot.svg')" }, { value: 'saffron', label: 'Saffron', image: "url('/sidebar-themes/saffron.svg')" }, { value: 'forest', label: 'Forest', image: "url('/sidebar-themes/forest.svg')" }, { value: 'violet', label: 'Violet', image: "url('/sidebar-themes/violet.svg')" }, { value: 'skyline', label: 'Skyline', image: "url('/sidebar-themes/skyline.svg')" }
+];
+
 export default function AppCustomizer({ inverse = false }) {
   const {
     accentColor,
@@ -41,6 +45,8 @@ export default function AppCustomizer({ inverse = false }) {
     setThemeMode,
     fontScale,
     setFontScale,
+    sidebarImage,
+    setSidebarImage,
     resetPreferences,
     t
   } = useAppPreferences();
@@ -93,6 +99,13 @@ export default function AppCustomizer({ inverse = false }) {
                 <ToggleButton value="light">{t('controls.light')}</ToggleButton>
                 <ToggleButton value="dark">{t('controls.dark')}</ToggleButton>
               </ToggleButtonGroup>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Sidebar background</Typography>
+              <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+                {sidebarOptions.map((option) => <Button key={option.value} onClick={() => setSidebarImage(option.value)} variant={sidebarImage === option.value ? 'contained' : 'outlined'} sx={{ minWidth: 100, flex: '1 1 28%', color: 'common.white', backgroundImage: option.image, backgroundSize: 'cover' }}>{option.label}</Button>)}
+              </Stack>
             </Box>
 
             <Box>

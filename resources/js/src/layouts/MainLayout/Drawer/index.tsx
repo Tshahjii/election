@@ -10,6 +10,7 @@ import DrawerContent from './DrawerContent';
 
 import { DRAWER_WIDTH } from 'config';
 import { handlerDrawerOpen, useGetMenuMaster } from 'states/menu';
+import { useAppPreferences } from 'contexts/AppPreferences';
 
 // ==============================|| MAIN LAYOUT - DRAWER ||============================== //
 
@@ -18,6 +19,10 @@ export default function MainDrawer({ window }: any = {}) {
 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { sidebarImage } = useAppPreferences();
+  const sidebarBackgrounds: Record<string, string> = {
+    heritage: "url('/sidebar-themes/heritage.svg')", ballot: "url('/sidebar-themes/ballot.svg')", saffron: "url('/sidebar-themes/saffron.svg')", forest: "url('/sidebar-themes/forest.svg')", violet: "url('/sidebar-themes/violet.svg')", skyline: "url('/sidebar-themes/skyline.svg')"
+  };
 
   // Define container for drawer when window is specified
   const container = window !== undefined ? () => window().document.body : undefined;
@@ -36,7 +41,9 @@ export default function MainDrawer({ window }: any = {}) {
               width: DRAWER_WIDTH,
               color: theme.palette.common.white,
               backgroundColor: theme.palette.primary.dark,
-              backgroundImage: 'none',
+              backgroundImage: sidebarBackgrounds[sidebarImage] || sidebarBackgrounds.heritage,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
               boxShadow: `0 0.15rem 1.25rem 0 ${alpha(theme.palette.common.black, 0.12)}`,
               borderRight: 'none'
             })

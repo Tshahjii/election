@@ -23,6 +23,7 @@ import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlin
 import CorporateFareOutlinedIcon from '@mui/icons-material/CorporateFareOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 
 // ==============================|| MENU ITEMS - ELECTION DASHBOARD ||============================== //
 
@@ -145,6 +146,13 @@ const dashboard = {
           permission: 'users.access.read'
         }
       ]
+    },
+    {
+      id: 'complaints',
+      title: 'Help & Complaints',
+      type: 'item',
+      icon: SupportAgentOutlinedIcon,
+      url: '/admin/complaints'
     }
   ]
 };

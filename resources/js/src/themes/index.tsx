@@ -14,7 +14,7 @@ import typography from './typography';
 // ==============================|| DEFAULT THEME - MAIN ||============================== //
 
 export default function ThemeCustomization({ children }) {
-  const { themeMode, accentColor, fontScale } = useAppPreferences();
+  const { themeMode, accentColor, fontScale, language } = useAppPreferences();
   const themePalette = useMemo(() => palette(themeMode, accentColor), [themeMode, accentColor]);
 
   const themeDefault = createTheme({
@@ -24,7 +24,12 @@ export default function ThemeCustomization({ children }) {
   // create duplicate theme due to responsive typography and fontFamily
   const theme = createTheme({
     ...themeDefault,
-    typography: typography(fontScale)
+    typography: {
+      ...typography(fontScale),
+      fontFamily: language === 'hi'
+        ? "'Nirmala UI', 'Noto Sans Devanagari', 'Mangal', 'Poppins', sans-serif"
+        : typography(fontScale).fontFamily
+    }
   });
 
   theme.components = componentsOverride(theme);

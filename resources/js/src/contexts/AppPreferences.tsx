@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import hiOverrides from './hiOverrides';
 
 const AppPreferencesContext = createContext(null);
 
@@ -745,6 +744,21 @@ const translations = {
   }
 };
 
+// Shared labels used by master forms and configuration screens. Keeping them in
+// one map prevents Hindi mode from falling back to the original English label.
+const hindiLabels: Record<string, string> = {
+  'District Election Configurations': 'जिला निर्वाचन कॉन्फ़िगरेशन',
+  'Configure Date of Birth rules, salary thresholds and home-city restrictions district-wise': 'जिले के अनुसार जन्म तिथि नियम, वेतन सीमा और गृह-शहर प्रतिबंध कॉन्फ़िगर करें',
+  'Select Country': 'देश चुनें', 'Select State': 'राज्य चुनें', 'Select District': 'जिला चुनें', 'Select District to Configure': 'कॉन्फ़िगरेशन हेतु जिला चुनें',
+  'Employee Date of Birth Range': 'कर्मचारी जन्म तिथि सीमा', 'From Date': 'आरंभ तिथि', 'To Date': 'अंतिम तिथि',
+  'Employees whose DOB is outside this range will fail validation during creation and import, and will not be assigned duty.': 'इस सीमा के बाहर जन्म तिथि वाले कर्मचारियों का निर्माण और आयात के समय सत्यापन असफल होगा तथा उन्हें ड्यूटी आवंटित नहीं की जाएगी।',
+  'City-wise Duty Restrictions': 'शहर-वार ड्यूटी प्रतिबंध', 'Male Employees same city duty': 'पुरुष कर्मचारियों की उसी शहर में ड्यूटी', 'Female Employees same city duty': 'महिला कर्मचारियों की उसी शहर में ड्यूटी',
+  'Toggle off to restrict duty allocation in their home city': 'गृह शहर में ड्यूटी आवंटन रोकने के लिए इसे बंद करें',
+  'Post Salary / Pay Level Mapping Configuration': 'पद वेतन / पे-लेवल मैपिंग कॉन्फ़िगरेशन', 'Define basic salary ranges for auto-determining designations (P0, P1, P2, P3, P4) during team deployments': 'टीम तैनाती के समय पदनाम स्वतः निर्धारित करने के लिए मूल वेतन सीमा तय करें (P0, P1, P2, P3, P4)।',
+  'Salary Threshold': 'वेतन सीमा', 'Comparison Operator': 'तुलना ऑपरेटर', 'Allowed Designations': 'अनुमत पदनाम', 'Select Designations': 'पदनाम चुनें', 'Above or Equal (>=)': 'अधिक या बराबर (>=)', 'Under (<)': 'से कम (<)', 'Save Configurations': 'कॉन्फ़िगरेशन सहेजें', 'Saving...': 'सहेजा जा रहा है...',
+  'Country': 'देश', 'State': 'राज्य', 'District': 'जिला', 'City': 'शहर', 'Name': 'नाम', 'Code': 'कोड', 'Department': 'विभाग', 'Designation': 'पदनाम', 'Employee Type': 'कर्मचारी प्रकार', 'Office': 'कार्यालय', 'Office Name': 'कार्यालय का नाम', 'Office Code': 'कार्यालय कोड', 'Email': 'ईमेल', 'Mobile': 'मोबाइल', 'Date of Birth': 'जन्म तिथि', 'Gender': 'लिंग', 'Basic Pay': 'मूल वेतन', 'Remark': 'टिप्पणी', 'Ward': 'वार्ड', 'Ward Name': 'वार्ड नाम', 'Ward No': 'वार्ड संख्या', 'Polling Station Name': 'मतदान केंद्र का नाम', 'Country Name': 'देश का नाम', 'State Name': 'राज्य का नाम', 'State Code': 'राज्य कोड', 'District Name': 'जिला नाम', 'District Code': 'जिला कोड', 'City Name': 'शहर का नाम'
+};
+
 const labelKey = (value) =>
   `field.${String(value)
     .replace(/[^a-zA-Z0-9 ]/g, '')
@@ -763,6 +777,7 @@ export function AppPreferencesProvider({ children }) {
   const [accentColor, setAccentColorState] = useState(() => getStoredValue('app_accent_color', 'indigo'));
   const [layoutDensity, setLayoutDensityState] = useState(() => getStoredValue('app_layout_density', 'comfortable'));
   const [fontScale, setFontScaleState] = useState(() => getStoredValue('app_font_scale', 'normal'));
+  const [sidebarImage, setSidebarImageState] = useState(() => getStoredValue('app_sidebar_image', 'heritage'));
 
   useEffect(() => {
     document.documentElement.lang = language === 'hi' ? 'hi' : 'en';
@@ -792,6 +807,10 @@ export function AppPreferencesProvider({ children }) {
     setFontScaleState(nextFontScale);
     localStorage.setItem('app_font_scale', nextFontScale);
   };
+  const setSidebarImage = (nextSidebarImage) => {
+    setSidebarImageState(nextSidebarImage);
+    localStorage.setItem('app_sidebar_image', nextSidebarImage);
+  };
 
   const resetPreferences = () => {
     setLanguage('hi');
@@ -799,10 +818,12 @@ export function AppPreferencesProvider({ children }) {
     setAccentColor('indigo');
     setLayoutDensity('comfortable');
     setFontScale('normal');
+    setSidebarImage('heritage');
   };
 
-  const t = (key) => (language === 'hi' ? hiOverrides[key] : undefined) || translations[language]?.[key] || translations.en[key] || key;
+  const t = (key) => translations[language]?.[key] || translations.en[key] || key;
   const tl = (value) => {
+    if (language === 'hi' && hindiLabels[value]) return hindiLabels[value];
     const key = labelKey(value);
     const translated = t(key);
 
@@ -823,9 +844,11 @@ export function AppPreferencesProvider({ children }) {
       setLayoutDensity,
       fontScale,
       setFontScale,
+      sidebarImage,
+      setSidebarImage,
       resetPreferences
     }),
-    [language, themeMode, accentColor, layoutDensity, fontScale]
+    [language, themeMode, accentColor, layoutDensity, fontScale, sidebarImage]
   );
 
   return <AppPreferencesContext.Provider value={value}>{children}</AppPreferencesContext.Provider>;

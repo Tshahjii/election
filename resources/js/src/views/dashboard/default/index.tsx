@@ -23,6 +23,7 @@ import MainCard from 'components/cards/MainCard';
 import DownloadMenu from 'components/DownloadMenu';
 import { GRID_SPACING } from 'config';
 import { useAppPreferences } from 'contexts/AppPreferences';
+import CountUp from 'components/CountUp';
 
 // assets
 import AssignmentTurnedInOutlined from '@mui/icons-material/AssignmentTurnedInOutlined';
@@ -205,7 +206,7 @@ export default function Default() {
                     </Avatar>
                   </Stack>
                   <Box>
-                    <Typography variant="h2">{item.value}</Typography>
+                    <Typography variant="h2"><CountUp value={item.value} /></Typography>
                     <Typography variant="caption" color="text.secondary">
                       {item.captionKey ? t(item.captionKey) : item.caption}
                     </Typography>
@@ -246,7 +247,7 @@ export default function Default() {
             headerSX={{ '& .MuiCardHeader-title': { fontSize: '1rem' } }}
           >
             <Box sx={{ minHeight: { xs: 260, md: 330 } }}>
-              <ReactApexChart options={turnoutChart.options} series={turnoutChart.series} type="bar" height={320} />
+              <ReactApexChart options={{ ...turnoutChart.options, chart: { ...turnoutChart.options.chart, animations: { enabled: true, dynamicAnimation: { enabled: true, speed: 350 } } } } as any} series={turnoutChart.series} type="bar" height={320} />
             </Box>
           </MainCard>
         </Grid>

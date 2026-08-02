@@ -29,6 +29,7 @@ const EmployeesPage = Loadable(lazy(() => import('views/masters/Employees')));
 const DistrictConfigsPage = Loadable(lazy(() => import('views/masters/DistrictConfigs')));
 const UserProfilePage = Loadable(lazy(() => import('views/auth/UserProfile')));
 const SamplePage = Loadable(lazy(() => import('views/pages/SamplePage')));
+const ComplaintsPage = Loadable(lazy(() => import('views/pages/Complaints')));
 
 // new modules
 const ElectionDashboardPage = Loadable(lazy(() => import('views/election/ElectionDashboard')));
@@ -98,6 +99,10 @@ const MainRoutes = {
     {
       path: 'profile',
       element: <UserProfilePage />
+    },
+    {
+      path: 'complaints',
+      element: <ComplaintsPage />
     },
     {
       path: 'masters/countries',

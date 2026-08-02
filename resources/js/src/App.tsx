@@ -1,5 +1,7 @@
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 
 // project imports
 import { AppPreferencesProvider } from 'contexts/AppPreferences';
@@ -8,8 +10,16 @@ import GlobalSnackbar from './components/GlobalSnackbar';
 import ThemeCustomization from './themes';
 
 import router from 'routes';
+import { sessionExpired } from 'store/slices/authSlice';
 
 function App() {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    const handleSessionExpired = () => dispatch(sessionExpired());
+    window.addEventListener('app:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('app:session-expired', handleSessionExpired);
+  }, [dispatch]);
+
   return (
     <AppPreferencesProvider>
       <ThemeCustomization>

@@ -7,6 +7,7 @@ use App\Http\Controllers\UserAccessController;
 use App\Http\Controllers\UrbanElectionController;
 use App\Http\Controllers\RuralElectionController;
 use App\Http\Controllers\DistrictConfigController;
+use App\Http\Controllers\ComplaintController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -83,4 +84,10 @@ Route::middleware('jwt')->prefix('calendar-events')->group(function () {
     Route::post('/', [CalendarEventController::class, 'store']);
     Route::put('{calendarEvent}', [CalendarEventController::class, 'update']);
     Route::delete('{calendarEvent}', [CalendarEventController::class, 'destroy']);
+});
+
+Route::middleware('jwt')->prefix('complaints')->group(function () {
+    Route::get('/', [ComplaintController::class, 'index']);
+    Route::post('/', [ComplaintController::class, 'store']);
+    Route::put('{complaint}', [ComplaintController::class, 'update']);
 });

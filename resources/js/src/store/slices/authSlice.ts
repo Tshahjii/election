@@ -107,6 +107,12 @@ const authSlice = createSlice({
     expireOtpState: (state) => {
       state.otpMessage = 'OTP expired. Please resend OTP.';
       state.otpExpiresAt = null;
+    },
+    sessionExpired: (state) => {
+      state.token = null;
+      state.user = null;
+      state.isAuthenticated = false;
+      state.error = 'Your session has ended because this account was used to sign in elsewhere.';
     }
   },
   extraReducers: (builder) => {
@@ -182,5 +188,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { clearAuthError, resetOtpState, clearOtpMessage, expireOtpState } = authSlice.actions;
+export const { clearAuthError, resetOtpState, clearOtpMessage, expireOtpState, sessionExpired } = authSlice.actions;
 export default authSlice.reducer;
