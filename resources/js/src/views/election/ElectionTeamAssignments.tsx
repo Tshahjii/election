@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@mui/material/styles';
 
@@ -58,19 +58,23 @@ import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
 const SearchTextField = ({ value, onChange, ...props }: any) => {
   const [localValue, setLocalValue] = useState(value);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
   useEffect(() => {
+    if (localValue === value) return;
     const timer = setTimeout(() => {
-      if (localValue !== value) {
-        onChange(localValue);
-      }
+      onChangeRef.current(localValue);
     }, 350);
     return () => clearTimeout(timer);
-  }, [localValue, onChange, value]);
+  }, [localValue, value]);
 
   return (
     <TextField
@@ -229,13 +233,15 @@ function ExemptEmployeeForm({ onExempt, onRestoreExempt, loading, restoreLoading
     return { availableResults: available, exemptedResults: exempted, notFoundResults: notFound };
   }, [searchedResults]);
 
+  const availableCodesKey = useMemo(() => availableResults.map((r) => r.code).join(','), [availableResults]);
+
   useEffect(() => {
     if (hasSearched && availableResults.length > 0) {
       setSelectedCodes(availableResults.map((r) => r.code));
     } else {
       setSelectedCodes([]);
     }
-  }, [hasSearched, availableResults]);
+  }, [hasSearched, availableCodesKey]);
 
   const isAllAvailableSelected = availableResults.length > 0 && selectedCodes.length === availableResults.length;
   const isSomeAvailableSelected = selectedCodes.length > 0 && selectedCodes.length < availableResults.length;

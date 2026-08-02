@@ -52,6 +52,10 @@ const MainRoutes = {
   errorElement: <RouteError />,
   children: [
     {
+      index: true,
+      element: <Navigate to="/admin/dashboard" replace />
+    },
+    {
       path: 'dashboard',
       element: <DashboardDefault />
     },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 // material-ui
@@ -32,14 +32,10 @@ export default function MainLayout() {
     handlerDrawerOpen(upLG);
   }, [upLG]);
 
-  // drawer toggle handler on resize window
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const drawer = useMemo(() => <Drawer />, [drawerOpen]);
-
   return (
     <Stack direction="row" sx={{ width: 1 }}>
       <Header />
-      {drawer}
+      <Drawer />
       <Box
         component="main"
         sx={{
