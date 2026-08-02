@@ -57,5 +57,14 @@ class SalaryComparison
             // P4 is only in Rural, catches all below P3
             $query->whereRaw('CAST(basic_pay AS DECIMAL(10,2)) < ?', [$p3_val]);
         }
+
+        // Apply designation filter if configured
+        $rule = $rules->get($postName);
+        if ($rule && isset($rule->designation_ids) && is_array($rule->designation_ids) && !empty($rule->designation_ids)) {
+            $designationIds = array_filter(array_map('intval', $rule->designation_ids));
+            if (!empty($designationIds)) {
+                $query->whereIn('designation_id', $designationIds);
+            }
+        }
     }
 }

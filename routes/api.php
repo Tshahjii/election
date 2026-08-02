@@ -61,6 +61,8 @@ Route::middleware('jwt')->prefix('rural-election')->group(function () {
     Route::post('create-teams-scheduled', [RuralElectionController::class, 'createTeamsScheduled']);
     Route::post('save-assignments', [RuralElectionController::class, 'saveAssignments']);
     Route::post('exempt-employee', [RuralElectionController::class, 'exemptEmployee']);
+    Route::get('exempt-employee-logs', [RuralElectionController::class, 'getExemptEmployeeLogs']);
+    Route::post('restore-exempt-employee', [RuralElectionController::class, 'restoreExemptEmployee']);
     Route::post('apply-duty', [RuralElectionController::class, 'applyDuty']);
     Route::post('apply-targeted-duty', [RuralElectionController::class, 'applyTargetedDuty']);
 });

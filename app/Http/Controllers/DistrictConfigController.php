@@ -51,6 +51,7 @@ class DistrictConfigController extends Controller
                         'post_name' => $post,
                         'min_salary' => (float) $rule->min_salary,
                         'comparison_operator' => $rule->comparison_operator,
+                        'designation_ids' => $rule->designation_ids ?? [],
                     ];
                 } else {
                     $globalRule = $globalRules->firstWhere('post_name', $post);
@@ -58,6 +59,7 @@ class DistrictConfigController extends Controller
                         'post_name' => $post,
                         'min_salary' => $globalRule ? (float) $globalRule->min_salary : 0,
                         'comparison_operator' => $globalRule ? $globalRule->comparison_operator : 'above',
+                        'designation_ids' => [],
                     ];
                 }
             }
@@ -88,6 +90,8 @@ class DistrictConfigController extends Controller
             'rules.*.post_name' => 'required|string|in:P0,P1,P2,P3,P4',
             'rules.*.min_salary' => 'required|numeric|min:0',
             'rules.*.comparison_operator' => 'required|string|in:above,under',
+            'rules.*.designation_ids' => 'nullable|array',
+            'rules.*.designation_ids.*' => 'integer|exists:master_designations,id',
         ]);
 
         $districtId = $request->input('district_id');
@@ -124,6 +128,7 @@ class DistrictConfigController extends Controller
                     [
                         'min_salary' => $rule['min_salary'],
                         'comparison_operator' => $rule['comparison_operator'],
+                        'designation_ids' => $rule['designation_ids'] ?? [],
                     ]
                 );
             }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@mui/material/styles';
 
 // material-ui
@@ -24,6 +24,7 @@ import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
+import Checkbox from '@mui/material/Checkbox';
 
 // project imports
 import MainCard from 'components/cards/MainCard';
@@ -41,6 +42,8 @@ import {
   useSaveRuralAssignmentsMutation,
   useExemptUrbanEmployeeMutation,
   useExemptRuralEmployeeMutation,
+  useRestoreUrbanExemptEmployeeMutation,
+  useRestoreRuralExemptEmployeeMutation,
   useCreateUrbanTeamsMutation,
   useCreateRuralTeamsMutation,
   useApplyUrbanTargetedDutyMutation,
@@ -51,6 +54,8 @@ import {
 // assets
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined';
 import SaveOutlined from '@mui/icons-material/SaveOutlined';
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
+import SearchOutlined from '@mui/icons-material/SearchOutlined';
 const SearchTextField = ({ value, onChange, ...props }: any) => {
   const [localValue, setLocalValue] = useState(value);
 
@@ -100,84 +105,441 @@ const buttonSx = {
 
 interface ExemptEmployeeFormProps {
   onExempt: (empCode: string, reason: string, scope: 'both' | 'urban' | 'rural') => Promise<void>;
+  onRestoreExempt: (logId: number) => Promise<void>;
   loading: boolean;
+  restoreLoading: boolean;
+  exemptedLogs?: any[];
 }
 
-function ExemptEmployeeForm({ onExempt, loading }: ExemptEmployeeFormProps) {
+function ExemptEmployeeForm({ onExempt, onRestoreExempt, loading, restoreLoading, exemptedLogs = [] }: ExemptEmployeeFormProps) {
   const { t } = useAppPreferences();
-  const [empCode, setEmpCode] = useState('');
+  const [empCodeInput, setEmpCodeInput] = useState('');
   const [reason, setReason] = useState('');
   const [scope, setScope] = useState<'both' | 'urban' | 'rural'>('both');
 
-  const handleSubmit = async () => {
-    const trimmed = empCode.trim();
-    if (!trimmed) {
-      return;
+  const [hasSearched, setHasSearched] = useState(false);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+
+  const [triggerSearch, { data: dbEmployees = [], isFetching: isSearching }] = useLazySearchEmployeesQuery();
+
+  const handleSearch = async () => {
+    const trimmed = empCodeInput.trim();
+    if (!trimmed) return;
+    await triggerSearch({ q: trimmed, include_all: 1 }).unwrap();
+    setHasSearched(true);
+  };
+
+  const codeItems = useMemo(() => {
+    if (!empCodeInput.trim()) return [];
+    return empCodeInput
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }, [empCodeInput]);
+
+  const searchedResults = useMemo(() => {
+    if (!hasSearched || codeItems.length === 0) return [];
+
+    return codeItems.map((code) => {
+      const lower = code.toLowerCase();
+      const cleanNum = lower.replace(/^nic/, '');
+      const paddedCode = isNaN(Number(cleanNum)) ? lower : `nic${String(cleanNum).padStart(4, '0')}`;
+
+      // 1. Check in exempt logs
+      const exemptRecord = exemptedLogs.find((log: any) => {
+        const logCode = String(log.emp_code || '').toLowerCase();
+        const logEmpId = String(log.employee_id || '');
+        const logEmpCode = String(log.employee?.emp_code || '').toLowerCase();
+
+        return (
+          logCode === lower ||
+          logCode === paddedCode ||
+          logEmpCode === lower ||
+          logEmpCode === paddedCode ||
+          logEmpId === lower
+        );
+      });
+
+      if (exemptRecord) {
+        return {
+          code: exemptRecord.emp_code || code.toUpperCase(),
+          employee: exemptRecord.employee,
+          status: 'exempted',
+          urbanPost: exemptRecord.urban_post,
+          ruralPost: exemptRecord.rural_post,
+          exemptReason: exemptRecord.urban_reason || exemptRecord.rural_reason || '-',
+          logId: exemptRecord.id
+        };
+      }
+
+      // 2. Check in dbEmployees
+      const dbMatch = dbEmployees.find((emp: any) => {
+        const empCodeStr = String(emp.emp_code || '').toLowerCase();
+        const empIdStr = String(emp.id || '');
+        const empNameStr = String(emp.name || '').toLowerCase();
+
+        return (
+          empCodeStr === lower ||
+          empCodeStr === paddedCode ||
+          empIdStr === lower ||
+          empNameStr.includes(lower)
+        );
+      });
+
+      if (dbMatch) {
+        return {
+          code: dbMatch.emp_code || code.toUpperCase(),
+          employee: dbMatch,
+          status: 'available',
+          urbanPost: null,
+          ruralPost: null,
+          exemptReason: '-',
+          logId: null
+        };
+      }
+
+      // 3. Not found
+      return {
+        code: code.toUpperCase(),
+        employee: null,
+        status: 'not_found',
+        urbanPost: null,
+        ruralPost: null,
+        exemptReason: '-',
+        logId: null
+      };
+    });
+  }, [hasSearched, codeItems, exemptedLogs, dbEmployees]);
+
+  const { availableResults, exemptedResults, notFoundResults } = useMemo(() => {
+    const available: any[] = [];
+    const exempted: any[] = [];
+    const notFound: any[] = [];
+
+    searchedResults.forEach((item) => {
+      if (item.status === 'available') {
+        available.push(item);
+      } else if (item.status === 'exempted') {
+        exempted.push(item);
+      } else {
+        notFound.push(item);
+      }
+    });
+
+    return { availableResults: available, exemptedResults: exempted, notFoundResults: notFound };
+  }, [searchedResults]);
+
+  useEffect(() => {
+    if (hasSearched && availableResults.length > 0) {
+      setSelectedCodes(availableResults.map((r) => r.code));
+    } else {
+      setSelectedCodes([]);
     }
-    await onExempt(trimmed, reason, scope);
-    setEmpCode('');
+  }, [hasSearched, availableResults]);
+
+  const isAllAvailableSelected = availableResults.length > 0 && selectedCodes.length === availableResults.length;
+  const isSomeAvailableSelected = selectedCodes.length > 0 && selectedCodes.length < availableResults.length;
+
+  const handleSelectAllAvailable = (checked: boolean) => {
+    if (checked) {
+      setSelectedCodes(availableResults.map((r) => r.code));
+    } else {
+      setSelectedCodes([]);
+    }
+  };
+
+  const handleToggleCode = (code: string) => {
+    setSelectedCodes((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+  };
+
+  const handleExemptSubmit = async () => {
+    if (selectedCodes.length === 0) return;
+    const codesString = selectedCodes.join(',');
+    await onExempt(codesString, reason, scope);
+
+    setEmpCodeInput('');
     setReason('');
     setScope('both');
+    setHasSearched(false);
+    setSelectedCodes([]);
   };
 
   return (
-    <MainCard title={t('election.exemptTitle')} sx={(theme) => ({ ...getSurfaceSx(theme) })}>
+    <MainCard title={t('election.exemptTitle') || 'कर्मचारी को असाइनमेंट से छूट दें'} sx={(theme) => ({ ...getSurfaceSx(theme) })}>
       <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <TextField
             fullWidth
             size="small"
-            label={t('election.searchEmp')}
-            placeholder={t('election.searchEmpPlaceholderExempt')}
-            value={empCode}
-            onChange={(e) => setEmpCode(e.target.value)}
+            label={t('election.searchEmp') || 'कर्मचारी आईडी / कोड खोजें'}
+            placeholder={t('election.searchEmpPlaceholderExempt') || 'कर्मचारी आईडी या कोड दर्ज करें (जैसे NIC001, NIC002)'}
+            value={empCodeInput}
+            onChange={(e) => {
+              setEmpCodeInput(e.target.value);
+              setHasSearched(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch();
+              }
+            }}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <ChosenSelect
-            label={t('election.exemptScopeLabel') || 'Exemption Scope'}
-            value={scope}
-            options={[
-              { value: 'both', label: t('election.exemptScopeBoth') || 'Both (Urban & Rural)' },
-              { value: 'urban', label: t('election.exemptScopeUrban') || 'Urban Only' },
-              { value: 'rural', label: t('election.exemptScopeRural') || 'Rural Only' }
-            ]}
-            onChange={(e) => setScope(e.target.value)}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <TextField
-            fullWidth
-            size="small"
-            label={t('election.exemptReasonLabel')}
-            placeholder={t('election.exemptReasonPlaceholder')}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 2 }}>
           <Button
             fullWidth
             type="button"
             variant="contained"
-            color="secondary"
-            disabled={loading}
-            onClick={handleSubmit}
+            color="primary"
+            disabled={isSearching || !empCodeInput.trim()}
+            onClick={handleSearch}
+            startIcon={isSearching ? <CircularProgress size={18} color="inherit" /> : <SearchOutlined />}
             sx={{ ...buttonSx, height: 40 }}
           >
-            {loading ? <CircularProgress size={18} color="inherit" /> : t('election.exemptBtn')}
+            {isSearching ? 'खोजा जा रहा है...' : 'कर्मचारी खोजें'}
           </Button>
         </Grid>
       </Grid>
+
+      {hasSearched && (
+        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          {/* Warning for IDs not found in DB */}
+          {notFoundResults.length > 0 && (
+            <Box sx={{ mb: 3, p: 1.5, bgcolor: 'warning.lighter', border: '1px solid', borderColor: 'warning.main', borderRadius: 2 }}>
+              <Typography variant="subtitle2" color="warning.dark" sx={{ fontWeight: 700 }}>
+                ⚠️ निम्नलिखित कर्मचारी कोड डेटाबेस में नहीं मिले: {notFoundResults.map((r) => r.code).join(', ')}
+              </Typography>
+            </Box>
+          )}
+
+          {/* TABLE 1: Duty Assigned / Available Employees (To Be Exempted) */}
+          {availableResults.length > 0 && (
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip label={availableResults.length} color="success" size="small" sx={{ fontWeight: 800 }} />
+                  1. ड्यूटी में लगे / उपलब्ध कर्मचारी (जिन्हें छूट देनी है)
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  चयनित कर्मचारी: {selectedCodes.length} / {availableResults.length}
+                </Typography>
+              </Box>
+
+              <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'bg.100' }}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={isAllAvailableSelected}
+                          indeterminate={isSomeAvailableSelected}
+                          onChange={(e) => handleSelectAllAvailable(e.target.checked)}
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={{ width: 60, fontWeight: 800 }}>{t('common.sno') || 'क्र.सं.'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('election.empCode') || 'कर्मचारी कोड'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('election.empName') || 'कर्मचारी नाम'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('masters.designation') || 'पदनाम'}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 800 }}>{t('common.status') || 'स्थिति'}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {availableResults.map((item, idx) => {
+                      const isChecked = selectedCodes.includes(item.code);
+                      return (
+                        <TableRow
+                          key={item.code + idx}
+                          hover
+                          selected={isChecked}
+                          onClick={() => handleToggleCode(item.code)}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              size="small"
+                              checked={isChecked}
+                              onChange={() => handleToggleCode(item.code)}
+                            />
+                          </TableCell>
+                          <TableCell align="center">{idx + 1}</TableCell>
+                          <TableCell>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                              {item.code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{item.employee?.name || '-'}</TableCell>
+                          <TableCell>
+                            {item.employee?.designation?.designation || item.employee?.designation?.name || '-'}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={t('election.statusAvailable') || 'ड्यूटी के लिए उपलब्ध'}
+                              color="success"
+                              variant="outlined"
+                              size="small"
+                              sx={{ fontWeight: 700 }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ChosenSelect
+                    label={t('election.exemptScopeLabel') || 'छूट का दायरा (Scope)'}
+                    value={scope}
+                    options={[
+                      { value: 'both', label: t('election.exemptScopeBoth') || 'दोनों (शहरी और ग्रामीण)' },
+                      { value: 'urban', label: t('election.exemptScopeUrban') || 'केवल शहरी (Urban)' },
+                      { value: 'rural', label: t('election.exemptScopeRural') || 'केवल ग्रामीण (Rural)' }
+                    ]}
+                    onChange={(e) => setScope(e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={t('election.exemptReasonLabel') || 'छूट का कारण'}
+                    placeholder={t('election.exemptReasonPlaceholder') || 'ड्यूटी से हटाने का कारण दर्ज करें...'}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Button
+                    fullWidth
+                    type="button"
+                    variant="contained"
+                    color="secondary"
+                    disabled={loading || selectedCodes.length === 0}
+                    onClick={handleExemptSubmit}
+                    sx={{ ...buttonSx, height: 40 }}
+                  >
+                    {loading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      `छूट दें (${selectedCodes.length} चयनित)`
+                    )}
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* TABLE 2: Already Exempted Employees (Removed from Duty) */}
+          {exemptedResults.length > 0 && (
+            <Box sx={{ mt: availableResults.length > 0 ? 4 : 0, pt: availableResults.length > 0 ? 3 : 0, borderTop: availableResults.length > 0 ? '1px solid' : 'none', borderColor: 'divider' }}>
+              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip label={exemptedResults.length} color="error" size="small" sx={{ fontWeight: 800 }} />
+                  2. छूट प्राप्त कर्मचारी (ड्यूटी से हटाए गए रिकॉर्ड्स)
+                </Typography>
+              </Box>
+
+              <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'bg.100' }}>
+                      <TableCell align="center" sx={{ width: 60, fontWeight: 800 }}>{t('common.sno') || 'क्र.सं.'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('election.empCode') || 'कर्मचारी कोड'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('election.empName') || 'कर्मचारी नाम'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('masters.designation') || 'पदनाम'}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.urbanPost') || 'शहरी ड्यूटी पद'}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.ruralPost') || 'ग्रामीण ड्यूटी पद'}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{t('election.exemptReasonLabel') || 'छूट का कारण'}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 800 }}>{t('common.status') || 'स्थिति'}</TableCell>
+                      <TableCell align="center" sx={{ width: 140, fontWeight: 800 }}>{t('common.action') || 'कार्रवाई'}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {exemptedResults.map((item, idx) => (
+                      <TableRow key={item.code + idx} hover>
+                        <TableCell align="center">{idx + 1}</TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            {item.code}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{item.employee?.name || '-'}</TableCell>
+                        <TableCell>
+                          {item.employee?.designation?.designation || item.employee?.designation?.name || '-'}
+                        </TableCell>
+                        <TableCell align="center">
+                          {item.urbanPost ? (
+                            <Chip label={item.urbanPost} color="warning" size="small" variant="outlined" style={{ fontWeight: 600 }} />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">N/A</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {item.ruralPost ? (
+                            <Chip label={item.ruralPost} color="info" size="small" variant="outlined" style={{ fontWeight: 600 }} />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">N/A</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          {item.exemptReason}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={t('election.statusExempted') || 'छूट प्राप्त (Exempted)'}
+                            color="error"
+                            variant="filled"
+                            size="small"
+                            sx={{ fontWeight: 700 }}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          {item.logId && (
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              disabled={restoreLoading}
+                              onClick={() => onRestoreExempt(item.logId)}
+                              startIcon={<DeleteOutlined sx={{ fontSize: 16 }} />}
+                              sx={{ borderRadius: 1.5, textTransform: 'none', px: 1.5, py: 0.5, fontSize: '0.75rem', fontWeight: 700 }}
+                            >
+                              {t('election.restoreExemptBtn') || 'छूट से बताएं'}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {availableResults.length === 0 && exemptedResults.length === 0 && notFoundResults.length === 0 && (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography color="text.secondary">कोई कर्मचारी नहीं मिला।</Typography>
+            </Box>
+          )}
+        </Box>
+      )}
     </MainCard>
   );
 }
 
 export default function ElectionTeamAssignments({ type }: ElectionTeamAssignmentsProps) {
   const dispatch = useDispatch();
+  const { user } = useSelector((state: any) => state.auth);
 
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('all');
   const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
   const [teamSearch, setTeamSearch] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -186,6 +548,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [logPage, setLogPage] = useState(1);
   const [logRowsPerPage, setLogRowsPerPage] = useState(10);
+  const [logSearch, setLogSearch] = useState('');
   const [sortField, setSortField] = useState<string>('padded_team_id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -201,18 +564,28 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   const [targetedGender, setTargetedGender] = useState<'male' | 'female' | 'any'>('any');
   const [targetedDesignationId, setTargetedDesignationId] = useState<number | ''>('');
-  const [targetedLimit, setTargetedLimit] = useState<number>(0);
+  const [targetedLimit, setTargetedLimit] = useState<number | ''>('');
 
   const { t } = useAppPreferences();
   const isUrban = type === 'Nagar Panchayat';
 
   // 1. Fetch cities options
   const { data: optionsData } = useGetOptionsQuery();
+  const districtsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+
+  const isMultiDistrictUser = useMemo(() => {
+    const isSuperOrSystem = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
+    return isSuperOrSystem || districtsList.length > 1;
+  }, [user, districtsList]);
 
   const filteredCities = useMemo(() => {
     if (!optionsData) return [];
-    return type === 'Nagar Panchayat' ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
-  }, [optionsData, type]);
+    const cities = type === 'Nagar Panchayat' ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
+    if (selectedDistrictId && selectedDistrictId !== 'all') {
+      return cities.filter((c: any) => Number(c.district_id) === Number(selectedDistrictId));
+    }
+    return cities;
+  }, [optionsData, type, selectedDistrictId]);
 
   // 2. Fetch dashboard data (urban vs rural)
   const skipQuery = false;
@@ -244,6 +617,11 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const exemptEmployee = isUrban ? exemptUrbanEmployee : exemptRuralEmployee;
   const exemptLoading = isUrban ? exemptUrbanLoading : exemptRuralLoading;
 
+  const [restoreUrbanExempt, { isLoading: restoreUrbanLoading }] = useRestoreUrbanExemptEmployeeMutation();
+  const [restoreRuralExempt, { isLoading: restoreRuralLoading }] = useRestoreRuralExemptEmployeeMutation();
+  const restoreExemptEmployee = isUrban ? restoreUrbanExempt : restoreRuralExempt;
+  const restoreLoading = isUrban ? restoreUrbanLoading : restoreRuralLoading;
+
   const [createUrbanTeams, { isLoading: urbanCreateLoading }] = useCreateUrbanTeamsMutation();
   const [createRuralTeams, { isLoading: ruralCreateLoading }] = useCreateRuralTeamsMutation();
   const createTeams = isUrban ? createUrbanTeams : createRuralTeams;
@@ -253,10 +631,33 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const { data: logsData, isFetching: logsLoading } = useGetExemptEmployeeLogsQuery();
   const logs = logsData || [];
 
+  const filteredLogs = useMemo(() => {
+    const term = logSearch.trim().toLowerCase();
+    if (!term) return logs;
+    return logs.filter((log: any) => {
+      const code = String(log.emp_code || '').toLowerCase();
+      const name = String(log.employee?.name || '').toLowerCase();
+      const desig = String(log.employee?.designation?.designation || log.employee?.designation?.name || '').toLowerCase();
+      const urbanPost = String(log.urban_post || '').toLowerCase();
+      const ruralPost = String(log.rural_post || '').toLowerCase();
+      const uReason = String(log.urban_reason || '').toLowerCase();
+      const rReason = String(log.rural_reason || '').toLowerCase();
+      return (
+        code.includes(term) ||
+        name.includes(term) ||
+        desig.includes(term) ||
+        urbanPost.includes(term) ||
+        ruralPost.includes(term) ||
+        uReason.includes(term) ||
+        rReason.includes(term)
+      );
+    });
+  }, [logs, logSearch]);
+
   const paginatedLogs = useMemo(() => {
     const startIndex = (logPage - 1) * logRowsPerPage;
-    return logs.slice(startIndex, startIndex + logRowsPerPage);
-  }, [logs, logPage, logRowsPerPage]);
+    return filteredLogs.slice(startIndex, startIndex + logRowsPerPage);
+  }, [filteredLogs, logPage, logRowsPerPage]);
 
   const [applyUrbanTargetedDuty, { isLoading: applyUrbanTargetedLoading }] = useApplyUrbanTargetedDutyMutation();
   const [applyRuralTargetedDuty, { isLoading: applyRuralTargetedLoading }] = useApplyRuralTargetedDutyMutation();
@@ -265,19 +666,20 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   const handleApplyTargetedDuty = async () => {
     if (!activeTargetedDuty) return;
+    const finalLimit = Math.max(1, Math.min(activeTargetedDuty.vacant_count, Number(targetedLimit) || 1));
     try {
       const response = await applyTargetedDuty({
         city_id: activeTargetedDuty.city_id,
         post_name: activeTargetedDuty.post_name,
         gender: targetedGender,
         designation_id: targetedDesignationId || null,
-        limit: targetedLimit
+        limit: finalLimit
       }).unwrap();
 
-      dispatch(showNotification({ message: response.message || t('common.success'), type: 'success' }));
+      dispatch(showNotification({ message: response.message || t('common.success'), severity: 'success' }));
       setActiveTargetedDuty(null);
     } catch (error: any) {
-      dispatch(showNotification({ message: error.data?.message || t('common.error'), type: 'error' }));
+      dispatch(showNotification({ message: error.data?.message || error.message || t('common.error'), severity: 'error' }));
     }
   };
 
@@ -384,6 +786,16 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     }
   };
 
+  const handleRestoreExempt = async (logId: number) => {
+    try {
+      const response = await restoreExemptEmployee({ log_id: logId }).unwrap();
+      dispatch(showNotification({ message: response.message || t('election.restoreExemptSuccess'), severity: 'success' }));
+    } catch (err: any) {
+      const errMsg = err.data?.message || err.message || t('election.restoreExemptFailed');
+      dispatch(showNotification({ message: errMsg, severity: 'error' }));
+    }
+  };
+
   const handleOpenAssignModal = (team: any) => {
     setActiveTeam(team);
     const initial: Record<number, any | null> = {};
@@ -431,18 +843,42 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       {/* City Selector and Search Card */}
       <Card sx={(theme) => ({ ...getSurfaceSx(theme), p: { xs: 2, sm: 2.5 } })}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 3 }}>
+          {isMultiDistrictUser && (
+            <Grid size={{ xs: 12, md: 3 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  label={t('masters.district') || 'जिला देखें'}
+                  placeholder="सभी जिले (All Districts)"
+                  value={selectedDistrictId}
+                  options={[
+                    { value: 'all', label: 'सभी जिले (All Districts)' },
+                    ...districtsList.map((d: any) => ({ value: d.id, label: d.name }))
+                  ]}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    setSelectedDistrictId(val === 'all' ? 'all' : val === '' ? '' : Number(val));
+                    setSelectedCityId('');
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
             <FormControl fullWidth>
               <ChosenSelect
                 label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
                 placeholder={t('election.chooseCity')}
                 value={selectedCityId}
-                options={filteredCities.map((city: any) => ({ value: city.id, label: city.karyalay_name || city.city_name }))}
+                options={filteredCities.map((city: any) => {
+                  const distObj = districtsList.find((d: any) => Number(d.id) === Number(city.district_id));
+                  const labelPrefix = selectedDistrictId === 'all' && distObj ? `[${distObj.name}] ` : '';
+                  return { value: city.id, label: `${labelPrefix}${city.karyalay_name || city.city_name}` };
+                })}
                 onChange={(event) => setSelectedCityId(event.target.value)}
               />
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
             <SearchTextField
               fullWidth
               size="small"
@@ -457,7 +893,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
             <SearchTextField
               fullWidth
               size="small"
@@ -731,93 +1167,13 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       )}
 
       {/* Exempt Employee Card placed at the bottom */}
-      <ExemptEmployeeForm onExempt={handleExemptEmployee} loading={exemptLoading} />
-
-      {/* Exempt Employee Logs Card */}
-      <MainCard title={t('election.exemptLogsTitle') || 'Exempted Employees Log History'} sx={(theme) => ({ ...getSurfaceSx(theme) })} contentSX={{ p: 0 }}>
-        {logsLoading ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <CircularProgress />
-          </Box>
-        ) : logs.length > 0 ? (
-          <>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'bg.100' }}>
-                    <TableCell align="center" sx={{ width: 80, fontWeight: 800 }}>{t('common.sno') || 'S.No'}</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>{t('election.empCode') || 'Employee Code'}</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>{t('election.empName') || 'Employee Name'}</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>{t('masters.designation') || 'Designation'}</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.urbanPost') || 'Urban Post'}</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800 }}>{t('election.ruralPost') || 'Rural Post'}</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>{t('election.exemptReasonLabel') || 'Reason'}</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>{t('election.dateTime') || 'Date & Time'}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedLogs.map((log: any, idx: number) => {
-                    const serialNumber = (logPage - 1) * logRowsPerPage + idx + 1;
-                    const formattedDate = new Date(log.created_at).toLocaleString();
-                    return (
-                      <TableRow key={log.id} hover>
-                        <TableCell align="center">{serialNumber}</TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{log.emp_code}</Typography>
-                        </TableCell>
-                        <TableCell>{log.employee?.name || '-'}</TableCell>
-                        <TableCell>{log.employee?.designation?.designation || log.employee?.designation?.name || '-'}</TableCell>
-                        <TableCell align="center">
-                          {log.urban_post ? (
-                            <Chip label={log.urban_post} color="warning" size="small" variant="outlined" style={{ fontWeight: 600 }} />
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">N/A</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="center">
-                          {log.rural_post ? (
-                            <Chip label={log.rural_post} color="info" size="small" variant="outlined" style={{ fontWeight: 600 }} />
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">N/A</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {log.urban_reason && (
-                            <Typography variant="body2" sx={{ fontSize: '0.825rem' }}>
-                              <strong>Urban: </strong>{log.urban_reason}
-                            </Typography>
-                          )}
-                          {log.rural_reason && (
-                            <Typography variant="body2" sx={{ fontSize: '0.825rem', mt: log.urban_reason ? 0.5 : 0 }}>
-                              <strong>Rural: </strong>{log.rural_reason}
-                            </Typography>
-                          )}
-                          {!log.urban_reason && !log.rural_reason && '-'}
-                        </TableCell>
-                        <TableCell>{formattedDate}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-              <PaginationFooter
-                page={logPage}
-                rowsPerPage={logRowsPerPage}
-                totalRows={logs.length}
-                onPageChange={setLogPage}
-              />
-            </Box>
-          </>
-        ) : (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary">
-              {t('common.noRecords') || 'No logs found.'}
-            </Typography>
-          </Box>
-        )}
-      </MainCard>
+      <ExemptEmployeeForm
+        onExempt={handleExemptEmployee}
+        onRestoreExempt={handleRestoreExempt}
+        loading={exemptLoading}
+        restoreLoading={restoreLoading}
+        exemptedLogs={logs}
+      />
 
 
       <Dialog open={Boolean(activeTeam)} onClose={() => setActiveTeam(null)} maxWidth="sm" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2.5 } }}>
@@ -995,8 +1351,24 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
                 label={t('election.dutyCount') || 'Number of Duties to Assign'}
                 value={targetedLimit}
                 onChange={(e) => {
-                  const val = Math.max(1, Math.min(activeTargetedDuty.vacant_count, Number(e.target.value)));
-                  setTargetedLimit(val);
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    setTargetedLimit('');
+                    return;
+                  }
+                  const parsed = parseInt(raw, 10);
+                  if (isNaN(parsed)) {
+                    setTargetedLimit('');
+                  } else if (parsed > activeTargetedDuty.vacant_count) {
+                    setTargetedLimit(activeTargetedDuty.vacant_count);
+                  } else {
+                    setTargetedLimit(parsed);
+                  }
+                }}
+                onBlur={() => {
+                  if (targetedLimit === '' || Number(targetedLimit) < 1) {
+                    setTargetedLimit(1);
+                  }
                 }}
                 slotProps={{
                   htmlInput: {

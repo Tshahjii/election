@@ -14,6 +14,11 @@ class DistrictElectionSalaryRule extends Model
         'post_name',
         'min_salary',
         'comparison_operator',
+        'designation_ids',
+    ];
+
+    protected $casts = [
+        'designation_ids' => 'array',
     ];
 
     public function district(): BelongsTo

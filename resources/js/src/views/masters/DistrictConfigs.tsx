@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
+import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
@@ -59,7 +61,7 @@ export default function DistrictConfigs() {
     dob_to: string;
     same_city_duty_male: boolean;
     same_city_duty_female: boolean;
-    rules: { post_name: string; min_salary: string; comparison_operator: 'above' | 'under' }[];
+    rules: { post_name: string; min_salary: string; comparison_operator: 'above' | 'under'; designation_ids?: number[] }[];
   }>({
     dob_from: '',
     dob_to: '',
@@ -158,7 +160,8 @@ export default function DistrictConfigs() {
           rules: (selected.rules || []).map((rule: any) => ({
             post_name: rule.post_name,
             min_salary: String(rule.min_salary ?? 0),
-            comparison_operator: rule.comparison_operator || 'above'
+            comparison_operator: rule.comparison_operator || 'above',
+            designation_ids: rule.designation_ids || []
           }))
         });
       }
@@ -198,7 +201,8 @@ export default function DistrictConfigs() {
         rules: formData.rules.map((r) => ({
           post_name: r.post_name,
           min_salary: parseFloat(r.min_salary) || 0,
-          comparison_operator: r.comparison_operator
+          comparison_operator: r.comparison_operator,
+          designation_ids: r.designation_ids || []
         }))
       };
 
@@ -455,6 +459,54 @@ export default function DistrictConfigs() {
                               <MenuItem value="above">{tl('Above or Equal (>=)')}</MenuItem>
                               <MenuItem value="under">{tl('Under (<)')}</MenuItem>
                             </Select>
+                          </FormControl>
+                          <FormControl fullWidth size="small">
+                            <FormLabel sx={{ mb: 0.5, fontSize: '0.75rem', fontWeight: 700 }}>
+                              {tl('Allowed Designations')}
+                            </FormLabel>
+                            <Autocomplete
+                              multiple
+                              size="small"
+                              limitTags={1}
+                              options={optionsData?.designations || []}
+                              getOptionLabel={(option: any) => option.designation || ''}
+                              value={(optionsData?.designations || []).filter((d: any) =>
+                                rule.designation_ids?.includes(d.id)
+                              )}
+                              onChange={(_, newValue) => {
+                                const selectedIds = newValue.map((item: any) => item.id);
+                                handleRuleChange(index, 'designation_ids', selectedIds);
+                              }}
+                              disableCloseOnSelect
+                              isOptionEqualToValue={(option: any, val: any) => option.id === val.id}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  placeholder={tl('Select Designations')}
+                                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                />
+                              )}
+                              renderOption={(props, option: any, { selected }) => (
+                                <li {...props}>
+                                  <Checkbox
+                                    size="small"
+                                    style={{ marginRight: 8 }}
+                                    checked={selected}
+                                  />
+                                  {option.designation}
+                                </li>
+                              )}
+                              slotProps={{
+                                paper: {
+                                  sx: {
+                                    borderRadius: 2,
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? 'none'
+                                      : '0 8px 24px rgba(15, 23, 42, 0.08)'
+                                  }
+                                }
+                              }}
+                            />
                           </FormControl>
                         </Stack>
                       </MainCard>

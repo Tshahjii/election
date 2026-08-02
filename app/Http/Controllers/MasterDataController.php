@@ -423,8 +423,30 @@ class MasterDataController extends Controller
 
         $user = $request->user();
         $access = AccessScope::payload($user);
-        if (! $access['is_super_admin']) {
-            if ((int) $user->role !== 2) {
+
+        $districtIds = collect($access['district_ids'] ?? [])
+            ->push($user->district_id)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if (! $access['is_super_admin'] && (int) $user->role !== 1) {
+            if ($districtIds->isNotEmpty()) {
+                $accessDistricts = MasterDistrict::query()->whereIn('id', $districtIds)->get(['country_id', 'state_id']);
+                $stateIds = $accessDistricts->pluck('state_id')->filter()->unique()->values();
+
+                if ($stateIds->isNotEmpty()) {
+                    $states->whereIn('id', $stateIds);
+                }
+
+                $districts->whereIn('id', $districtIds);
+                $npCities->whereIn('district_id', $districtIds);
+                $rpCities->whereIn('district_id', $districtIds);
+                $npWards->whereIn('district_id', $districtIds);
+                $rpWards->whereIn('district_id', $districtIds);
+                $offices->whereIn('district_id', $districtIds);
+            } else if ((int) $user->role !== 2) {
                 $countries->where('created_by', $user->id);
                 $states->where('created_by', $user->id);
                 $npCities->where('created_by', $user->id);
@@ -494,13 +516,16 @@ class MasterDataController extends Controller
             $query->where('city_type', $cityType);
         }
 
-        // 1. Exclude already assigned employees across both NP and RP mapping tables
-        $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-        $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-        $assignedEmpIds = array_unique(array_merge($assignedNP, $assignedRP));
+        // 1. Exclude already assigned and exempted employees across NP, RP and exemption log (unless include_all is passed)
+        if (!$request->boolean('include_all') && !$request->boolean('all')) {
+            $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+            $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
+            $exemptedEmpIds = \App\Models\ExemptEmployeeLog::query()->whereNotNull('employee_id')->pluck('employee_id')->toArray();
+            $assignedEmpIds = array_unique(array_merge($assignedNP, $assignedRP, $exemptedEmpIds));
 
-        if (!empty($assignedEmpIds)) {
-            $query->whereNotIn('id', $assignedEmpIds);
+            if (!empty($assignedEmpIds)) {
+                $query->whereNotIn('id', $assignedEmpIds);
+            }
         }
 
         // Resolve district ID
@@ -560,15 +585,38 @@ class MasterDataController extends Controller
         }
 
         if ($term !== '') {
-            $query->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")
-                  ->orWhere('emp_code', 'like', "%{$term}%");
-            });
+            $rawTerms = array_filter(array_map('trim', explode(',', $term)));
+            if (count($rawTerms) > 1) {
+                $normalized = [];
+                foreach ($rawTerms as $rt) {
+                    $normalized[] = $rt;
+                    $normalized[] = strtoupper($rt);
+                    $clean = preg_replace('/^nic/i', '', $rt);
+                    if (is_numeric($clean)) {
+                        $normalized[] = 'NIC' . str_pad($clean, 4, '0', STR_PAD_LEFT);
+                    }
+                }
+                $normalized = array_values(array_unique($normalized));
+                $query->where(function ($q) use ($normalized, $rawTerms) {
+                    $q->whereIn('emp_code', $normalized);
+                    foreach ($rawTerms as $rt) {
+                        $q->orWhere('name', 'like', "%{$rt}%")
+                          ->orWhere('emp_code', 'like', "%{$rt}%");
+                    }
+                });
+            } else {
+                $query->where(function ($q) use ($term) {
+                    $q->where('name', 'like', "%{$term}%")
+                      ->orWhere('emp_code', 'like', "%{$term}%");
+                });
+            }
         }
+
+        $limit = ($term !== '' && str_contains($term, ',')) ? 100 : 20;
 
         $employees = $query->with('designation:id,designation')
             ->orderBy('name')
-            ->limit(20)
+            ->limit($limit)
             ->get(['id', 'name', 'emp_code', 'designation_id']);
 
         return response()->json($employees);

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@mui/material/styles';
 
 import AssignmentTurnedInOutlined from '@mui/icons-material/AssignmentTurnedInOutlined';
@@ -113,11 +113,13 @@ const MetricCard = memo(function MetricCard({
 
 export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   const dispatch = useDispatch();
+  const { user } = useSelector((state: any) => state.auth);
   const { t } = useAppPreferences();
   const theme = useTheme();
   const isUrban = type === 'Nagar Panchayat';
   const postOptions = useMemo(() => (isUrban ? ['P0', 'P1', 'P2', 'P3'] : ['P0', 'P1', 'P2', 'P3', 'P4']), [isUrban]);
 
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('all');
   const [selectedCityId, setSelectedCityId] = useState<number | 'all' | ''>('all');
   const [dutyCriteria, setDutyCriteria] = useState<Record<string, string>>({
     P0: 'any',
@@ -128,10 +130,21 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   });
 
   const { data: optionsData } = useGetOptionsQuery();
+  const districtsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+
+  const isMultiDistrictUser = useMemo(() => {
+    const isSuperOrSystem = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
+    return isSuperOrSystem || districtsList.length > 1;
+  }, [user, districtsList]);
+
   const filteredCities = useMemo(() => {
     if (!optionsData) return [];
-    return isUrban ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
-  }, [optionsData, isUrban]);
+    const cities = isUrban ? (optionsData.np_cities || []) : (optionsData.rp_cities || []);
+    if (selectedDistrictId && selectedDistrictId !== 'all') {
+      return cities.filter((c: any) => Number(c.district_id) === Number(selectedDistrictId));
+    }
+    return cities;
+  }, [optionsData, isUrban, selectedDistrictId]);
 
   const urbanQuery = useGetUrbanDashboardQuery(
     isUrban && selectedCityId !== '' && selectedCityId !== 'all' ? { city_id: selectedCityId } : {},
@@ -153,6 +166,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   useEffect(() => {
     setSelectedCityId('all');
+    setSelectedDistrictId('all');
   }, [type]);
 
   const notifyError = (error: any, fallback: string) => {
@@ -226,26 +240,70 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
       <Card sx={(theme) => ({ ...getSurfaceSx(theme), p: { xs: 2, sm: 2.5 } })}>
         <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <FormControl fullWidth>
-              <ChosenSelect
-                label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
-                placeholder={t('election.chooseCity')}
-                value={selectedCityId}
-                options={[
-                  { value: 'all', label: allCityOptionLabel },
-                  ...filteredCities.map((city: any) => ({ value: city.id, label: city.karyalay_name || city.city_name }))
-                ]}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setSelectedCityId(value === 'all' ? 'all' : value === '' ? '' : Number(value));
-                }}
-              />
-            </FormControl>
-          </Grid>
+          {isMultiDistrictUser ? (
+            <>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormControl fullWidth>
+                  <ChosenSelect
+                    label={t('masters.district') || 'जिला देखें'}
+                    placeholder="सभी जिले (All Districts)"
+                    value={selectedDistrictId}
+                    options={[
+                      { value: 'all', label: 'सभी जिले (All Districts)' },
+                      ...districtsList.map((d: any) => ({ value: d.id, label: d.name }))
+                    ]}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setSelectedDistrictId(val === 'all' ? 'all' : val === '' ? '' : Number(val));
+                      setSelectedCityId('all');
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormControl fullWidth>
+                  <ChosenSelect
+                    label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
+                    placeholder={t('election.chooseCity')}
+                    value={selectedCityId}
+                    options={[
+                      { value: 'all', label: allCityOptionLabel },
+                      ...filteredCities.map((city: any) => {
+                        const distObj = districtsList.find((d: any) => Number(d.id) === Number(city.district_id));
+                        const labelPrefix = selectedDistrictId === 'all' && distObj ? `[${distObj.name}] ` : '';
+                        return { value: city.id, label: `${labelPrefix}${city.karyalay_name || city.city_name}` };
+                      })
+                    ]}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setSelectedCityId(value === 'all' ? 'all' : value === '' ? '' : Number(value));
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+            </>
+          ) : (
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormControl fullWidth>
+                <ChosenSelect
+                  label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
+                  placeholder={t('election.chooseCity')}
+                  value={selectedCityId}
+                  options={[
+                    { value: 'all', label: allCityOptionLabel },
+                    ...filteredCities.map((city: any) => ({ value: city.id, label: city.karyalay_name || city.city_name }))
+                  ]}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedCityId(value === 'all' ? 'all' : value === '' ? '' : Number(value));
+                  }}
+                />
+              </FormControl>
+            </Grid>
+          )}
 
           {selectedCityId !== '' && !hasGeneratedTeams && (
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: isMultiDistrictUser ? 4 : 6 }}>
               <Stack direction="row" spacing={2} sx={{ justifyContent: { xs: 'stretch', md: 'flex-end' } }}>
                 <Button
                   fullWidth

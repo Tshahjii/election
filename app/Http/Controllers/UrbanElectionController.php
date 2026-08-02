@@ -304,6 +304,10 @@ class UrbanElectionController extends Controller
                         'updated_by' => $user->id,
                         'updated_at' => now(),
                     ]);
+
+                if (!empty($item['emp_id'])) {
+                    \App\Models\ExemptEmployeeLog::where('employee_id', $item['emp_id'])->delete();
+                }
             }
         });
 
@@ -331,9 +335,27 @@ class UrbanElectionController extends Controller
         }
 
         if (!empty($empCodeInput)) {
-            $codes = array_filter(array_map('trim', explode(',', $empCodeInput)));
+            $rawCodes = array_filter(array_map('trim', explode(',', $empCodeInput)));
+            $normalizedCodes = [];
+            foreach ($rawCodes as $c) {
+                $normalizedCodes[] = $c;
+                $normalizedCodes[] = strtoupper($c);
+                $clean = preg_replace('/^nic/i', '', $c);
+                if (is_numeric($clean)) {
+                    $normalizedCodes[] = 'NIC' . str_pad($clean, 4, '0', STR_PAD_LEFT);
+                }
+            }
+            $normalizedCodes = array_values(array_unique($normalizedCodes));
+
             $foundIds = MasterEmployee::query()
-                ->whereIn('emp_code', $codes)
+                ->where(function($q) use ($normalizedCodes, $rawCodes) {
+                    $q->whereIn('emp_code', $normalizedCodes);
+                    foreach ($rawCodes as $rc) {
+                        if (strlen($rc) >= 2) {
+                            $q->orWhere('emp_code', 'like', "%{$rc}%");
+                        }
+                    }
+                })
                 ->pluck('id')
                 ->toArray();
 
@@ -364,19 +386,20 @@ class UrbanElectionController extends Controller
                 $ruralMapping = MasterRPMapping::where('emp_id', $empId)->first();
             }
 
-            if ($urbanMapping || $ruralMapping) {
-                \App\Models\ExemptEmployeeLog::create([
+            // Always record or update exemption log so the employee is marked as exempt
+            \App\Models\ExemptEmployeeLog::updateOrCreate(
+                ['employee_id' => $employee->id],
+                [
                     'emp_code' => $employee->emp_code,
-                    'employee_id' => $employee->id,
                     'urban_post' => $urbanMapping ? $urbanMapping->post_name : null,
                     'rural_post' => $ruralMapping ? $ruralMapping->post_name : null,
                     'urban_mapping_id' => $urbanMapping ? $urbanMapping->id : null,
                     'rural_mapping_id' => $ruralMapping ? $ruralMapping->id : null,
-                    'urban_reason' => $urbanMapping ? $reason : null,
-                    'rural_reason' => $ruralMapping ? $reason : null,
+                    'urban_reason' => $urbanMapping ? $reason : ($reason ?: 'Duty Exempted'),
+                    'rural_reason' => $ruralMapping ? $reason : ($reason ?: 'Duty Exempted'),
                     'created_by' => $user->id,
-                ]);
-            }
+                ]
+            );
         }
 
         $updatedNP = 0;
@@ -419,6 +442,35 @@ class UrbanElectionController extends Controller
             ->get();
 
         return response()->json($logs);
+    }
+
+    public function restoreExemptEmployee(Request $request): JsonResponse
+    {
+        $logId = $request->input('log_id') ?: $request->input('id');
+        $employeeId = $request->input('employee_id');
+        $empCode = $request->input('emp_code');
+
+        $query = \App\Models\ExemptEmployeeLog::query();
+
+        if ($logId) {
+            $query->where('id', $logId);
+        } elseif ($employeeId) {
+            $query->where('employee_id', $employeeId);
+        } elseif ($empCode) {
+            $query->where('emp_code', $empCode);
+        } else {
+            return response()->json(['message' => 'log_id, employee_id, or emp_code is required.'], 422);
+        }
+
+        $deleted = $query->delete();
+
+        if ($deleted === 0) {
+            return response()->json(['message' => 'Exemption record not found.'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Employee removed from exemption list successfully.',
+        ]);
     }
 
     public function applyDuty(Request $request): JsonResponse
@@ -488,10 +540,11 @@ class UrbanElectionController extends Controller
             $posts = ['P0', 'P1', 'P2', 'P3'];
             $newlyAssignedIds = [];
 
-            // Fetch currently assigned employee IDs across both NP and RP
+            // Fetch currently assigned employee IDs across both NP and RP, plus exempted employees
             $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
             $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-            $globalAssignedIds = array_unique(array_merge($assignedNP, $assignedRP));
+            $exemptedEmpIds = \App\Models\ExemptEmployeeLog::query()->whereNotNull('employee_id')->pluck('employee_id')->toArray();
+            $globalAssignedIds = array_unique(array_merge($assignedNP, $assignedRP, $exemptedEmpIds));
 
             // Group vacant mappings by post name
             $mappingsByPost = $vacantMappings->groupBy('post_name');
@@ -660,10 +713,11 @@ class UrbanElectionController extends Controller
 
         $actualLimit = count($vacantMappings);
 
-        // 2. Fetch all assigned employees to avoid double assignment
+        // 2. Fetch all assigned and exempted employees to avoid double assignment or assigning exempted staff
         $assignedNP = MasterNPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
         $assignedRP = MasterRPMapping::query()->whereNotNull('emp_id')->pluck('emp_id')->toArray();
-        $assignedEmpIds = array_unique(array_merge($assignedNP, $assignedRP));
+        $exemptedEmpIds = \App\Models\ExemptEmployeeLog::query()->whereNotNull('employee_id')->pluck('employee_id')->toArray();
+        $assignedEmpIds = array_unique(array_merge($assignedNP, $assignedRP, $exemptedEmpIds));
 
         // 3. Find matching active employees
         $employeesQuery = MasterEmployee::query()

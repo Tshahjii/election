@@ -85,10 +85,10 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, arg) => ['Masters', { type: 'Masters', id: arg.type }]
     }),
-    searchEmployees: builder.query<any, { q: string; post_name?: string; city_type?: string; city_id?: number }>({
-      query: ({ q, post_name, city_type, city_id }) => ({
+    searchEmployees: builder.query<any, { q: string; post_name?: string; city_type?: string; city_id?: number; include_all?: number }>({
+      query: ({ q, post_name, city_type, city_id, include_all }) => ({
         url: '/masters/employees/search',
-        params: { q, post_name, city_type, city_id }
+        params: { q, post_name, city_type, city_id, include_all }
       })
     }),
     getElectionSalaryRules: builder.query<any, void>({
@@ -203,7 +203,7 @@ export const apiSlice = createApi({
         method: 'POST',
         data
       }),
-      invalidatesTags: ['UrbanElection']
+      invalidatesTags: ['UrbanElection', 'RuralElection']
     }),
     exemptUrbanEmployee: builder.mutation<any, any>({
       query: (data) => ({
@@ -211,7 +211,7 @@ export const apiSlice = createApi({
         method: 'POST',
         data
       }),
-      invalidatesTags: ['UrbanElection']
+      invalidatesTags: ['UrbanElection', 'RuralElection']
     }),
     getExemptEmployeeLogs: builder.query<any[], void>({
       query: () => ({
@@ -219,6 +219,14 @@ export const apiSlice = createApi({
         method: 'GET'
       }),
       providesTags: ['UrbanElection', 'RuralElection']
+    }),
+    restoreUrbanExemptEmployee: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/urban-election/restore-exempt-employee',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['UrbanElection', 'RuralElection']
     }),
     applyUrbanDuty: builder.mutation<any, any>({
       query: (data) => ({
@@ -259,7 +267,7 @@ export const apiSlice = createApi({
         method: 'POST',
         data
       }),
-      invalidatesTags: ['RuralElection']
+      invalidatesTags: ['UrbanElection', 'RuralElection']
     }),
     exemptRuralEmployee: builder.mutation<any, any>({
       query: (data) => ({
@@ -267,7 +275,15 @@ export const apiSlice = createApi({
         method: 'POST',
         data
       }),
-      invalidatesTags: ['RuralElection']
+      invalidatesTags: ['UrbanElection', 'RuralElection']
+    }),
+    restoreRuralExemptEmployee: builder.mutation<any, any>({
+      query: (data) => ({
+        url: '/rural-election/restore-exempt-employee',
+        method: 'POST',
+        data
+      }),
+      invalidatesTags: ['UrbanElection', 'RuralElection']
     }),
     applyRuralDuty: builder.mutation<any, any>({
       query: (data) => ({
@@ -318,6 +334,7 @@ export const {
   useSaveUrbanAssignmentsMutation,
   useExemptUrbanEmployeeMutation,
   useGetExemptEmployeeLogsQuery,
+  useRestoreUrbanExemptEmployeeMutation,
   useApplyUrbanDutyMutation,
   useApplyUrbanTargetedDutyMutation,
 
@@ -325,6 +342,7 @@ export const {
   useCreateRuralTeamsMutation,
   useSaveRuralAssignmentsMutation,
   useExemptRuralEmployeeMutation,
+  useRestoreRuralExemptEmployeeMutation,
   useApplyRuralDutyMutation,
   useApplyRuralTargetedDutyMutation
 } = apiSlice;
