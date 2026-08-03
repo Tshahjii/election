@@ -48,7 +48,7 @@ const dashboard = {
     },
     {
       id: 'nagar-panchayat',
-      title: 'Nagar Panchayat',
+      title: 'Urban Election',
       titleKey: 'menu.nagarPanchayat',
       type: 'collapse',
       icon: LocationOnOutlinedIcon,
@@ -62,7 +62,7 @@ const dashboard = {
     },
     {
       id: 'nagari-nikay',
-      title: 'Nagri Nikay',
+      title: 'Rural Election',
       titleKey: 'menu.nagariNikay',
       type: 'collapse',
       icon: ApartmentOutlinedIcon,

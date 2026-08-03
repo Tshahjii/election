@@ -267,7 +267,7 @@ export default function Complaints() {
   // Filtered districts list based on state selection
   const filteredDistricts = useMemo(() => {
     if (!optionsData?.districts) return [];
-    if (!stateFilter) return optionsData.districts;
+    if (!stateFilter) return [];
     return optionsData.districts.filter((d: any) => Number(d.state_id) === Number(stateFilter));
   }, [optionsData, stateFilter]);
 

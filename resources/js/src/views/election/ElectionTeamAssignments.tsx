@@ -48,6 +48,8 @@ import {
   useCreateRuralTeamsMutation,
   useApplyUrbanTargetedDutyMutation,
   useApplyRuralTargetedDutyMutation,
+  useApplyUrbanDutyMutation,
+  useApplyRuralDutyMutation,
   useGetExemptEmployeeLogsQuery
 } from 'store/apiSlice';
 
@@ -545,7 +547,8 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const dispatch = useDispatch();
   const { user } = useSelector((state: any) => state.auth);
 
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('all');
+  const [selectedStateId, setSelectedStateId] = useState<number | 'all' | ''>('');
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('');
   const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
   const [teamSearch, setTeamSearch] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -577,12 +580,19 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
 
   // 1. Fetch cities options
   const { data: optionsData } = useGetOptionsQuery();
-  const districtsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+  const statesList = useMemo(() => optionsData?.states || [], [optionsData]);
+  const allDistrictsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+
+  const filteredDistricts = useMemo(() => {
+    if (!optionsData?.districts || !selectedStateId || selectedStateId === '') return [];
+    if (selectedStateId === 'all') return optionsData.districts;
+    return optionsData.districts.filter((d: any) => Number(d.state_id) === Number(selectedStateId));
+  }, [optionsData, selectedStateId]);
 
   const isMultiDistrictUser = useMemo(() => {
     const isSuperOrSystem = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
-    return isSuperOrSystem || districtsList.length > 1;
-  }, [user, districtsList]);
+    return isSuperOrSystem || allDistrictsList.length > 1;
+  }, [user, allDistrictsList]);
 
   const filteredCities = useMemo(() => {
     if (!optionsData) return [];
@@ -590,8 +600,12 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
     if (selectedDistrictId && selectedDistrictId !== 'all') {
       return cities.filter((c: any) => Number(c.district_id) === Number(selectedDistrictId));
     }
+    if (selectedStateId && selectedStateId !== 'all') {
+      const stateDistIds = filteredDistricts.map((d: any) => Number(d.id));
+      return cities.filter((c: any) => stateDistIds.includes(Number(c.district_id)));
+    }
     return cities;
-  }, [optionsData, type, selectedDistrictId]);
+  }, [optionsData, type, selectedDistrictId, selectedStateId, filteredDistricts]);
 
   // 2. Fetch dashboard data (urban vs rural)
   const skipQuery = false;
@@ -632,6 +646,41 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
   const [createRuralTeams, { isLoading: ruralCreateLoading }] = useCreateRuralTeamsMutation();
   const createTeams = isUrban ? createUrbanTeams : createRuralTeams;
   const createLoading = isUrban ? urbanCreateLoading : ruralCreateLoading;
+
+  const [applyUrbanDuty, { isLoading: applyingUrbanDuty }] = useApplyUrbanDutyMutation();
+  const [applyRuralDuty, { isLoading: applyingRuralDuty }] = useApplyRuralDutyMutation();
+  const dutyLoading = isUrban ? applyingUrbanDuty : applyingRuralDuty;
+
+  const [dutyCriteria, setDutyCriteria] = useState<Record<string, string>>({
+    P0: 'any',
+    P1: 'any',
+    P2: 'any',
+    P3: 'any',
+    P4: 'any'
+  });
+
+  const postOptions = useMemo(() => (isUrban ? ['P0', 'P1', 'P2', 'P3'] : ['P0', 'P1', 'P2', 'P3', 'P4']), [isUrban]);
+
+  const updateDutyCriteria = (field: string, value: string) => {
+    setDutyCriteria((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleApplyDuty = async () => {
+    try {
+      const payload: any = {
+        P0: dutyCriteria.P0,
+        P1: dutyCriteria.P1,
+        P2: dutyCriteria.P2,
+        P3: dutyCriteria.P3,
+        P4: dutyCriteria.P4
+      };
+      if (selectedCityId && selectedCityId !== 'all') payload.city_id = Number(selectedCityId);
+      const response = await (isUrban ? applyUrbanDuty : applyRuralDuty)(payload).unwrap();
+      dispatch(showNotification({ message: response.message || t('common.success'), severity: 'success' }));
+    } catch (error: any) {
+      dispatch(showNotification({ message: error?.data?.message || error?.message || t('election.applyDutyFailed'), severity: 'error' }));
+    }
+  };
 
   // 5. Fetch exempt employee logs
   const { data: logsData, isFetching: logsLoading } = useGetExemptEmployeeLogsQuery();
@@ -850,41 +899,66 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
       <Card sx={(theme) => ({ ...getSurfaceSx(theme), p: { xs: 2, sm: 2.5 } })}>
         <Grid container spacing={2}>
           {isMultiDistrictUser && (
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth>
-                <ChosenSelect
-                  label={t('masters.district') || 'जिला देखें'}
-                  placeholder="सभी जिले (All Districts)"
-                  value={selectedDistrictId}
-                  options={[
-                    { value: 'all', label: 'सभी जिले (All Districts)' },
-                    ...districtsList.map((d: any) => ({ value: d.id, label: d.name }))
-                  ]}
-                  onChange={(event) => {
-                    const val = event.target.value;
-                    setSelectedDistrictId(val === 'all' ? 'all' : val === '' ? '' : Number(val));
-                    setSelectedCityId('');
-                  }}
-                />
-              </FormControl>
-            </Grid>
+            <>
+              <Grid size={{ xs: 12, md: 2.4 }}>
+                <FormControl fullWidth>
+                  <ChosenSelect
+                    label={t('masters.state') || 'State'}
+                    placeholder="Select State"
+                    value={selectedStateId}
+                    options={[
+                      { value: '', label: 'Select State' },
+                      ...statesList.map((s: any) => ({ value: s.id, label: s.name }))
+                    ]}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setSelectedStateId(val === '' ? '' : Number(val));
+                      setSelectedDistrictId('');
+                      setSelectedCityId('');
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 2.4 }}>
+                <FormControl fullWidth disabled={selectedStateId === ''}>
+                  <ChosenSelect
+                    label={t('masters.district') || 'District'}
+                    placeholder={selectedStateId === '' ? 'Select State First' : 'All Districts'}
+                    value={selectedDistrictId}
+                    options={
+                      selectedStateId === ''
+                        ? []
+                        : [
+                            { value: 'all', label: 'All Districts' },
+                            ...filteredDistricts.map((d: any) => ({ value: d.id, label: d.name }))
+                          ]
+                    }
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setSelectedDistrictId(val === 'all' ? 'all' : val === '' ? '' : Number(val));
+                      setSelectedCityId('');
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+            </>
           )}
-          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
-            <FormControl fullWidth>
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 2.4 : 4 }}>
+            <FormControl fullWidth disabled={isMultiDistrictUser && selectedStateId === ''}>
               <ChosenSelect
                 label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
                 placeholder={t('election.chooseCity')}
                 value={selectedCityId}
                 options={filteredCities.map((city: any) => {
-                  const distObj = districtsList.find((d: any) => Number(d.id) === Number(city.district_id));
-                  const labelPrefix = selectedDistrictId === 'all' && distObj ? `[${distObj.name}] ` : '';
+                  const distObj = allDistrictsList.find((d: any) => Number(d.id) === Number(city.district_id));
+                  const labelPrefix = (selectedDistrictId === 'all' || selectedDistrictId === '') && distObj ? `[${distObj.name}] ` : '';
                   return { value: city.id, label: `${labelPrefix}${city.karyalay_name || city.city_name}` };
                 })}
                 onChange={(event) => setSelectedCityId(event.target.value)}
               />
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 2.4 : 4 }}>
             <SearchTextField
               fullWidth
               size="small"
@@ -899,7 +973,7 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 3 : 4 }}>
+          <Grid size={{ xs: 12, md: isMultiDistrictUser ? 2.4 : 4 }}>
             <SearchTextField
               fullWidth
               size="small"
@@ -929,6 +1003,38 @@ export default function ElectionTeamAssignments({ type }: ElectionTeamAssignment
           </Grid>
         </Grid>
       </Card>
+
+      <MainCard title={t('election.dutyCriteria')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
+        <Grid container spacing={2.5}>
+          {postOptions.map((post) => (
+            <Grid key={post} size={{ xs: 12, sm: 6, md: 4 }}>
+              <ChosenSelect
+                label={`${post} ${t('election.genderCond')}`}
+                value={dutyCriteria[post] || 'any'}
+                options={[
+                  { value: 'any', label: t('election.any') },
+                  { value: 'male', label: t('election.male') },
+                  { value: 'female', label: t('election.female') }
+                ]}
+                onChange={(event) => updateDutyCriteria(post, String(event.target.value))}
+              />
+            </Grid>
+          ))}
+          <Grid size={{ xs: 12 }} sx={{ mt: 1 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              onClick={handleApplyDuty}
+              disabled={dutyLoading}
+              startIcon={dutyLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{ borderRadius: 2, minHeight: 42, px: 2.75, textTransform: 'none', fontWeight: 700, width: { xs: '100%', sm: 'auto' } }}
+            >
+              {t('election.applyDuty')}
+            </Button>
+          </Grid>
+        </Grid>
+      </MainCard>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>

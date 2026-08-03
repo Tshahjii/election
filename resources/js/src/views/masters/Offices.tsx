@@ -139,7 +139,7 @@ export default function Offices() {
   }, [filters.country_id, options.states]);
 
   const filterDistrictOptions = useMemo(() => {
-    if (!filters.state_id) return options.districts;
+    if (!filters.state_id) return [];
     return options.districts.filter((district: any) => Number(district.state_id) === Number(filters.state_id));
   }, [filters.state_id, options.districts]);
 

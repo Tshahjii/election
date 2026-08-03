@@ -10,6 +10,7 @@ import Box from '@mui/material/Box';
 // project imports
 import Drawer from './Drawer';
 import Header from './Header';
+import Footer from './Footer';
 import Breadcrumbs from 'components/Breadcrumbs';
 import ChangeDefaultPasswordDialog from 'components/auth/ChangeDefaultPasswordDialog';
 import VoiceAssistant from 'components/ai/VoiceAssistant';
@@ -45,12 +46,17 @@ export default function MainLayout() {
           ml: { xs: 0, lg: 'auto' },
           minHeight: '100vh',
           bgcolor: 'background.default',
-          overflowX: 'hidden'
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         <Toolbar />
         <Breadcrumbs sx={{ mt: { xs: 1.25, sm: 1 }, mb: { xs: 0.5, sm: 0 } }} />
-        <Outlet />
+        <Box sx={{ flexGrow: 1, pb: 2 }}>
+          <Outlet />
+        </Box>
+        <Footer />
         <ChangeDefaultPasswordDialog />
         <VoiceAssistant />
       </Box>

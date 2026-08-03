@@ -27,8 +27,6 @@ import ChosenSelect from 'components/ChosenSelect';
 import MainCard from 'components/cards/MainCard';
 import { useAppPreferences } from 'contexts/AppPreferences';
 import {
-  useApplyRuralDutyMutation,
-  useApplyUrbanDutyMutation,
   useCreateRuralTeamsMutation,
   useCreateUrbanTeamsMutation,
   useGetOptionsQuery,
@@ -36,7 +34,6 @@ import {
   useGetUrbanDashboardQuery
 } from 'store/apiSlice';
 import { showNotification } from 'store/slices/notificationSlice';
-import ElectionTeamAssignments from './ElectionTeamAssignments';
 
 interface ElectionDashboardProps {
   type: 'Nagar Panchayat' | 'Nagari Nikay';
@@ -119,23 +116,24 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   const isUrban = type === 'Nagar Panchayat';
   const postOptions = useMemo(() => (isUrban ? ['P0', 'P1', 'P2', 'P3'] : ['P0', 'P1', 'P2', 'P3', 'P4']), [isUrban]);
 
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('all');
+  const [selectedStateId, setSelectedStateId] = useState<number | 'all' | ''>('');
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | 'all' | ''>('');
   const [selectedCityId, setSelectedCityId] = useState<number | 'all' | ''>('all');
-  const [dutyCriteria, setDutyCriteria] = useState<Record<string, string>>({
-    P0: 'any',
-    P1: 'any',
-    P2: 'any',
-    P3: 'any',
-    P4: 'any'
-  });
 
   const { data: optionsData } = useGetOptionsQuery();
-  const districtsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+  const statesList = useMemo(() => optionsData?.states || [], [optionsData]);
+  const allDistrictsList = useMemo(() => optionsData?.districts || [], [optionsData]);
+
+  const filteredDistricts = useMemo(() => {
+    if (!optionsData?.districts || !selectedStateId || selectedStateId === '') return [];
+    if (selectedStateId === 'all') return optionsData.districts;
+    return optionsData.districts.filter((d: any) => Number(d.state_id) === Number(selectedStateId));
+  }, [optionsData, selectedStateId]);
 
   const isMultiDistrictUser = useMemo(() => {
     const isSuperOrSystem = Number(user?.role) === 1 || Number(user?.role) === 2 || user?.access?.is_super_admin;
-    return isSuperOrSystem || districtsList.length > 1;
-  }, [user, districtsList]);
+    return isSuperOrSystem || allDistrictsList.length > 1;
+  }, [user, allDistrictsList]);
 
   const filteredCities = useMemo(() => {
     if (!optionsData) return [];
@@ -143,8 +141,12 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     if (selectedDistrictId && selectedDistrictId !== 'all') {
       return cities.filter((c: any) => Number(c.district_id) === Number(selectedDistrictId));
     }
+    if (selectedStateId && selectedStateId !== 'all') {
+      const stateDistIds = filteredDistricts.map((d: any) => Number(d.id));
+      return cities.filter((c: any) => stateDistIds.includes(Number(c.district_id)));
+    }
     return cities;
-  }, [optionsData, isUrban, selectedDistrictId]);
+  }, [optionsData, isUrban, selectedDistrictId, selectedStateId, filteredDistricts]);
 
   const urbanQuery = useGetUrbanDashboardQuery(
     isUrban && selectedCityId !== '' && selectedCityId !== 'all' ? { city_id: selectedCityId } : {},
@@ -159,10 +161,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
 
   const [createUrbanTeams, { isLoading: creatingUrbanTeams }] = useCreateUrbanTeamsMutation();
   const [createRuralTeams, { isLoading: creatingRuralTeams }] = useCreateRuralTeamsMutation();
-  const [applyUrbanDuty, { isLoading: applyingUrbanDuty }] = useApplyUrbanDutyMutation();
-  const [applyRuralDuty, { isLoading: applyingRuralDuty }] = useApplyRuralDutyMutation();
   const scheduleLoading = isUrban ? creatingUrbanTeams : creatingRuralTeams;
-  const dutyLoading = isUrban ? applyingUrbanDuty : applyingRuralDuty;
 
   useEffect(() => {
     setSelectedCityId('all');
@@ -184,24 +183,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
     }
   };
 
-  const handleApplyDuty = async () => {
-    if (selectedCityId === '') return;
-    try {
-      const payload: any = {
-        P0: dutyCriteria.P0,
-        P1: dutyCriteria.P1,
-        P2: dutyCriteria.P2,
-        P3: dutyCriteria.P3,
-        P4: dutyCriteria.P4
-      };
-      if (selectedCityId !== 'all') payload.city_id = selectedCityId;
-      const response = await (isUrban ? applyUrbanDuty : applyRuralDuty)(payload).unwrap();
-      dispatch(showNotification({ message: response.message, severity: 'success' }));
-    } catch (error: any) {
-      notifyError(error, t('election.applyDutyFailed'));
-    }
-  };
-
   const getStatusChip = (status: string) => {
     if (status === 'Approved' || status === 'Verified') {
       return <Chip label={t('data.verified')} color="success" size="small" variant="filled" sx={{ borderRadius: 1.5, fontWeight: 700 }} />;
@@ -210,10 +191,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
       return <Chip label={t('data.disqualified')} color="error" size="small" variant="filled" sx={{ borderRadius: 1.5, fontWeight: 700 }} />;
     }
     return <Chip label={t('data.pending')} color="warning" size="small" variant="outlined" sx={{ borderRadius: 1.5, fontWeight: 700 }} />;
-  };
-
-  const updateDutyCriteria = (field: string, value: string) => {
-    setDutyCriteria((prev) => ({ ...prev, [field]: value }));
   };
 
   const hasGeneratedTeams = Boolean(dashboardData && dashboardData.stats.teams_count > 0);
@@ -245,13 +222,36 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
               <Grid size={{ xs: 12, md: 4 }}>
                 <FormControl fullWidth>
                   <ChosenSelect
-                    label={t('masters.district') || 'जिला देखें'}
-                    placeholder="सभी जिले (All Districts)"
-                    value={selectedDistrictId}
+                    label={t('masters.state') || 'State'}
+                    placeholder="Select State"
+                    value={selectedStateId}
                     options={[
-                      { value: 'all', label: 'सभी जिले (All Districts)' },
-                      ...districtsList.map((d: any) => ({ value: d.id, label: d.name }))
+                      { value: '', label: 'Select State' },
+                      ...statesList.map((s: any) => ({ value: s.id, label: s.name }))
                     ]}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setSelectedStateId(val === '' ? '' : Number(val));
+                      setSelectedDistrictId('');
+                      setSelectedCityId('all');
+                    }}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormControl fullWidth disabled={selectedStateId === ''}>
+                  <ChosenSelect
+                    label={t('masters.district') || 'District'}
+                    placeholder={selectedStateId === '' ? 'Select State First' : 'All Districts'}
+                    value={selectedDistrictId}
+                    options={
+                      selectedStateId === ''
+                        ? []
+                        : [
+                            { value: 'all', label: 'All Districts' },
+                            ...filteredDistricts.map((d: any) => ({ value: d.id, label: d.name }))
+                          ]
+                    }
                     onChange={(event) => {
                       const val = event.target.value;
                       setSelectedDistrictId(val === 'all' ? 'all' : val === '' ? '' : Number(val));
@@ -261,7 +261,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={selectedStateId === ''}>
                   <ChosenSelect
                     label={isUrban ? t('election.selectNpCity') : t('election.selectRnCity')}
                     placeholder={t('election.chooseCity')}
@@ -269,8 +269,8 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
                     options={[
                       { value: 'all', label: allCityOptionLabel },
                       ...filteredCities.map((city: any) => {
-                        const distObj = districtsList.find((d: any) => Number(d.id) === Number(city.district_id));
-                        const labelPrefix = selectedDistrictId === 'all' && distObj ? `[${distObj.name}] ` : '';
+                        const distObj = allDistrictsList.find((d: any) => Number(d.id) === Number(city.district_id));
+                        const labelPrefix = (selectedDistrictId === 'all' || selectedDistrictId === '') && distObj ? `[${distObj.name}] ` : '';
                         return { value: city.id, label: `${labelPrefix}${city.karyalay_name || city.city_name}` };
                       })
                     ]}
@@ -360,46 +360,6 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
               <MetricCard label={t('election.deployedOfficers')} value={dashboardData.stats.deployed} icon={<AssignmentTurnedInOutlined />} tone="warning" />
             </Grid>
           </Grid>
-
-          {selectedCityId !== '' && (
-            <>
-              <MainCard title={t('election.dutyCriteria')} sx={getSurfaceSx} headerSX={{ p: { xs: 2, sm: 2.5 } }}>
-                <Grid container spacing={2.5}>
-                  {postOptions.map((post) => (
-                    <Grid key={post} size={{ xs: 12, sm: 6, md: 4 }}>
-                      <ChosenSelect
-                        label={`${post} ${t('election.genderCond')}`}
-                        value={dutyCriteria[post] || 'any'}
-                        options={[
-                          { value: 'any', label: t('election.any') },
-                          { value: 'male', label: t('election.male') },
-                          { value: 'female', label: t('election.female') }
-                        ]}
-                        onChange={(event) => updateDutyCriteria(post, String(event.target.value))}
-                      />
-                    </Grid>
-                  ))}
-                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      color="primary"
-                      onClick={handleApplyDuty}
-                      disabled={dutyLoading}
-                      startIcon={dutyLoading ? <CircularProgress size={20} color="inherit" /> : null}
-                      sx={{ ...actionButtonSx, width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {t('election.applyDuty')}
-                    </Button>
-                  </Grid>
-                </Grid>
-              </MainCard>
-
-              <Box sx={{ mt: 1 }}>
-                <ElectionTeamAssignments type={type} />
-              </Box>
-            </>
-          )}
 
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 8 }}>

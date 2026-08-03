@@ -120,7 +120,7 @@ export default function RPPollingStations() {
   const [deleteMaster] = useDeleteMasterMutation();
 
   const filterDistrictOptions = useMemo(() => {
-    if (!filters.state_id) return options.districts;
+    if (!filters.state_id) return [];
     return options.districts.filter((d: any) => Number(d.state_id) === Number(filters.state_id));
   }, [filters.state_id, options.districts]);
 

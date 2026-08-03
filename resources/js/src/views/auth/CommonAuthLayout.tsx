@@ -200,6 +200,12 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
             </Typography>
           )}
         </MainCard>
+        <Typography variant="caption" sx={{ mt: 1.5, textAlign: 'center', color: 'text.secondary', fontWeight: 600 }}>
+          Designed & Developed by{' '}
+          <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>
+            NIC Durg
+          </Box>
+        </Typography>
             </Stack>
           </Grid>
         </Grid>
