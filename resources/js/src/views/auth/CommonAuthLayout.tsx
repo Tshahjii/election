@@ -139,73 +139,73 @@ export default function CommonAuthLayout({ title, subHeading, footerLink, childr
                 }}
               >
                 <HowToVoteOutlined />
-                  <Typography variant="h4" sx={{ minWidth: 0, textAlign: 'center' }}>
-                    {t('app.name')}
+                <Typography variant="h4" sx={{ minWidth: 0, textAlign: 'center' }}>
+                  {t('app.name')}
+                </Typography>
+              </Box>
+
+              <MainCard
+                sx={{
+                  overflow: 'visible',
+                  display: 'flex',
+                  position: 'relative',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: '0 18px 45px rgba(16, 60, 92, 0.14)',
+                  '& .MuiCardContent-root': { flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' } },
+                  maxWidth: 475,
+                  margin: '0 auto',
+                  '&:before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 5,
+                    background: 'linear-gradient(90deg, #ff9933 0%, #ffffff 50%, #138808 100%)'
+                  }
+                }}
+                contentSX={{ flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' }, px: { xs: 2.5, sm: 4 }, pt: { xs: 4, sm: 5 } }}
+              >
+                <Stack direction="column" sx={{ mb: 2, gap: 3.5, justifyContent: 'center' }}>
+                  <Stack
+                    direction={{ xs: 'column-reverse', sm: 'row' }}
+                    sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: { xs: 2, sm: 1 } }}
+                  >
+                    <Box>
+                      <Chip
+                        icon={<VerifiedUserOutlined />}
+                        label={t('auth.officialLogin')}
+                        size="small"
+                        sx={{ mb: 1.5, bgcolor: alpha(theme.palette.success.main, 0.12), color: 'success.dark', '& .MuiChip-icon': { color: 'success.dark' } }}
+                      />
+                      <Typography color="text.primary" gutterBottom variant="h2">
+                        {title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {subHeading}
+                      </Typography>
+                    </Box>
+                    <Link to="/">
+                      <CardMedia component="img" image={Logo} alt="logo" />
+                    </Link>
+                  </Stack>
+
+                  {children}
+                </Stack>
+                {footerLink && (
+                  <Typography variant="subtitle2" color="text.secondary" component={Link} to={footerLink.link} sx={{ textDecoration: 'none' }}>
+                    {footerLink.title}
                   </Typography>
-              </Box>
-
-        <MainCard
-          sx={{
-            overflow: 'visible',
-            display: 'flex',
-            position: 'relative',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            boxShadow: '0 18px 45px rgba(16, 60, 92, 0.14)',
-            '& .MuiCardContent-root': { flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' } },
-            maxWidth: 475,
-            margin: '0 auto',
-            '&:before': {
-              content: '""',
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 5,
-              background: 'linear-gradient(90deg, #ff9933 0%, #ffffff 50%, #138808 100%)'
-            }
-          }}
-          contentSX={{ flexGrow: 1, flexBasis: { xs: 'auto', sm: '50%' }, width: { xs: '100%', sm: '50%' }, px: { xs: 2.5, sm: 4 }, pt: { xs: 4, sm: 5 } }}
-        >
-          <Stack direction="column" sx={{ mb: 2, gap: 3.5, justifyContent: 'center' }}>
-            <Stack
-              direction={{ xs: 'column-reverse', sm: 'row' }}
-              sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: { xs: 2, sm: 1 } }}
-            >
-              <Box>
-                <Chip
-                  icon={<VerifiedUserOutlined />}
-                  label={t('auth.officialLogin')}
-                  size="small"
-                  sx={{ mb: 1.5, bgcolor: alpha(theme.palette.success.main, 0.12), color: 'success.dark', '& .MuiChip-icon': { color: 'success.dark' } }}
-                />
-                <Typography color="text.primary" gutterBottom variant="h2">
-                  {title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {subHeading}
-                </Typography>
-              </Box>
-              <Link to="/">
-                <CardMedia component="img" image={Logo} alt="logo" />
-              </Link>
-            </Stack>
-
-            {children}
-          </Stack>
-          {footerLink && (
-            <Typography variant="subtitle2" color="text.secondary" component={Link} to={footerLink.link} sx={{ textDecoration: 'none' }}>
-              {footerLink.title}
-            </Typography>
-          )}
-        </MainCard>
-        <Typography variant="caption" sx={{ mt: 1.5, textAlign: 'center', color: 'text.secondary', fontWeight: 600 }}>
-          Designed & Developed by{' '}
-          <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>
-            NIC Durg
-          </Box>
-        </Typography>
+                )}
+              </MainCard>
+              <Typography variant="caption" sx={{ mt: 1.5, textAlign: 'center', color: 'text.secondary', fontWeight: 600 }}>
+                Designed & Developed by{' '}
+                <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>
+                  National Informatics Centre, Durg
+                </Box>
+              </Typography>
             </Stack>
           </Grid>
         </Grid>

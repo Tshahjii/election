@@ -43,7 +43,7 @@ export default function Footer() {
         >
           Designed & Developed by{' '}
           <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>
-            NIC Durg
+            National Informatics Centre, Durg
           </Box>
         </Typography>
       </Stack>
