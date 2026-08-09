@@ -614,10 +614,71 @@ class MasterDataController extends Controller
 
         $limit = ($term !== '' && str_contains($term, ',')) ? 100 : 20;
 
-        $employees = $query->with('designation:id,designation')
+        $employees = $query->with(['designation:id,designation', 'office:ofc_id,office_name,office_code'])
             ->orderBy('name')
             ->limit($limit)
-            ->get(['id', 'name', 'emp_code', 'designation_id']);
+            ->get(['id', 'name', 'emp_code', 'designation_id', 'ofc_id']);
+
+        $empIds = $employees->pluck('id')->filter()->toArray();
+
+        $urbanAssignments = [];
+        $ruralAssignments = [];
+
+        if (!empty($empIds)) {
+            $urbanRows = MasterNPMapping::query()
+                ->join('master_n_p_team_mappings', 'master_n_p_team_mappings.id', '=', 'master_n_p_mappings.team_id')
+                ->leftJoin('master_np_polling_stations', 'master_np_polling_stations.id', '=', 'master_n_p_team_mappings.ps_id')
+                ->leftJoin('master_np_cities', 'master_np_cities.id', '=', 'master_n_p_team_mappings.city_id')
+                ->whereIn('master_n_p_mappings.emp_id', $empIds)
+                ->select([
+                    'master_n_p_mappings.emp_id',
+                    'master_n_p_mappings.post_name',
+                    'master_n_p_team_mappings.team_id',
+                    'master_np_polling_stations.polling_station_name',
+                    'master_np_cities.city_name'
+                ])
+                ->get();
+
+            foreach ($urbanRows as $row) {
+                $urbanAssignments[$row->emp_id] = [
+                    'post_name' => $row->post_name,
+                    'team_id' => $row->team_id,
+                    'padded_team_id' => sprintf('%04d', $row->team_id),
+                    'polling_station_name' => $row->polling_station_name,
+                    'city_name' => $row->city_name,
+                ];
+            }
+
+            $ruralRows = MasterRPMapping::query()
+                ->join('master_r_p_team_mappings', 'master_r_p_team_mappings.id', '=', 'master_r_p_mappings.team_id')
+                ->leftJoin('master_rp_polling_stations', 'master_rp_polling_stations.id', '=', 'master_r_p_team_mappings.ps_id')
+                ->leftJoin('master_rp_cities', 'master_rp_cities.id', '=', 'master_r_p_team_mappings.city_id')
+                ->whereIn('master_r_p_mappings.emp_id', $empIds)
+                ->select([
+                    'master_r_p_mappings.emp_id',
+                    'master_r_p_mappings.post_name',
+                    'master_r_p_team_mappings.team_id',
+                    'master_rp_polling_stations.polling_station_name',
+                    'master_rp_cities.city_name'
+                ])
+                ->get();
+
+            foreach ($ruralRows as $row) {
+                $ruralAssignments[$row->emp_id] = [
+                    'post_name' => $row->post_name,
+                    'team_id' => $row->team_id,
+                    'padded_team_id' => sprintf('%04d', $row->team_id),
+                    'polling_station_name' => $row->polling_station_name,
+                    'city_name' => $row->city_name,
+                ];
+            }
+        }
+
+        $employees->transform(function ($emp) use ($urbanAssignments, $ruralAssignments) {
+            $emp->urban_assignment = $urbanAssignments[$emp->id] ?? null;
+            $emp->rural_assignment = $ruralAssignments[$emp->id] ?? null;
+            return $emp;
+        });
 
         return response()->json($employees);
     }

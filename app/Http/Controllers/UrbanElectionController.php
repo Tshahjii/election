@@ -168,20 +168,18 @@ class UrbanElectionController extends Controller
                 ])
                 ->get();
 
-            // Load the P0-P3 posts for these team mappings
+            // Load the P0-P3 posts for these team mappings using Eloquent for reliable office resolution
             $postsData = MasterNPMapping::query()
-                ->leftJoin('master_employees', 'master_employees.id', '=', 'master_n_p_mappings.emp_id')
-                ->whereIn('master_n_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
-                ->select([
-                    'master_n_p_mappings.id as post_mapping_id',
-                    'master_n_p_mappings.team_id as team_mapping_id',
-                    'master_n_p_mappings.post_name',
-                    'master_n_p_mappings.emp_id',
-                    'master_employees.name as employee_name',
-                    'master_employees.emp_code as employee_code',
-                ])
+                ->whereIn('team_id', $teamMappings->pluck('mapping_id'))
                 ->get()
-                ->groupBy('team_mapping_id');
+                ->groupBy('team_id');
+
+            $empIds = $postsData->flatten()->pluck('emp_id')->filter()->unique()->toArray();
+            $empMap = MasterEmployee::query()
+                ->with(['designation', 'office', 'department'])
+                ->whereIn('id', $empIds)
+                ->get()
+                ->keyBy('id');
 
             $grouped = $teamMappings->groupBy('team_id');
             foreach ($grouped as $teamId => $rows) {
@@ -192,12 +190,34 @@ class UrbanElectionController extends Controller
                 foreach ($rows as $row) {
                     $rowPosts = $postsData->get($row->mapping_id) ?? collect();
                     foreach ($rowPosts as $postInfo) {
+                        $emp = $postInfo->emp_id ? ($empMap->get($postInfo->emp_id)) : null;
+
+                        $officeName = '-';
+                        $officeCode = '-';
+                        if ($emp) {
+                            if ($emp->office) {
+                                $officeName = $emp->office->office_name ?: ($emp->office->company_name ?: '-');
+                                $officeCode = $emp->office->office_code ?: '-';
+                            } elseif ($emp->department) {
+                                $officeName = $emp->department->department ?: '-';
+                            }
+                        }
+
+                        $age = ($emp && $emp->dob) ? \Carbon\Carbon::parse($emp->dob)->age : null;
+
                         $posts[] = [
-                            'post_mapping_id' => $postInfo->post_mapping_id,
-                            'post_name' => $postInfo->post_name,
-                            'emp_id' => $postInfo->emp_id,
-                            'employee_name' => $postInfo->employee_name,
-                            'employee_code' => $postInfo->employee_code,
+                            'post_mapping_id' => $postInfo->id,
+                            'post_name'       => $postInfo->post_name,
+                            'emp_id'          => $postInfo->emp_id,
+                            'employee_name'   => $emp ? $emp->name : null,
+                            'employee_code'   => $emp ? $emp->emp_code : null,
+                            'designation'     => ($emp && $emp->designation) ? $emp->designation->designation : '-',
+                            'gender'          => $emp ? ((int)$emp->gender === 1 ? 'Male' : ((int)$emp->gender === 2 ? 'Female' : '-')) : '-',
+                            'dob'             => ($emp && $emp->dob) ? \Carbon\Carbon::parse($emp->dob)->format('d/m/Y') : '-',
+                            'age'             => $age ? "{$age} Yrs" : '-',
+                            'mobile'          => $emp ? ($emp->mobile ?: '-') : '-',
+                            'office_name'     => $officeName,
+                            'office_code'     => $officeCode,
                         ];
                     }
                 }
@@ -453,11 +473,14 @@ class UrbanElectionController extends Controller
         $query = \App\Models\ExemptEmployeeLog::query();
 
         if ($logId) {
-            $query->where('id', $logId);
+            $logIds = is_array($logId) ? $logId : explode(',', (string) $logId);
+            $query->whereIn('id', array_filter($logIds));
         } elseif ($employeeId) {
-            $query->where('employee_id', $employeeId);
+            $employeeIds = is_array($employeeId) ? $employeeId : explode(',', (string) $employeeId);
+            $query->whereIn('employee_id', array_filter($employeeIds));
         } elseif ($empCode) {
-            $query->where('emp_code', $empCode);
+            $empCodes = is_array($empCode) ? $empCode : explode(',', (string) $empCode);
+            $query->whereIn('emp_code', array_filter($empCodes));
         } else {
             return response()->json(['message' => 'log_id, employee_id, or emp_code is required.'], 422);
         }
@@ -469,7 +492,7 @@ class UrbanElectionController extends Controller
         }
 
         return response()->json([
-            'message' => 'Employee removed from exemption list successfully.',
+            'message' => 'Employee(s) removed from exemption list successfully.',
         ]);
     }
 
@@ -842,6 +865,90 @@ class UrbanElectionController extends Controller
 
         return response()->json([
             'message' => "Successfully assigned duties to {$assignedCount} employees.",
+        ]);
+    }
+
+    public function getTrainingSchedules(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $districtId = $request->input('district_id');
+        $cityId = $request->input('city_id');
+        $electionType = $request->input('election_type', 'urban');
+
+        if (!$districtId && $cityId) {
+            $districtId = DB::table('master_np_cities')->where('id', $cityId)->value('district_id');
+        }
+        if (!$districtId && $user) {
+            $districtId = $user->district_id ?: (AccessScope::payload($user)['district_ids'][0] ?? null);
+        }
+
+        $query = \App\Models\MasterElectionTrainingSchedule::query()
+            ->where('election_type', $electionType);
+
+        if ($districtId) {
+            $query->where('district_id', $districtId);
+        } else {
+            $query->whereNull('district_id');
+        }
+
+        $schedules = $query->orderBy('sort_order', 'asc')->get();
+
+        return response()->json($schedules);
+    }
+
+    public function saveTrainingSchedules(Request $request): JsonResponse
+    {
+        $request->validate([
+            'district_id' => 'nullable|integer',
+            'city_id' => 'nullable|integer',
+            'election_type' => 'nullable|string|in:urban,rural',
+            'schedules' => 'required|array',
+            'schedules.*.purpose' => 'required|string',
+            'schedules.*.date' => 'nullable|string',
+            'schedules.*.time' => 'nullable|string',
+            'schedules.*.venue' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $districtId = $request->input('district_id');
+        $cityId = $request->input('city_id');
+        $electionType = $request->input('election_type', 'urban');
+        $schedules = $request->input('schedules');
+
+        if (!$districtId && $cityId) {
+            $districtId = DB::table('master_np_cities')->where('id', $cityId)->value('district_id');
+        }
+        if (!$districtId && $user) {
+            $districtId = $user->district_id ?: (AccessScope::payload($user)['district_ids'][0] ?? null);
+        }
+
+        DB::transaction(function () use ($districtId, $electionType, $schedules) {
+            $query = \App\Models\MasterElectionTrainingSchedule::query()
+                ->where('election_type', $electionType);
+
+            if ($districtId) {
+                $query->where('district_id', $districtId);
+            } else {
+                $query->whereNull('district_id');
+            }
+
+            $query->delete();
+
+            foreach ($schedules as $index => $item) {
+                \App\Models\MasterElectionTrainingSchedule::create([
+                    'district_id' => $districtId,
+                    'election_type' => $electionType,
+                    'purpose' => $item['purpose'],
+                    'date' => $item['date'] ?? '',
+                    'time' => $item['time'] ?? '',
+                    'venue' => $item['venue'] ?? '',
+                    'sort_order' => $index + 1,
+                ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'District training schedule saved to database successfully.',
         ]);
     }
 }

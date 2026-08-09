@@ -150,6 +150,7 @@ const dashboard = {
     {
       id: 'complaints',
       title: 'Help & Complaints',
+      titleKey: 'menu.helpComplaints',
       type: 'item',
       icon: SupportAgentOutlinedIcon,
       url: '/admin/complaints'

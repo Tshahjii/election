@@ -168,20 +168,18 @@ class RuralElectionController extends Controller
                 ])
                 ->get();
 
-            // Load the P0-P4 posts for these team mappings
+            // Load the P0-P4 posts for these team mappings using Eloquent for reliable office resolution
             $postsData = MasterRPMapping::query()
-                ->leftJoin('master_employees', 'master_employees.id', '=', 'master_r_p_mappings.emp_id')
-                ->whereIn('master_r_p_mappings.team_id', $teamMappings->pluck('mapping_id'))
-                ->select([
-                    'master_r_p_mappings.id as post_mapping_id',
-                    'master_r_p_mappings.team_id as team_mapping_id',
-                    'master_r_p_mappings.post_name',
-                    'master_r_p_mappings.emp_id',
-                    'master_employees.name as employee_name',
-                    'master_employees.emp_code as employee_code',
-                ])
+                ->whereIn('team_id', $teamMappings->pluck('mapping_id'))
                 ->get()
-                ->groupBy('team_mapping_id');
+                ->groupBy('team_id');
+
+            $empIds = $postsData->flatten()->pluck('emp_id')->filter()->unique()->toArray();
+            $empMap = MasterEmployee::query()
+                ->with(['designation', 'office', 'department'])
+                ->whereIn('id', $empIds)
+                ->get()
+                ->keyBy('id');
 
             $grouped = $teamMappings->groupBy('team_id');
             foreach ($grouped as $teamId => $rows) {
@@ -192,12 +190,34 @@ class RuralElectionController extends Controller
                 foreach ($rows as $row) {
                     $rowPosts = $postsData->get($row->mapping_id) ?? collect();
                     foreach ($rowPosts as $postInfo) {
+                        $emp = $postInfo->emp_id ? ($empMap->get($postInfo->emp_id)) : null;
+
+                        $officeName = '-';
+                        $officeCode = '-';
+                        if ($emp) {
+                            if ($emp->office) {
+                                $officeName = $emp->office->office_name ?: ($emp->office->company_name ?: '-');
+                                $officeCode = $emp->office->office_code ?: '-';
+                            } elseif ($emp->department) {
+                                $officeName = $emp->department->department ?: '-';
+                            }
+                        }
+
+                        $age = ($emp && $emp->dob) ? \Carbon\Carbon::parse($emp->dob)->age : null;
+
                         $posts[] = [
-                            'post_mapping_id' => $postInfo->post_mapping_id,
-                            'post_name' => $postInfo->post_name,
-                            'emp_id' => $postInfo->emp_id,
-                            'employee_name' => $postInfo->employee_name,
-                            'employee_code' => $postInfo->employee_code,
+                            'post_mapping_id' => $postInfo->id,
+                            'post_name'       => $postInfo->post_name,
+                            'emp_id'          => $postInfo->emp_id,
+                            'employee_name'   => $emp ? $emp->name : null,
+                            'employee_code'   => $emp ? $emp->emp_code : null,
+                            'designation'     => ($emp && $emp->designation) ? $emp->designation->designation : '-',
+                            'gender'          => $emp ? ((int)$emp->gender === 1 ? 'Male' : ((int)$emp->gender === 2 ? 'Female' : '-')) : '-',
+                            'dob'             => ($emp && $emp->dob) ? \Carbon\Carbon::parse($emp->dob)->format('d/m/Y') : '-',
+                            'age'             => $age ? "{$age} Yrs" : '-',
+                            'mobile'          => $emp ? ($emp->mobile ?: '-') : '-',
+                            'office_name'     => $officeName,
+                            'office_code'     => $officeCode,
                         ];
                     }
                 }
@@ -453,11 +473,14 @@ class RuralElectionController extends Controller
         $query = \App\Models\ExemptEmployeeLog::query();
 
         if ($logId) {
-            $query->where('id', $logId);
+            $logIds = is_array($logId) ? $logId : explode(',', (string) $logId);
+            $query->whereIn('id', array_filter($logIds));
         } elseif ($employeeId) {
-            $query->where('employee_id', $employeeId);
+            $employeeIds = is_array($employeeId) ? $employeeId : explode(',', (string) $employeeId);
+            $query->whereIn('employee_id', array_filter($employeeIds));
         } elseif ($empCode) {
-            $query->where('emp_code', $empCode);
+            $empCodes = is_array($empCode) ? $empCode : explode(',', (string) $empCode);
+            $query->whereIn('emp_code', array_filter($empCodes));
         } else {
             return response()->json(['message' => 'log_id, employee_id, or emp_code is required.'], 422);
         }
@@ -469,7 +492,7 @@ class RuralElectionController extends Controller
         }
 
         return response()->json([
-            'message' => 'Employee removed from exemption list successfully.',
+            'message' => 'Employee(s) removed from exemption list successfully.',
         ]);
     }
 

@@ -75,3 +75,88 @@ select {
 .apexcharts-tooltip-text-y-label:empty + .apexcharts-tooltip-text-y-value {
   margin-left: 0;
 }
+
+/* ==========================================================================
+   GLOBAL PRINT & ELECTION ATTENDANCE SHEET STYLES
+   ========================================================================== */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 5mm !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  .print-attendance-sheet-area,
+  .print-attendance-sheet-area * {
+    visibility: visible !important;
+    color: #000 !important;
+  }
+
+  .print-official-header,
+  .print-card,
+  .appointment-order-card,
+  .print-grid-col > div {
+    border-color: #000 !important;
+    background-color: #fff !important;
+  }
+
+  .print-attendance-sheet-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-card {
+    box-shadow: none !important;
+    border: 1.5px solid #000 !important;
+    margin-bottom: 12px !important;
+    padding: 12px 16px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .appointment-order-card {
+    box-shadow: none !important;
+    border: 1.5px solid #000 !important;
+    margin: 0 !important;
+    padding: 6mm 10mm !important;
+    height: 284mm !important;
+    min-height: 284mm !important;
+    max-height: 284mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .print-grid-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+  }
+
+  .print-grid-col {
+    flex: 1 1 25% !important;
+    width: 25% !important;
+    max-width: 25% !important;
+    box-sizing: border-box !important;
+  }
+}

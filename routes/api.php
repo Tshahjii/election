@@ -55,6 +55,8 @@ Route::middleware('jwt')->prefix('urban-election')->group(function () {
     Route::post('restore-exempt-employee', [UrbanElectionController::class, 'restoreExemptEmployee']);
     Route::post('apply-duty', [UrbanElectionController::class, 'applyDuty']);
     Route::post('apply-targeted-duty', [UrbanElectionController::class, 'applyTargetedDuty']);
+    Route::get('training-schedules', [UrbanElectionController::class, 'getTrainingSchedules']);
+    Route::post('training-schedules', [UrbanElectionController::class, 'saveTrainingSchedules']);
 });
 
 Route::middleware('jwt')->prefix('rural-election')->group(function () {
@@ -66,6 +68,8 @@ Route::middleware('jwt')->prefix('rural-election')->group(function () {
     Route::post('restore-exempt-employee', [RuralElectionController::class, 'restoreExemptEmployee']);
     Route::post('apply-duty', [RuralElectionController::class, 'applyDuty']);
     Route::post('apply-targeted-duty', [RuralElectionController::class, 'applyTargetedDuty']);
+    Route::get('training-schedules', [UrbanElectionController::class, 'getTrainingSchedules']);
+    Route::post('training-schedules', [UrbanElectionController::class, 'saveTrainingSchedules']);
 });
 
 Route::middleware('jwt')->prefix('users')->group(function () {

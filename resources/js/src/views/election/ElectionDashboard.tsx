@@ -125,7 +125,7 @@ export default function ElectionDashboard({ type }: ElectionDashboardProps) {
   const allDistrictsList = useMemo(() => optionsData?.districts || [], [optionsData]);
 
   const filteredDistricts = useMemo(() => {
-    if (!optionsData?.districts || !selectedStateId || selectedStateId === '') return [];
+    if (!optionsData?.districts || !selectedStateId || (selectedStateId as any) === '') return [];
     if (selectedStateId === 'all') return optionsData.districts;
     return optionsData.districts.filter((d: any) => Number(d.state_id) === Number(selectedStateId));
   }, [optionsData, selectedStateId]);
